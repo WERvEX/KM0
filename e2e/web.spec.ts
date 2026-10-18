@@ -62,9 +62,7 @@ test("documents are written after the discussion and can be edited, revised and 
   await ledger.getByRole("button", { name: "修改 范围" }).click();
   await page.getByRole("dialog").getByRole("textbox").fill("文章页评论，含楼中楼回复");
   await page.getByRole("dialog").getByRole("button", { name: "保存" }).click();
-  await expect(
-    page.getByText("5 个小节依据的决策已改动：目标、范围、实现思路、验收标准、待定问题"),
-  ).toBeVisible();
+  await expect(page.getByText("5 个小节依据的决策已改动：目标、范围、实现思路、验收标准、待定问题")).toBeVisible();
   await page.getByRole("button", { name: "按新决策更新这些小节" }).click();
   // The hand-edited scope section is about to be rewritten, so KM0 asks first.
   await expect(page.getByRole("dialog", { name: "将覆盖手动修改" })).toBeVisible();

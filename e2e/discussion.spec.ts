@@ -73,7 +73,9 @@ test("a new project walks the four stages, and editing a decision flags its depe
   await page.getByRole("dialog").getByRole("button", { name: "保存" }).click();
   await expect(ledger.getByText("需复核").first()).toBeVisible();
   // Only the sections written from the delivery form are marked stale.
-  await expect(page.getByText("4 个小节依据的决策已改动：背景与目标、项目定位与规模、非功能需求、待定问题")).toBeVisible();
+  await expect(
+    page.getByText("4 个小节依据的决策已改动：背景与目标、项目定位与规模、非功能需求、待定问题"),
+  ).toBeVisible();
   await page.screenshot({ path: "test-results/screenshots/needs-review.png" });
 
   await ledger.getByRole("button", { name: "复核此阶段" }).first().click();
