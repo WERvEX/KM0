@@ -20,8 +20,12 @@ export interface ChatRequest {
   temperature?: number | null;
   maxTokens?: number;
   output?: StructuredOutputRequest;
+  /** How hard the model should think, where the endpoint supports it (Claude API). */
+  effort?: Effort;
   signal?: AbortSignal;
 }
+
+export type Effort = "low" | "medium" | "high";
 
 export interface TokenUsage {
   inputTokens: number;
@@ -48,6 +52,7 @@ export type ProviderErrorKind =
   | "server"
   | "network"
   | "timeout"
+  | "refusal"
   | "unknown";
 
 export class ProviderError extends Error {

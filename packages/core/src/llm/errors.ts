@@ -21,6 +21,11 @@ export function providerErrorToAppError(error: unknown): AppError {
         retryable: false,
         cause: error,
       });
+    case "refusal":
+      return new AppError("upstream", `The model declined this request: ${error.message}`, {
+        retryable: false,
+        cause: error,
+      });
     case "rate_limit":
       return new AppError("upstream", `Rate limited: ${error.message}`, { retryable: true, cause: error });
     case "server":

@@ -50,6 +50,7 @@ export async function triageTask(llm: DiscussionLlm, description: string, langua
     prompt: description,
     schema: TriageOutput,
     maxTokens: 800,
+    effort: "low",
   });
   return {
     title: output.title,
@@ -131,6 +132,7 @@ export async function planRound(llm: DiscussionLlm, ctx: RoundContext): Promise<
     prompt: roundPrompt(promptInput),
     schema: RoundOutput,
     maxTokens: 2500,
+    effort: "low",
   });
 
   const allowed = new Set(targetKeys);
@@ -304,6 +306,7 @@ export async function fillDecisions(
     prompt: fillPrompt(input),
     schema: FillOutput,
     maxTokens: 2000,
+    effort: "medium",
   });
   const wanted = new Set(keys);
   const drafts: DecisionDraft[] = [];

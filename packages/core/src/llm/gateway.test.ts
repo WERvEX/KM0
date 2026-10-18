@@ -133,6 +133,34 @@ describe("structured calls", () => {
   });
 });
 
+describe("auto mode", () => {
+  it("starts Claude profiles with JSON schema output and moves on when a mode is rejected", async () => {
+    const provider = new FakeProvider([
+      new ProviderError("bad_request", "output_config.format is not supported", { status: 400 }),
+      toolReply({ title: "a", score: 1 }),
+    ]);
+    const detected: [number, string][] = [];
+    const gateway = createGateway({
+      providerFor: () => provider,
+      recordCall: () => {},
+      onModeDetected: (id, mode) => detected.push([id, mode]),
+    });
+    await gateway.structured({ ...call, effort: "low", profile: profile({ provider: "anthropic" }) });
+    expect(provider.requests.map((request) => request.output?.kind)).toEqual(["json_schema", "tool"]);
+    expect(provider.requests[0]?.effort).toBe("low");
+    expect(detected).toEqual([[1, "tool"]]);
+  });
+
+  it("does not switch modes on a rejected key", async () => {
+    const provider = new FakeProvider([new ProviderError("auth", "bad key", { status: 401 })]);
+    const { gateway } = setup(provider);
+    await expect(gateway.structured({ ...call, profile: profile({ provider: "anthropic" }) })).rejects.toMatchObject({
+      kind: "config",
+    });
+    expect(provider.requests).toHaveLength(1);
+  });
+});
+
 describe("text calls", () => {
   it("returns plain text and logs the call", async () => {
     const { gateway, calls } = setup(new FakeProvider([textReply("hello")]));

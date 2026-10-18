@@ -81,7 +81,12 @@ void app.whenReady().then(() => {
   const db = openDatabase(join(dataDir, "km0.db"));
   const secrets = new ElectronSecretStore();
   const settings = new SettingsStore(db, secrets);
-  const gateway = createGateway({ recordCall: (record) => settings.recordCall(record) });
+  const gateway = createGateway({
+    recordCall: (record) => settings.recordCall(record),
+    onModeDetected: (profileId, mode) => {
+      if (settings.getProfile(profileId).structuredMode === "auto") settings.setStructuredMode(profileId, mode);
+    },
+  });
   const projects = new ProjectService(
     db,
     // KM0_FAKE_LLM=1 swaps in a deterministic model for end-to-end tests and demos without an API key.

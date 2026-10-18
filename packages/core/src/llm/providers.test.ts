@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AnthropicProvider } from "./anthropic-provider";
+import { AnthropicProvider, strictSchema } from "./anthropic-provider";
 import { OpenAIProvider } from "./openai-provider";
 import { ProviderError } from "./types";
 
@@ -130,5 +130,75 @@ describe("AnthropicProvider", () => {
       output: { kind: "json_schema", name: "probe", description: "d", schema },
     });
     expect(bodies[0]).toMatchObject({ output_config: { format: { type: "json_schema", schema } } });
+  });
+
+  it("on the Claude API, adds effort, room for thinking and server-side fallback", async () => {
+    const { fetch, bodies, urls } = capture({ ...message, content: [{ type: "text", text: '{"ok":true}' }] });
+    const provider = new AnthropicProvider({ apiKey: "k", baseUrl: null, fetch });
+    await provider.complete({
+      model: "claude-sonnet-5-5",
+      messages: [{ role: "user", content: "hi" }],
+      maxTokens: 800,
+      effort: "low",
+      output: { kind: "json_schema", name: "probe", description: "d", schema },
+    });
+    expect(urls[0]).toContain("/v1/messages?beta=true");
+    expect(bodies[0]).toMatchObject({
+      max_tokens: 16000,
+      fallbacks: "default",
+      output_config: { effort: "low", format: { type: "json_schema" } },
+    });
+  });
+
+  it("does not send Claude-only fields to compatible endpoints", async () => {
+    const { fetch, bodies } = capture(message);
+    const provider = new AnthropicProvider({ apiKey: "k", baseUrl: "https://api.deepseek.com/anthropic", fetch });
+    await provider.complete({
+      model: "deepseek-chat",
+      messages: [{ role: "user", content: "hi" }],
+      maxTokens: 800,
+      effort: "low",
+    });
+    expect(bodies[0]).not.toHaveProperty("fallbacks");
+    expect(bodies[0]).not.toHaveProperty("output_config");
+    expect(bodies[0]).toMatchObject({ max_tokens: 800 });
+  });
+
+  it("reports a policy decline as a refusal", async () => {
+    const { fetch } = capture({
+      ...message,
+      content: [],
+      stop_reason: "refusal",
+      stop_details: { type: "refusal", category: "cyber", explanation: null },
+    });
+    const provider = new AnthropicProvider({ apiKey: "k", baseUrl: null, fetch });
+    await expect(
+      provider.complete({ model: "claude-sonnet-5-5", messages: [{ role: "user", content: "hi" }] }),
+    ).rejects.toMatchObject({
+      kind: "refusal",
+    });
+  });
+});
+
+describe("strictSchema", () => {
+  it("closes objects and drops unsupported constraints", () => {
+    expect(
+      strictSchema({
+        type: "object",
+        properties: {
+          name: { type: "string", minLength: 1, maxLength: 80 },
+          tags: { type: "array", maxItems: 5, items: { type: "object", properties: {} } },
+        },
+        required: ["name"],
+      }),
+    ).toEqual({
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        tags: { type: "array", items: { type: "object", properties: {}, additionalProperties: false } },
+      },
+      required: ["name"],
+      additionalProperties: false,
+    });
   });
 });

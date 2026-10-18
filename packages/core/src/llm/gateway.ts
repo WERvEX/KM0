@@ -11,6 +11,7 @@ import {
   type ChatRequest,
   type ChatResponse,
   type ConcreteMode,
+  type Effort,
   type LlmCallRecord,
   ProviderError,
   type ResolvedProfile,
@@ -21,6 +22,8 @@ export interface GatewayDeps {
   providerFor?: (profile: ResolvedProfile) => ChatProvider;
   /** Persists one row per provider request. */
   recordCall: (record: LlmCallRecord) => void;
+  /** Called when an `auto` profile finds a structured mode that works, so later calls start with it. */
+  onModeDetected?: (profileId: number, mode: ConcreteMode) => void;
   now?: () => number;
 }
 
@@ -31,6 +34,8 @@ interface CallContext {
   projectId?: number | null;
   system?: string;
   maxTokens?: number;
+  /** Thinking effort where the endpoint supports it: low for quick routing, higher for planning. */
+  effort?: Effort;
   signal?: AbortSignal;
 }
 
@@ -48,9 +53,19 @@ export interface TextCall extends CallContext {
   prompt: string;
 }
 
-/** Until a connection test has detected a mode, forced tool calls are the most widely supported. */
-const AUTO_DEFAULT_MODE: ConcreteMode = "tool";
+/**
+ * Order tried for `auto` profiles until one works. OpenAI-compatible endpoints almost all support
+ * forced tool calls; current Claude models reject forced tools but support JSON schema output.
+ */
+function autoOrder(profile: ResolvedProfile): ConcreteMode[] {
+  return profile.provider === "anthropic" ? ["json_schema", "tool", "prompt"] : ["tool", "json_schema", "prompt"];
+}
 const DETECTION_ORDER: ConcreteMode[] = ["json_schema", "tool", "prompt"];
+
+/** A provider that rejects the request shape, as opposed to the key, the model or the network. */
+function isUnsupportedMode(error: unknown): boolean {
+  return error instanceof AppError && error.cause instanceof ProviderError && error.cause.kind === "bad_request";
+}
 
 const ConnectionProbe = z.object({ ok: z.boolean() });
 
@@ -137,6 +152,7 @@ export function createGateway(deps: GatewayDeps) {
       messages,
       temperature: call.profile.temperature,
       ...(call.maxTokens ? { maxTokens: call.maxTokens } : {}),
+      ...(call.effort ? { effort: call.effort } : {}),
       ...(call.signal ? { signal: call.signal } : {}),
     };
     if (mode === "prompt") {
@@ -165,7 +181,29 @@ export function createGateway(deps: GatewayDeps) {
 
   async function structured<S extends z.ZodType>(call: StructuredCall<S>): Promise<z.output<S>> {
     const configured = call.profile.structuredMode;
-    const mode: ConcreteMode = call.mode ?? (configured === "auto" ? AUTO_DEFAULT_MODE : configured);
+    const detecting = !call.mode && configured === "auto";
+    const modes: ConcreteMode[] = call.mode
+      ? [call.mode]
+      : detecting
+        ? autoOrder(call.profile)
+        : [configured as ConcreteMode];
+    for (const [index, mode] of modes.entries()) {
+      try {
+        const result = await structuredInMode(call, mode);
+        if (detecting) deps.onModeDetected?.(call.profile.id, mode);
+        return result;
+      } catch (error) {
+        if (index < modes.length - 1 && isUnsupportedMode(error)) continue;
+        throw error;
+      }
+    }
+    throw new AppError("internal", "No structured output mode to try.");
+  }
+
+  async function structuredInMode<S extends z.ZodType>(
+    call: StructuredCall<S>,
+    mode: ConcreteMode,
+  ): Promise<z.output<S>> {
     const messages: ChatMessage[] = [{ role: "user", content: call.prompt }];
 
     const first = await send(call, mode, 1, buildRequest(call, mode, messages));
@@ -203,6 +241,7 @@ export function createGateway(deps: GatewayDeps) {
       temperature: call.profile.temperature,
       ...(call.system ? { system: call.system } : {}),
       ...(call.maxTokens ? { maxTokens: call.maxTokens } : {}),
+      ...(call.effort ? { effort: call.effort } : {}),
       ...(call.signal ? { signal: call.signal } : {}),
     };
     const response = await send(call, "text", 1, request);
@@ -228,6 +267,7 @@ export function createGateway(deps: GatewayDeps) {
           description: "Report that the connection works.",
           prompt: 'Reply with {"ok": true}.',
           maxTokens: 64,
+          effort: "low",
         });
         return { ok: true, latencyMs: now() - started, detectedMode: mode, error: null };
       } catch (error) {

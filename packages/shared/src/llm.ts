@@ -94,7 +94,7 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     label: "Anthropic",
     urls: { anthropic: "https://api.anthropic.com" },
     defaultProvider: "anthropic",
-    modelHint: "",
+    modelHint: "claude-sonnet-5-5",
   },
   {
     id: "deepseek",
