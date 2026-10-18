@@ -161,4 +161,19 @@ CREATE TABLE search_services (
 );
 `,
   },
+  {
+    id: 2,
+    name: "discussion_state",
+    sql: `
+CREATE TABLE stage_states (
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  stage TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'active', 'ready', 'complete')),
+  rounds_used INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (project_id, stage)
+);
+
+ALTER TABLE question_rounds ADD COLUMN review INTEGER NOT NULL DEFAULT 0;
+`,
+  },
 ];

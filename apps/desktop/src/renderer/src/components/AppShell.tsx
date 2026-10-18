@@ -28,8 +28,15 @@ export function AppShell() {
           {projects.data && projects.data.length > 0 ? (
             <ul className="flex flex-col gap-0.5">
               {projects.data.map((project) => (
-                <li key={project.id} className="truncate rounded-md px-2 py-1.5 text-sm hover:bg-sunken">
-                  {project.title}
+                <li key={project.id}>
+                  <Link
+                    to="/projects/$projectId"
+                    params={{ projectId: String(project.id) }}
+                    className="block truncate rounded-md px-2 py-1.5 text-sm hover:bg-sunken"
+                    activeProps={{ className: "bg-sunken font-medium" }}
+                  >
+                    {project.title}
+                  </Link>
                 </li>
               ))}
             </ul>

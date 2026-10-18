@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { createGateway } from "@km0/core";
+import { createGateway, createSimulatedLlm } from "@km0/core";
 import { IPC_INVOKE } from "@km0/shared";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import log from "electron-log/main";
@@ -7,6 +7,8 @@ import { openDatabase } from "./db/database";
 import { ElectronSecretStore } from "./electron-secrets";
 import { createHandlers } from "./handlers";
 import { createDispatcher } from "./ipc/router";
+import { llmPort } from "./services/llm-port";
+import { ProjectService } from "./services/project-service";
 import { SettingsStore } from "./services/settings-store";
 
 const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL;
@@ -80,11 +82,23 @@ void app.whenReady().then(() => {
   const secrets = new ElectronSecretStore();
   const settings = new SettingsStore(db, secrets);
   const gateway = createGateway({ recordCall: (record) => settings.recordCall(record) });
+  const projects = new ProjectService(
+    db,
+    // KM0_FAKE_LLM=1 swaps in a deterministic model for end-to-end tests and demos without an API key.
+    process.env.KM0_FAKE_LLM === "1"
+      ? () => createSimulatedLlm()
+      : (projectId) => llmPort(gateway, settings, projectId),
+    () => {
+      const language = settings.getPreferences().language;
+      if (language !== "system") return language;
+      return app.getLocale().toLowerCase().startsWith("zh") ? "zh-CN" : "en";
+    },
+  );
 
   const dispatch = createDispatcher(
     createHandlers({
-      db,
       settings,
+      projects,
       gateway,
       appInfo: () => ({
         name: "KM0",
@@ -92,6 +106,7 @@ void app.whenReady().then(() => {
         platform: process.platform,
         dataDir,
         secureStorage: secrets.secure,
+        simulatedModel: process.env.KM0_FAKE_LLM === "1",
       }),
     }),
     (channel, error) => log.warn(`[ipc] ${channel} failed (${error.kind}): ${error.message}`),

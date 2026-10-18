@@ -1,27 +1,17 @@
 import type { Gateway } from "@km0/core";
-import type { AppInfo, ProjectSummary } from "@km0/shared";
-import type { Database } from "./db/database";
+import type { AppInfo } from "@km0/shared";
 import type { Handlers } from "./ipc/router";
+import type { ProjectService } from "./services/project-service";
 import type { SettingsStore } from "./services/settings-store";
 
 export interface HandlerDeps {
-  db: Database;
   settings: SettingsStore;
+  projects: ProjectService;
   gateway: Gateway;
   appInfo: () => AppInfo;
 }
 
-interface ProjectRow {
-  id: number;
-  title: string;
-  path: ProjectSummary["path"];
-  stage: ProjectSummary["stage"];
-  status: ProjectSummary["status"];
-  created_at: string;
-  updated_at: string;
-}
-
-export function createHandlers({ db, settings, gateway, appInfo }: HandlerDeps): Handlers {
+export function createHandlers({ settings, projects, gateway, appInfo }: HandlerDeps): Handlers {
   return {
     "app.info": () => appInfo(),
 
@@ -43,19 +33,18 @@ export function createHandlers({ db, settings, gateway, appInfo }: HandlerDeps):
     "settings.preferences.get": () => settings.getPreferences(),
     "settings.preferences.set": (partial) => settings.setPreferences(partial),
 
-    "project.list": () => {
-      const rows = db
-        .prepare("SELECT id, title, path, stage, status, created_at, updated_at FROM projects ORDER BY updated_at DESC")
-        .all() as unknown as ProjectRow[];
-      return rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        path: row.path,
-        stage: row.stage,
-        status: row.status,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      }));
-    },
+    "project.list": () => projects.list(),
+    "project.create": ({ description, repoPath }) => projects.create(description, repoPath),
+    "project.get": ({ id }) => projects.get(id),
+    "project.rename": ({ id, title }) => projects.rename(id, title),
+    "project.delete": ({ id }) => projects.delete(id),
+    "project.setPath": ({ id, path }) => projects.setPath(id, path),
+    "project.retry": ({ id }) => projects.retry(id),
+
+    "round.answer": ({ projectId, roundId, answers }) => projects.answer(projectId, roundId, answers),
+    "stage.advance": ({ projectId, adoptRecommended }) => projects.advance(projectId, adoptRecommended),
+    "stage.more": ({ projectId }) => projects.askMore(projectId),
+    "stage.review": ({ projectId, stage }) => projects.review(projectId, stage),
+    "decision.update": ({ projectId, key, value }) => projects.updateDecision(projectId, key, value),
   };
 }

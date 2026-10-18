@@ -7,6 +7,8 @@ export type ProjectPath = z.infer<typeof ProjectPath>;
 /** Where a project currently is. Discussion stages A–D only apply to the full path. */
 export const ProjectStage = z.enum([
   "triage",
+  "confirm",
+  "brief",
   "scale",
   "requirements",
   "tech",

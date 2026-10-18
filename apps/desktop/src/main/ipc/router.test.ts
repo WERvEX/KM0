@@ -1,7 +1,8 @@
-import { createGateway, FakeProvider, ProviderError, toolReply } from "@km0/core";
+import { createGateway, createSimulatedLlm, FakeProvider, ProviderError, toolReply } from "@km0/core";
 import { describe, expect, it } from "vitest";
 import { openDatabase } from "../db/database";
 import { createHandlers } from "../handlers";
+import { ProjectService } from "../services/project-service";
 import { PlainSecretStore } from "../services/secrets";
 import { SettingsStore } from "../services/settings-store";
 import { createDispatcher } from "./router";
@@ -12,10 +13,21 @@ function setup(provider = new FakeProvider([])) {
   const gateway = createGateway({ providerFor: () => provider, recordCall: (record) => settings.recordCall(record) });
   const dispatch = createDispatcher(
     createHandlers({
-      db,
       settings,
+      projects: new ProjectService(
+        db,
+        () => createSimulatedLlm(),
+        () => "zh-CN",
+      ),
       gateway,
-      appInfo: () => ({ name: "KM0", version: "0.0.0", platform: "test", dataDir: "/tmp", secureStorage: false }),
+      appInfo: () => ({
+        name: "KM0",
+        version: "0.0.0",
+        platform: "test",
+        dataDir: "/tmp",
+        secureStorage: false,
+        simulatedModel: false,
+      }),
     }),
   );
   return { dispatch, settings, provider };

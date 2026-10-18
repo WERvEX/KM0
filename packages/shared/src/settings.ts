@@ -21,5 +21,7 @@ export const AppInfo = z.object({
   dataDir: z.string(),
   /** Whether the OS credential store protects API keys (false on Linux without a keyring). */
   secureStorage: z.boolean(),
+  /** A deterministic stand-in model is active (KM0_FAKE_LLM=1); no API key is needed. */
+  simulatedModel: z.boolean(),
 });
 export type AppInfo = z.infer<typeof AppInfo>;

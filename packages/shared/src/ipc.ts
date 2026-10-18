@@ -1,5 +1,13 @@
 import { z } from "zod";
-import { ProjectSummary } from "./domain";
+import {
+  AdvanceStageInput,
+  AnswerRoundInput,
+  CreateProjectInput,
+  DiscussionStage,
+  ProjectDetail,
+  UpdateDecisionInput,
+} from "./discussion";
+import { ProjectPath, ProjectSummary } from "./domain";
 import type { AppErrorShape } from "./errors";
 import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
 import { AppInfo, Preferences } from "./settings";
@@ -33,6 +41,18 @@ export const ipcContract = {
   "settings.preferences.set": channel(Preferences.partial(), Preferences),
 
   "project.list": channel(z.void(), z.array(ProjectSummary)),
+  "project.create": channel(CreateProjectInput, ProjectDetail),
+  "project.get": channel(Id, ProjectDetail),
+  "project.rename": channel(Id.extend({ title: z.string().trim().min(1).max(120) }), ProjectSummary),
+  "project.delete": channel(Id, z.void()),
+  "project.setPath": channel(Id.extend({ path: ProjectPath }), ProjectDetail),
+  "project.retry": channel(Id, ProjectDetail),
+
+  "round.answer": channel(AnswerRoundInput, ProjectDetail),
+  "stage.advance": channel(AdvanceStageInput, ProjectDetail),
+  "stage.more": channel(z.object({ projectId: z.number().int().positive() }), ProjectDetail),
+  "stage.review": channel(z.object({ projectId: z.number().int().positive(), stage: DiscussionStage }), ProjectDetail),
+  "decision.update": channel(UpdateDecisionInput, ProjectDetail),
 } as const;
 
 export type IpcContract = typeof ipcContract;
