@@ -1,5 +1,6 @@
-import type { Answer, Question, QuestionRound } from "@km0/shared";
-import { Sparkles } from "lucide-react";
+import type { Answer, Question, QuestionRound, Research } from "@km0/shared";
+import { Link } from "@tanstack/react-router";
+import { SearchCheck, SearchX, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,7 @@ export function QuestionRoundCard({ round, busy, onSubmit, onSkipRest }: Props) 
         </Button>
       </header>
       {round.review ? <p className="px-5 pt-4 text-sm text-muted">{t("project.reviewHint")}</p> : null}
+      {round.research ? <ResearchNote research={round.research} /> : null}
       <div className="flex flex-col divide-y divide-border">
         {round.questions.map((question, index) => (
           <QuestionCard
@@ -211,5 +213,60 @@ function QuestionCard({ index, question, draft, disabled, onChange }: QuestionCa
         </label>
       ) : null}
     </fieldset>
+  );
+}
+
+/** What the technology questions are based on: search results, or a note that nothing was checked. */
+export function ResearchNote({ research }: { research: Research }) {
+  const { t } = useTranslation();
+  if (research.status !== "verified") {
+    return (
+      <div className="mx-5 mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-sunken px-3 py-2 text-xs text-muted">
+        <SearchX className="size-4 shrink-0" />
+        <span>{t(`project.research.${research.status}`)}</span>
+        {research.status === "unverified" ? (
+          <Link to="/settings" className="underline">
+            {t("project.research.configure")}
+          </Link>
+        ) : null}
+      </div>
+    );
+  }
+  const count = research.findings.reduce((sum, finding) => sum + finding.results.length, 0);
+  return (
+    <details className="mx-5 mt-4 rounded-md bg-sunken px-3 py-2 text-xs">
+      <summary className="flex cursor-pointer items-center gap-2 text-muted">
+        <SearchCheck className="size-4 shrink-0 text-success" />
+        <span>{t("project.research.verified", { service: research.service ?? "" })}</span>
+        <span>· {t("project.research.sources", { count })}</span>
+      </summary>
+      <div className="mt-2 flex flex-col gap-3">
+        {research.findings.map((finding) => (
+          <div key={finding.query}>
+            <div className="font-medium">{t("project.research.query", { query: finding.query })}</div>
+            {finding.error ? (
+              <p className="text-danger">{t("project.research.error", { message: finding.error })}</p>
+            ) : finding.results.length === 0 ? (
+              <p className="text-muted">{t("project.research.noResults")}</p>
+            ) : (
+              <ul className="mt-1 flex flex-col gap-1">
+                {finding.results.map((result) => (
+                  <li key={result.url || result.title}>
+                    {result.url ? (
+                      <a href={result.url} target="_blank" rel="noreferrer" className="text-accent underline">
+                        {result.title}
+                      </a>
+                    ) : (
+                      <span>{result.title}</span>
+                    )}
+                    {result.snippet ? <span className="text-muted"> · {result.snippet}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }

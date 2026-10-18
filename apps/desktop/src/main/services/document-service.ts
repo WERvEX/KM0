@@ -21,7 +21,7 @@ import {
 import { z } from "zod";
 import { type Database, nowIso } from "../db/sql";
 import { KeyedLock } from "./lock";
-import { readDecisions } from "./project-service";
+import { describeProject, readDecisions } from "./project-service";
 
 interface DocumentRow {
   version: number;
@@ -38,6 +38,7 @@ interface ProjectRow {
   path: ProjectPath | null;
   stage: ProjectStage;
   triage_json: string | null;
+  repo_scan_json: string | null;
 }
 
 const StoredSections = z.array(StoredSection);
@@ -252,7 +253,7 @@ export class DocumentService {
 
   private project(projectId: number): ProjectRow {
     const row = this.db
-      .prepare("SELECT title, description, path, stage, triage_json FROM projects WHERE id = ?")
+      .prepare("SELECT title, description, path, stage, triage_json, repo_scan_json FROM projects WHERE id = ?")
       .get(projectId) as ProjectRow | undefined;
     if (!row) throw new AppError("not_found", `Project ${projectId} does not exist.`);
     return row;
@@ -295,7 +296,7 @@ export class DocumentService {
       language: this.language(),
       kind,
       title: project.title,
-      description: project.description,
+      description: describeProject(project.description, project.repo_scan_json),
       triage: project.triage_json ? Triage.parse(JSON.parse(project.triage_json)) : null,
       decisions,
     };

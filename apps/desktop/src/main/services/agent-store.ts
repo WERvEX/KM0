@@ -75,6 +75,19 @@ export class AgentStore {
     return this.list();
   }
 
+  /** Put the listed agents first, in this order; the rest keep their relative order after them. */
+  reorder(ids: AgentId[]): AgentConfig[] {
+    const known = this.list().map((agent) => agent.id);
+    const first = ids.filter((id, index) => known.includes(id) && ids.indexOf(id) === index);
+    const order = [...first, ...known.filter((id) => !first.includes(id))];
+    transaction(this.db, () => {
+      order.forEach((agentId, position) => {
+        this.db.prepare("UPDATE agents SET preference = ? WHERE id = ?").run(position, agentId);
+      });
+    });
+    return this.list();
+  }
+
   private require(id: AgentId): void {
     if (!this.db.prepare("SELECT 1 FROM agents WHERE id = ?").get(id)) {
       throw new AppError("not_found", `Unknown agent: ${id}`);

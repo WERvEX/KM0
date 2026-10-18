@@ -1,4 +1,5 @@
-import type { Decision, DiscussionStage, ProjectPath, Triage } from "@km0/shared";
+import type { Decision, DiscussionStage, ProjectPath, Research, Triage } from "@km0/shared";
+import { evidenceBlock } from "../research/verify";
 import { keyDef, SCALE_DEFAULTS, SCALE_OPTIONS, scaleIdFromText, stageKeys } from "./catalog";
 
 export type Language = "zh-CN" | "en";
@@ -49,6 +50,10 @@ export interface RoundPromptInput {
   targetKeys: string[];
   maxQuestions: number;
   mode: "required" | "more" | "review";
+  /** A read-only scan of the linked repository, summarised. */
+  repoSummary?: string | null;
+  /** Technology stage only: what the research step found. */
+  research?: Research | null;
 }
 
 export function roundSystem(input: RoundPromptInput): string {
@@ -101,6 +106,9 @@ export function roundPrompt(input: RoundPromptInput): string {
     input.triage
       ? `Triage: ${input.triage.taskType}, complexity ${input.triage.complexity}. ${input.triage.summary}`
       : "",
+    input.repoSummary
+      ? `Existing codebase (read-only scan; keep its stack unless the task says otherwise):\n${input.repoSummary}`
+      : "",
     `Path: ${input.path}. Current stage: ${input.stage}. ${STAGE_PURPOSE[input.stage]}`,
     `Decisions so far:\n${decided}`,
     `Keys to settle now:\n${targets || "(none)"}`,
@@ -110,6 +118,7 @@ export function roundPrompt(input: RoundPromptInput): string {
     const scale = input.decisions.find((decision) => decision.key === "scale");
     const scaleId = scale ? scaleIdFromText(scale.value.text) : null;
     if (scaleId) parts.push(`Default recommendations for this delivery form: ${SCALE_DEFAULTS[scaleId]}`);
+    parts.push(evidenceBlock(input.research));
   }
   return parts.filter(Boolean).join("\n\n");
 }

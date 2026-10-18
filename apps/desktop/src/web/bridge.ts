@@ -7,13 +7,16 @@ import { migrate } from "../main/db/sql";
 import { createHandlers } from "../main/handlers";
 import { createDispatcher } from "../main/ipc/router";
 import { AgentStore } from "../main/services/agent-store";
+import { ConfigService } from "../main/services/config-service";
 import { DocumentService } from "../main/services/document-service";
 import { HandoffService } from "../main/services/handoff-service";
 import { llmPort } from "../main/services/llm-port";
 import { ProjectService } from "../main/services/project-service";
 import { RoutingService } from "../main/services/routing-service";
+import { SearchStore } from "../main/services/search-store";
 import { PlainSecretStore } from "../main/services/secrets";
 import { SettingsStore } from "../main/services/settings-store";
+import { webRepoAccess } from "./repo-access";
 import { indexedDbStore, SqlJsAdapter } from "./sqljs-database";
 
 export interface WebBridgeOptions {
@@ -60,9 +63,13 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
     const copy = structuredClone(payload);
     for (const listener of listeners.get(event) ?? []) listener(copy);
   };
-  const projects = new ProjectService(db, llmFor, language);
+  // No local processes in a browser: only Bocha and remote MCP servers work here.
+  const search = new SearchStore(db, secrets, {});
+  const repo = webRepoAccess();
+  const projects = new ProjectService(db, llmFor, language, { searchPort: () => search.activePort(), repo });
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db);
+  const config = new ConfigService(settings, agents, search);
   const routing = new RoutingService(db, llmFor, language, agents);
   const handoff = new HandoffService(db, routing, language);
   const dispatch = createDispatcher(
@@ -73,6 +80,9 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
       routing,
       handoff,
       agents,
+      search,
+      config,
+      repo,
       gateway,
       appInfo: () => ({
         name: "KM0",

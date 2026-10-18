@@ -2,6 +2,8 @@ import { z } from "zod";
 import { DocumentSummary } from "./documents";
 import { ProjectPath, ProjectSummary } from "./domain";
 import { AppErrorShape } from "./errors";
+import { RepoScan } from "./repo";
+import { Research } from "./research";
 
 /** Stages in which questions are asked. Fast uses `confirm`, light uses `brief`, full uses the other four. */
 export const DiscussionStage = z.enum(["confirm", "brief", "scale", "requirements", "tech", "implementation"]);
@@ -73,6 +75,8 @@ export const QuestionRound = z.object({
   status: RoundStatus,
   /** True when the round re-checks decisions flagged for review. */
   review: z.boolean(),
+  /** Technology rounds only: what was looked up before the questions were written. */
+  research: Research.nullable(),
 });
 export type QuestionRound = z.infer<typeof QuestionRound>;
 
@@ -113,6 +117,8 @@ export type StageState = z.infer<typeof StageState>;
 export const ProjectDetail = ProjectSummary.extend({
   description: z.string(),
   repoPath: z.string().nullable(),
+  /** The read-only scan of the linked repository, when there is one. */
+  repoScan: RepoScan.nullable(),
   triage: Triage.nullable(),
   stages: z.array(StageState),
   decisions: z.array(Decision),

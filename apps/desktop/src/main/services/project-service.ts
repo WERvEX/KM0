@@ -1,6 +1,7 @@
 import {
   type DecisionDraft,
   type DiscussionLlm,
+  decisionsFromScan,
   dependentsOf,
   fillDecisions,
   keyDef,
@@ -11,9 +12,13 @@ import {
   planRound,
   type RoundContext,
   recommendedAnswers,
+  repoSummary,
   requiredKeys,
+  researchTech,
   resolveAnswers,
   reviewKeys,
+  type SearchPort,
+  stageKeys,
   triageTask,
 } from "@km0/core";
 import {
@@ -28,6 +33,8 @@ import {
   type ProjectSummary,
   Question,
   type QuestionRound,
+  RepoScan,
+  Research,
   type StageState,
   type StageStatus,
   Triage,
@@ -37,6 +44,7 @@ import { z } from "zod";
 import { type Database, nowIso, transaction } from "../db/sql";
 import { documentSummaries } from "./document-service";
 import { KeyedLock } from "./lock";
+import { type RepoAccess, scanPath } from "./repo-access";
 
 interface ProjectRow {
   id: number;
@@ -46,6 +54,7 @@ interface ProjectRow {
   stage: ProjectDetail["stage"];
   status: ProjectDetail["status"];
   repo_path: string | null;
+  repo_scan_json: string | null;
   triage_json: string | null;
   created_at: string;
   updated_at: string;
@@ -58,6 +67,7 @@ interface RoundRow {
   questions_json: string;
   status: QuestionRound["status"];
   review: number;
+  research_json: string | null;
 }
 
 interface DecisionRow {
@@ -76,6 +86,13 @@ interface StageRow {
   stage: DiscussionStage;
   status: StageStatus;
   rounds_used: number;
+}
+
+export interface ProjectServiceOptions {
+  /** The enabled search service for technology research; null or absent means "unverified". */
+  searchPort?: () => SearchPort | null;
+  /** Read-only access to local repositories linked to a project. */
+  repo?: RepoAccess;
 }
 
 const Questions = z.array(Question);
@@ -97,6 +114,7 @@ export class ProjectService {
     private readonly db: Database,
     private readonly llmFor: (projectId: number | null) => DiscussionLlm,
     private readonly language: () => Language,
+    private readonly options: ProjectServiceOptions = {},
   ) {}
 
   list(): ProjectSummary[] {
@@ -111,14 +129,20 @@ export class ProjectService {
   }
 
   async create(description: string, repoPath: string | null): Promise<ProjectDetail> {
-    const triage = await triageTask(this.llmFor(null), description, this.language());
+    const scan = repoPath ? await this.scanRepo(repoPath) : null;
+    const triageInput = scan
+      ? `${description}\n\nLinked repository (read-only scan):\n${repoSummary(scan)}`
+      : description;
+    const triaged = await triageTask(this.llmFor(null), triageInput, this.language());
+    // A linked repository means the work happens in an existing codebase, whatever the wording.
+    const triage = scan ? { ...triaged, hasCodebase: true } : triaged;
     const path = triage.suggestedPath;
     const id = transaction(this.db, () => {
       const now = nowIso();
       const result = this.db
         .prepare(
-          `INSERT INTO projects (title, description, path, stage, status, repo_path, triage_json, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`,
+          `INSERT INTO projects (title, description, path, stage, status, repo_path, repo_scan_json, triage_json, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)`,
         )
         .run(
           triage.title,
@@ -126,12 +150,15 @@ export class ProjectService {
           path,
           PATH_STAGES[path][0] as string,
           repoPath,
+          scan ? JSON.stringify(scan) : null,
           JSON.stringify(triage),
           now,
           now,
         );
       const projectId = Number(result.lastInsertRowid);
       this.resetStages(projectId, path);
+      // The technology stage starts from the stack the repository already uses.
+      if (scan) for (const draft of decisionsFromScan(scan, this.language())) this.upsertDecision(projectId, draft);
       return projectId;
     });
     return this.withLock(id, () => this.advanceDiscussion(id));
@@ -335,8 +362,11 @@ export class ProjectService {
     stage: DiscussionStage,
     mode: RoundContext["mode"],
   ): Promise<ProjectDetail> {
+    const context = this.context(projectId, stage);
+    const research = stage === "tech" && mode !== "review" ? await this.research(projectId, context) : null;
     const plan = await planRound(this.llmFor(projectId), {
-      ...this.context(projectId, stage),
+      ...context,
+      ...(research ? { research } : {}),
       roundNo: this.nextRoundNo(projectId, stage),
       mode,
     });
@@ -345,8 +375,8 @@ export class ProjectService {
       if (plan.questions.length > 0) {
         this.db
           .prepare(
-            `INSERT INTO question_rounds (project_id, stage, round_no, questions_json, status, created_at, review)
-             VALUES (?, ?, ?, ?, 'open', ?, ?)`,
+            `INSERT INTO question_rounds (project_id, stage, round_no, questions_json, status, created_at, review, research_json)
+             VALUES (?, ?, ?, ?, 'open', ?, ?, ?)`,
           )
           .run(
             projectId,
@@ -355,6 +385,7 @@ export class ProjectService {
             JSON.stringify(plan.questions),
             nowIso(),
             mode === "review" ? 1 : 0,
+            research ? JSON.stringify(research) : null,
           );
         if (mode !== "review") {
           this.db
@@ -371,6 +402,51 @@ export class ProjectService {
       this.setStageStatus(projectId, stage, "ready");
     }
     return this.detail(projectId, null);
+  }
+
+  /**
+   * Evidence for the technology questions. Searches run once per project (at most three calls);
+   * later rounds reuse the result. "Unverified" is not stored as final, so adding a search service
+   * later still helps. Failures are recorded, never thrown: research must not block the discussion.
+   */
+  private async research(projectId: number, context: Omit<RoundContext, "roundNo" | "mode">): Promise<Research | null> {
+    const decided = new Set(context.decisions.filter((decision) => !decision.needsReview).map((d) => d.key));
+    const targetKeys = stageKeys("tech")
+      .filter((def) => !decided.has(def.key))
+      .map((def) => def.key);
+    if (targetKeys.length === 0) return null;
+    if (context.research && context.research.status !== "unverified") return context.research;
+    let port: SearchPort | null = null;
+    try {
+      port = this.options.searchPort?.() ?? null;
+      return await researchTech(this.llmFor(projectId), port, {
+        language: context.language,
+        description: context.description,
+        decisions: context.decisions,
+        targetKeys,
+        repoSummary: context.repoSummary ?? null,
+      });
+    } catch (error) {
+      const message = toAppError(error).message;
+      return { status: "failed", service: port?.name ?? null, findings: [{ query: "", results: [], error: message }] };
+    }
+  }
+
+  private async scanRepo(path: string): Promise<RepoScan> {
+    if (!this.options.repo) throw new AppError("config", "Linking a local repository is not available here.");
+    return scanPath(this.options.repo, path);
+  }
+
+  private storedResearch(projectId: number): Research | null {
+    const row = this.db
+      .prepare(
+        `SELECT research_json FROM question_rounds WHERE project_id = ? AND stage = 'tech' AND research_json IS NOT NULL
+         ORDER BY id DESC LIMIT 1`,
+      )
+      .get(projectId) as { research_json: string } | undefined;
+    if (!row) return null;
+    const parsed = Research.safeParse(JSON.parse(row.research_json));
+    return parsed.success ? parsed.data : null;
   }
 
   private async fill(projectId: number, stage: DiscussionStage, keys: string[]): Promise<void> {
@@ -390,6 +466,8 @@ export class ProjectService {
       description: project.description,
       triage: project.triage_json ? Triage.parse(JSON.parse(project.triage_json)) : null,
       decisions: this.decisions(projectId),
+      repoSummary: summaryOf(project.repo_scan_json),
+      research: stage === "tech" ? this.storedResearch(projectId) : null,
     };
   }
 
@@ -557,6 +635,7 @@ export class ProjectService {
       ...this.summary(row),
       description: row.description,
       repoPath: row.repo_path,
+      repoScan: parseScan(row.repo_scan_json),
       triage: row.triage_json ? Triage.parse(JSON.parse(row.triage_json)) : null,
       stages,
       decisions,
@@ -568,6 +647,7 @@ export class ProjectService {
             questions: Questions.parse(JSON.parse(open.questions_json)),
             status: open.status,
             review: open.review === 1,
+            research: open.research_json ? Research.parse(JSON.parse(open.research_json)) : null,
           }
         : null,
       discussionComplete: stages.every((stage) => stage.status === "complete"),
@@ -593,4 +673,21 @@ export function readDecisions(db: Database, projectId: number): Decision[] {
     needsReview: row.needs_review === 1,
     updatedAt: row.updated_at,
   }));
+}
+
+function parseScan(json: string | null): RepoScan | null {
+  if (!json) return null;
+  const parsed = RepoScan.safeParse(JSON.parse(json));
+  return parsed.success ? parsed.data : null;
+}
+
+function summaryOf(json: string | null): string | null {
+  const scan = parseScan(json);
+  return scan ? repoSummary(scan) : null;
+}
+
+/** The task description as the planner sees it: with the linked repository summarised, when there is one. */
+export function describeProject(description: string, repoScanJson: string | null): string {
+  const summary = summaryOf(repoScanJson);
+  return summary ? `${description}\n\nExisting codebase (read-only scan):\n${summary}` : description;
 }

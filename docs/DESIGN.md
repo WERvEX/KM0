@@ -86,8 +86,8 @@ KM0 是编码 Agent 的上游：把一句任务描述变成谈清楚的需求、
 - “跳过剩余问题，进入下一阶段”：未答的题按推荐项处理，本阶段其余待定键由规划模型决定。
 - 每条决策记录来源、理由和被否决的备选。
 - 决策键声明依赖关系（例如 `storage` 依赖 `scale`）；回改后，依赖它的决策和文档小节标记“需复核”。
-- 技术选型阶段可以查证（最多 3 次工具调用），没配搜索就标注“未查证”。
-- 已有仓库可以做一次只读扫描，识别出的技术栈预填阶段 C。
+- 技术选型阶段可以查证（最多 3 次工具调用），没配搜索就标注“未查证”。实现：阶段 C 第一次出题前，路由模型给出最多 3 条搜索词，用第一个启用的搜索服务（博查 API、远程 MCP、本地 MCP）各搜一次，结果作为证据放进出题和代填的提示词，并存在该轮问题上显示来源；之后的轮次复用这份证据，不再搜索。搜索失败只记录，不阻断讨论。
+- 已有仓库可以做一次只读扫描，识别出的技术栈预填阶段 C。实现：新建任务时选择文件夹，扫描最多 5000 个文件、6 层目录（跳过 `node_modules`、`.git`、构建产物等，不跟随符号链接），读取根目录附近的依赖清单（package.json、pyproject.toml、requirements.txt、go.mod、Cargo.toml、pom.xml、build.gradle、Gemfile、composer.json、docker-compose、schema.prisma）和标志性文件。识别出的层写成“AI 决定”的决策并注明来源文件，扫描摘要同时提供给分诊、出题、写文档和拆任务。
 
 ```json
 {"key":"storage","value":"postgresql","stage":"tech","source":"recommended","rationale":"在线部署，多用户并发写入","alternatives":["sqlite","mysql"],"depends_on":["scale"],"needs_review":false}
@@ -246,7 +246,9 @@ km0/
 | `agents`、`model_catalog` | Agent 启用与偏好；Agent × 档位 → 模型与单价 |
 | `llm_profiles` | KM0 自己调用的模型（密钥加密存储、结构化输出方式） |
 | `llm_calls` | 调用日志：用途、token、成本、耗时、错误 |
-| `search_services`、`preferences` | 查证搜索服务；界面偏好与角色分配 |
+| `search_services`、`preferences` | 查证搜索服务（密钥加密）；界面偏好与角色分配 |
+
+`question_rounds.research_json` 保存技术选型轮次的查证结果，`projects.repo_scan_json` 保存仓库扫描结果。
 
 IPC 通道定义在 `packages/shared/src/ipc.ts`，主进程按 zod schema 校验参数后再调用处理函数。主进程向界面推送的事件（目前只有文档生成进度）走单独的 `km0:event` 通道，约每 80 ms 合并一次：
 
@@ -258,12 +260,14 @@ IPC 通道定义在 `packages/shared/src/ipc.ts`，主进程按 zod schema 校�
 | `document.*` | 读取某个版本、生成（流式，进度通过 `document.progress` 事件推送）、保存小节、按小节修订、恢复旧版本 |
 | `routing.*` / `task.override` | 读取路由结果；拆任务并路由；覆盖或恢复某个任务的档位、Agent、模型 |
 | `handoff.build` | 按当前路由生成交接包（zip 在界面里打包下载） |
-| `settings.*` | 模型配置与连接测试、角色、Agent 启用与排序和模型目录、偏好 |
-| `repo.scan` | 只读扫描本地仓库 |
+| `settings.*` | 模型配置与连接测试、角色、Agent 启用与排序和模型目录、搜索服务与测试、偏好、配置导入导出 |
+| `repo.pick` / `repo.scan` | 选择文件夹；只读扫描本地仓库 |
 
 ## 界面设计
 
-三栏布局：左栏是项目列表；中间工作区按阶段切换（分诊卡、阶段进度与问题卡、文档页、路由表、交接面板）；右栏是决策账本。设置页包含模型与角色、Agent、模型目录、搜索服务、通用、关于。
+三栏布局：左栏是项目列表；中间工作区按阶段切换（分诊卡、阶段进度与问题卡、文档页、路由表、交接面板）；右栏是决策账本。设置页包含模型与角色、Agent（含模型目录）、搜索服务、通用（含配置导入导出）、关于。
+
+配置导入导出：导出为一个 `km0-config` JSON 文件，包含模型配置、角色（按名称引用）、Agent 启用顺序与模型目录、搜索服务和界面偏好；默认不含密钥，勾选后以明文写入。导入按名称合并，已有的更新、没有的新建，不删除任何配置，文件里没有密钥时保留本机已存的密钥。
 
 ## 分阶段实施计划
 

@@ -224,4 +224,12 @@ INSERT INTO model_catalog (agent_id, tier, model_id) VALUES
   ('claude_code', 'T3', 'claude-opus-5-5');
 `,
   },
+  {
+    id: 5,
+    name: "research_and_repo_scan",
+    sql: `
+ALTER TABLE question_rounds ADD COLUMN research_json TEXT;
+ALTER TABLE projects ADD COLUMN repo_scan_json TEXT;
+`,
+  },
 ];

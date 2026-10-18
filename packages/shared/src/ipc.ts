@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ConfigBundle, ExportConfigInput, ImportSummary } from "./config";
 import {
   AdvanceStageInput,
   AnswerRoundInput,
@@ -20,6 +21,8 @@ import { ProjectPath, ProjectSummary } from "./domain";
 import type { AppErrorShape } from "./errors";
 import { HandoffPackage } from "./handoff";
 import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
+import { RepoScan, ScanRepoInput } from "./repo";
+import { SearchService, SearchServiceInput, SearchTestResult } from "./research";
 import { AgentConfig, MoveAgentInput, OverrideTaskInput, RoutingPlan, UpdateAgentInput } from "./routing";
 import { AppInfo, Preferences } from "./settings";
 
@@ -53,6 +56,17 @@ export const ipcContract = {
   "settings.agents.list": channel(z.void(), z.array(AgentConfig)),
   "settings.agents.update": channel(UpdateAgentInput, z.array(AgentConfig)),
   "settings.agents.move": channel(MoveAgentInput, z.array(AgentConfig)),
+  "settings.search.list": channel(z.void(), z.array(SearchService)),
+  "settings.search.create": channel(SearchServiceInput, SearchService),
+  "settings.search.update": channel(Id.extend({ data: SearchServiceInput }), SearchService),
+  "settings.search.delete": channel(Id, z.void()),
+  "settings.search.test": channel(Id.extend({ query: z.string().trim().min(1).max(200) }), SearchTestResult),
+  "settings.export": channel(ExportConfigInput, ConfigBundle),
+  "settings.import": channel(ConfigBundle, ImportSummary),
+
+  /** Ask the user for a folder; null when they cancel. Desktop: a path. Web: a label for the picked folder. */
+  "repo.pick": channel(z.void(), z.string().nullable()),
+  "repo.scan": channel(ScanRepoInput, RepoScan),
 
   "project.list": channel(z.void(), z.array(ProjectSummary)),
   "project.create": channel(CreateProjectInput, ProjectDetail),

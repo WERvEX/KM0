@@ -8,6 +8,7 @@ import type {
   ProjectPath,
   Question,
   QuestionOption,
+  Research,
   Triage,
 } from "@km0/shared";
 import type { z } from "zod";
@@ -93,6 +94,8 @@ export interface RoundContext {
   decisions: Decision[];
   roundNo: number;
   mode: RoundPromptInput["mode"];
+  repoSummary?: string | null;
+  research?: Research | null;
 }
 
 export interface RoundPlan {
@@ -123,6 +126,8 @@ export async function planRound(llm: DiscussionLlm, ctx: RoundContext): Promise<
     targetKeys,
     maxQuestions: MAX_QUESTIONS_PER_ROUND,
     mode: ctx.mode,
+    repoSummary: ctx.repoSummary ?? null,
+    research: ctx.research ?? null,
   };
   const output = await llm.structured("router", {
     purpose: `questions.${ctx.stage}`,
@@ -304,6 +309,8 @@ export async function fillDecisions(
     triage: ctx.triage,
     decisions: ctx.decisions,
     targetKeys: keys,
+    repoSummary: ctx.repoSummary ?? null,
+    research: ctx.research ?? null,
   };
   const output = await llm.structured("planner", {
     purpose: `fill.${ctx.stage}`,

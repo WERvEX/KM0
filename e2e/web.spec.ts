@@ -137,3 +137,82 @@ test("the real-model build asks for a model first and offers the simulated one",
   await page.getByRole("tab", { name: "关于" }).click();
   await expect(page.getByText("IndexedDB · km0-web", { exact: true })).toBeVisible();
 });
+
+test("technology questions are checked with a search service, which can be exported and imported", async ({ page }) => {
+  // A remote MCP search server, answered in-page: initialize, then one result per search.
+  const searches: string[] = [];
+  await page.route("https://search.example.com/mcp", async (route) => {
+    const request = route.request();
+    if (request.method() !== "POST") return route.fulfill({ status: 405 });
+    const message = request.postDataJSON() as { id?: number; method: string; params?: { arguments?: { q?: string } } };
+    if (message.id === undefined) return route.fulfill({ status: 202 });
+    const reply = (result: unknown) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ jsonrpc: "2.0", id: message.id, result }),
+      });
+    if (message.method === "initialize") {
+      return reply({
+        protocolVersion: "2025-06-18",
+        capabilities: { tools: {} },
+        serverInfo: { name: "fake-search", version: "1.0.0" },
+      });
+    }
+    if (message.method === "tools/call") {
+      const query = message.params?.arguments?.q ?? "";
+      searches.push(query);
+      return reply({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify([
+              { title: `关于 ${query}`, url: "https://docs.example.com/a", snippet: "最新稳定版" },
+            ]),
+          },
+        ],
+      });
+    }
+    return reply({});
+  });
+
+  await page.goto("./?simulated=1#/");
+  await page.getByRole("link", { name: "设置" }).click();
+  await page.getByRole("tab", { name: "搜索服务" }).click();
+  await page.getByRole("button", { name: "添加搜索服务" }).click();
+  const form = page.getByRole("dialog");
+  await form.getByLabel("名称").fill("测试搜索");
+  await form.getByLabel("类型").selectOption("mcp_http");
+  await form.getByLabel("服务器地址").fill("https://search.example.com/mcp");
+  await form.getByLabel("搜索工具名").fill("web_search");
+  await form.getByLabel("查询参数名").fill("q");
+  await form.getByLabel("请求头（可选）").fill("Authorization=Bearer test");
+  await form.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByText("用于查证")).toBeVisible();
+  await page.getByRole("button", { name: "测试" }).click();
+  await expect(page.getByText(/可用 · 1 条结果/)).toBeVisible();
+  await page.screenshot({ path: "test-results/screenshots/web-search.png", fullPage: true });
+
+  // Export the settings, then import them back: the service is matched by name and updated.
+  await page.getByRole("tab", { name: "通用" }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "导出配置" }).click();
+  const file = await (await download).path();
+  await page.getByLabel("导入配置").setInputFiles(file);
+  await expect(page.getByText(/导入完成：.*更新 1 个搜索服务/)).toBeVisible();
+
+  // A full-path project reaches the technology stage with its options checked.
+  await page.getByRole("link", { name: "新建任务" }).click();
+  await page.getByRole("textbox", { name: "从一句话开始" }).fill("从零做一个团队需求管理平台");
+  await page.getByRole("button", { name: "开始分诊" }).click();
+  await expect(page.getByText("A 定位与规模 · 第 1 轮")).toBeVisible();
+  await page.getByRole("button", { name: "跳过剩余问题，进入下一阶段" }).click();
+  await expect(page.getByText("B 产品需求 · 第 1 轮")).toBeVisible();
+  await page.getByRole("button", { name: "跳过剩余问题，进入下一阶段" }).click();
+  await expect(page.getByText("C 技术选型 · 第 1 轮")).toBeVisible();
+  await expect(page.getByText("已查证 · 测试搜索")).toBeVisible();
+  expect(searches.length).toBeGreaterThan(0);
+  expect(searches.length).toBeLessThanOrEqual(3);
+  await page.getByText("已查证 · 测试搜索").click();
+  await expect(page.getByRole("link", { name: /^关于 / }).first()).toBeVisible();
+  await page.screenshot({ path: "test-results/screenshots/web-research.png", fullPage: true });
+});

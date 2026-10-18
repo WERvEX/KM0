@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { type LaunchedApp, launchApp } from "./launch";
 
@@ -123,4 +126,32 @@ test("a full-path task goes from one sentence to a hand-off package, then is ren
   await page.getByRole("dialog").getByRole("button", { name: "删除" }).click();
   await expect(sidebar.getByText("内部知识库", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("从一句话开始");
+});
+
+test("a linked repository is scanned read-only and its stack fills the technology stage", async () => {
+  const repo = mkdtempSync(join(tmpdir(), "km0-linked-"));
+  writeFileSync(join(repo, "package.json"), JSON.stringify({ dependencies: { react: "19", express: "5", pg: "8" } }));
+  // Stand in for the native folder dialog.
+  await launched.app.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog;
+  }, repo);
+
+  await page.getByRole("link", { name: /新建任务/ }).click();
+  await page.getByRole("button", { name: "关联本地仓库（可选）" }).click();
+  await expect(page.getByText("识别到：React, Express, PostgreSQL")).toBeVisible();
+  await page.getByRole("textbox", { name: "从一句话开始" }).fill("从零做一个团队需求管理平台");
+  await page.getByRole("button", { name: "开始分诊" }).click();
+  await expect(page.getByText(/仓库：km0-linked-/)).toBeVisible();
+
+  await page.getByRole("button", { name: "跳过剩余问题，进入下一阶段" }).click();
+  await expect(page.getByText("B 产品需求 · 第 1 轮")).toBeVisible();
+  await page.getByRole("button", { name: "跳过剩余问题，进入下一阶段" }).click();
+  await expect(page.getByText("C 技术选型 · 第 1 轮")).toBeVisible();
+  // No search service is set up, so the round says its options are unverified.
+  await expect(page.getByText(/未查证：没有启用搜索服务/)).toBeVisible();
+  const ledger = page.getByRole("complementary", { name: "决策账本" });
+  await expect(ledger.getByText("Express", { exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "关于「deployment」，你倾向哪种方案？" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "关于「backend」，你倾向哪种方案？" })).toHaveCount(0);
+  await page.screenshot({ path: "test-results/screenshots/repo-tech.png", fullPage: true });
 });

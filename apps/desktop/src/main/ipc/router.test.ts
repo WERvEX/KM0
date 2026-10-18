@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import { openDatabase } from "../db/database";
 import { createHandlers } from "../handlers";
 import { AgentStore } from "../services/agent-store";
+import { ConfigService } from "../services/config-service";
 import { DocumentService } from "../services/document-service";
 import { HandoffService } from "../services/handoff-service";
 import { ProjectService } from "../services/project-service";
 import { RoutingService } from "../services/routing-service";
+import { SearchStore } from "../services/search-store";
 import { PlainSecretStore } from "../services/secrets";
 import { SettingsStore } from "../services/settings-store";
 import { createDispatcher } from "./router";
@@ -21,6 +23,8 @@ function setup(provider = new FakeProvider([])) {
     () => "zh-CN",
     new AgentStore(db),
   );
+  const agents = new AgentStore(db);
+  const search = new SearchStore(db, new PlainSecretStore(), {});
   const dispatch = createDispatcher(
     createHandlers({
       settings,
@@ -37,7 +41,15 @@ function setup(provider = new FakeProvider([])) {
       ),
       routing,
       handoff: new HandoffService(db, routing, () => "zh-CN"),
-      agents: new AgentStore(db),
+      agents,
+      search,
+      config: new ConfigService(settings, agents, search),
+      repo: {
+        pick: async () => null,
+        open: async () => {
+          throw new Error("no repositories in this test");
+        },
+      },
       gateway,
       appInfo: () => ({
         name: "KM0",

@@ -1,6 +1,6 @@
 import type { ProjectDetail, ProjectPath } from "@km0/shared";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, Loader2, RotateCcw } from "lucide-react";
+import { CheckCircle2, FolderGit2, Loader2, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
@@ -187,6 +187,20 @@ function Header({
           </span>
           <span className="text-muted">{t(`project.pathHint.${detail.path ?? "full"}`)}</span>
           {triage.reasons.length > 0 ? <span className="text-muted">· {triage.reasons.join("；")}</span> : null}
+        </div>
+      ) : null}
+      {detail.repoScan ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted" title={detail.repoScan.root}>
+          <FolderGit2 className="size-4" />
+          <span>{t("project.repo", { name: detail.repoScan.name })}</span>
+          {detail.repoScan.stack.length > 0 ? (
+            <span>
+              ·{" "}
+              {t("workspace.repo.detected", {
+                value: detail.repoScan.stack.map((item) => item.name).join(", "),
+              })}
+            </span>
+          ) : null}
         </div>
       ) : null}
       <StageStepper detail={detail} />

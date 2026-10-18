@@ -16,7 +16,7 @@ import { type Database, nowIso, transaction } from "../db/sql";
 import type { AgentStore } from "./agent-store";
 import { latestDocument } from "./document-service";
 import { KeyedLock } from "./lock";
-import { readDecisions } from "./project-service";
+import { describeProject, readDecisions } from "./project-service";
 
 interface ProjectRow {
   title: string;
@@ -24,6 +24,7 @@ interface ProjectRow {
   path: ProjectPath | null;
   stage: ProjectStage;
   triage_json: string | null;
+  repo_scan_json: string | null;
 }
 
 interface TaskRow {
@@ -111,7 +112,7 @@ export class RoutingService {
         language: this.language(),
         path,
         title: project.title,
-        description: project.description,
+        description: describeProject(project.description, project.repo_scan_json),
         triage: project.triage_json ? Triage.parse(JSON.parse(project.triage_json)) : null,
         decisions: readDecisions(this.db, projectId),
         documents: documents.map(({ kind, doc }) => ({ kind, sections: doc?.sections ?? [] })),
@@ -172,7 +173,7 @@ export class RoutingService {
 
   private project(projectId: number): ProjectRow {
     const row = this.db
-      .prepare("SELECT title, description, path, stage, triage_json FROM projects WHERE id = ?")
+      .prepare("SELECT title, description, path, stage, triage_json, repo_scan_json FROM projects WHERE id = ?")
       .get(projectId) as ProjectRow | undefined;
     if (!row) throw new AppError("not_found", `Project ${projectId} does not exist.`);
     return row;

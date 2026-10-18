@@ -11,6 +11,7 @@ const round: QuestionRound = {
   roundNo: 1,
   review: false,
   status: "open",
+  research: null,
   questions: [
     {
       id: "r1q1",

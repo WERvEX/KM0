@@ -2,10 +2,13 @@ import type { Gateway } from "@km0/core";
 import type { AppInfo } from "@km0/shared";
 import type { Handlers } from "./ipc/router";
 import type { AgentStore } from "./services/agent-store";
+import type { ConfigService } from "./services/config-service";
 import type { DocumentService } from "./services/document-service";
 import type { HandoffService } from "./services/handoff-service";
 import type { ProjectService } from "./services/project-service";
+import { type RepoAccess, scanPath } from "./services/repo-access";
 import type { RoutingService } from "./services/routing-service";
+import type { SearchStore } from "./services/search-store";
 import type { SettingsStore } from "./services/settings-store";
 
 export interface HandlerDeps {
@@ -15,6 +18,9 @@ export interface HandlerDeps {
   routing: RoutingService;
   handoff: HandoffService;
   agents: AgentStore;
+  search: SearchStore;
+  config: ConfigService;
+  repo: RepoAccess;
   gateway: Gateway;
   appInfo: () => AppInfo;
 }
@@ -26,6 +32,9 @@ export function createHandlers({
   routing,
   handoff,
   agents,
+  search,
+  config,
+  repo,
   gateway,
   appInfo,
 }: HandlerDeps): Handlers {
@@ -52,6 +61,16 @@ export function createHandlers({
     "settings.agents.list": () => agents.list(),
     "settings.agents.update": ({ id, enabled, models }) => agents.update(id, enabled, models),
     "settings.agents.move": ({ id, direction }) => agents.move(id, direction),
+    "settings.search.list": () => search.list(),
+    "settings.search.create": (input) => search.create(input),
+    "settings.search.update": ({ id, data }) => search.update(id, data),
+    "settings.search.delete": ({ id }) => search.delete(id),
+    "settings.search.test": ({ id, query }) => search.test(id, query),
+    "settings.export": ({ includeSecrets }) => config.export(includeSecrets),
+    "settings.import": (bundle) => config.import(bundle),
+
+    "repo.pick": () => repo.pick(),
+    "repo.scan": ({ path }) => scanPath(repo, path),
 
     "project.list": () => projects.list(),
     "project.create": ({ description, repoPath }) => projects.create(description, repoPath),

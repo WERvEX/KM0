@@ -76,15 +76,17 @@ function listedKeys(prompt: string, heading: string): string[] {
 
 function simulate(purpose: string, prompt: string): unknown {
   if (purpose === "triage") {
+    // A linked repository's summary follows the description; the title comes from the description alone.
+    const description = prompt.trim().split("\n")[0] ?? "";
     const text = prompt.toLowerCase();
     const small = /修复|错别字|typo|fix|改个|按钮/.test(text);
     const big = /新项目|从零|平台|系统|new app|platform/.test(text);
     return {
-      title: prompt.trim().slice(0, 20),
+      title: description.slice(0, 20),
       task_type: small ? "bugfix" : big ? "new_project" : "feature",
       complexity: small ? "S" : big ? "L" : "M",
       has_codebase: !big,
-      summary: prompt.trim().slice(0, 60),
+      summary: description.slice(0, 60),
       reasons: [small ? "改动集中在一处" : big ? "需要从零搭建多个模块" : "涉及几个文件的功能改动"],
     };
   }
@@ -112,6 +114,16 @@ function simulate(purpose: string, prompt: string): unknown {
         value: `${key}（AI 决定）`,
         rationale: "按当前决策选择最简单可行的方案",
       })),
+    };
+  }
+  if (purpose === "research.queries") {
+    const keys = /^Technology keys to settle: (.*)$/m.exec(prompt)?.[1] ?? "";
+    return {
+      queries: keys
+        .split(", ")
+        .filter((key) => key && key !== "(none)")
+        .slice(0, 2)
+        .map((key) => `${key} 选型 最新稳定版本`),
     };
   }
   if (purpose === "breakdown") return simulateBreakdown(prompt);

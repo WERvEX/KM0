@@ -1,18 +1,22 @@
 import { join } from "node:path";
 import { createGateway, createSimulatedLlm } from "@km0/core";
 import { type EmitEvent, IPC_EVENT, IPC_INVOKE } from "@km0/shared";
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { getDefaultEnvironment, StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import log from "electron-log/main";
 import { openDatabase } from "./db/database";
 import { ElectronSecretStore } from "./electron-secrets";
 import { createHandlers } from "./handlers";
 import { createDispatcher } from "./ipc/router";
+import { nodeRepoAccess } from "./node-repo-access";
 import { AgentStore } from "./services/agent-store";
+import { ConfigService } from "./services/config-service";
 import { DocumentService } from "./services/document-service";
 import { HandoffService } from "./services/handoff-service";
 import { llmPort } from "./services/llm-port";
 import { ProjectService } from "./services/project-service";
 import { RoutingService } from "./services/routing-service";
+import { SearchStore } from "./services/search-store";
 import { SettingsStore } from "./services/settings-store";
 
 const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL;
@@ -100,9 +104,20 @@ void app.whenReady().then(() => {
     return app.getLocale().toLowerCase().startsWith("zh") ? "zh-CN" : "en";
   };
   const emit: EmitEvent = (event, payload) => mainWindow?.webContents.send(IPC_EVENT, { event, payload });
-  const projects = new ProjectService(db, llmFor, language);
+  const search = new SearchStore(db, secrets, {
+    // Local MCP servers inherit a minimal safe environment plus the variables the user configured.
+    stdio: (command, args, env) =>
+      new StdioClientTransport({ command, args, env: { ...getDefaultEnvironment(), ...env }, stderr: "ignore" }),
+  });
+  const repo = nodeRepoAccess(async () => {
+    const options = { title: "KM0", properties: ["openDirectory" as const] };
+    const result = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options);
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+  });
+  const projects = new ProjectService(db, llmFor, language, { searchPort: () => search.activePort(), repo });
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db);
+  const config = new ConfigService(settings, agents, search);
   const routing = new RoutingService(db, llmFor, language, agents);
   const handoff = new HandoffService(db, routing, language);
 
@@ -114,6 +129,9 @@ void app.whenReady().then(() => {
       routing,
       handoff,
       agents,
+      search,
+      config,
+      repo,
       gateway,
       appInfo: () => ({
         name: "KM0",

@@ -3,6 +3,7 @@ import { AppError, type ProjectDetail } from "@km0/shared";
 import { describe, expect, it } from "vitest";
 import { openDatabase } from "../db/database";
 import { ProjectService } from "./project-service";
+import type { RepoAccess } from "./repo-access";
 
 function setup(llm: DiscussionLlm = createSimulatedLlm()) {
   const db = openDatabase(":memory:");
@@ -212,5 +213,95 @@ describe("path changes and failures", () => {
     const { service } = setup(failing);
     await expect(service.create("修复登录页按钮上的错别字", null)).rejects.toMatchObject({ kind: "config" });
     expect(service.list()).toEqual([]);
+  });
+});
+
+describe("research and linked repositories", () => {
+  const repoAccess = (files: Record<string, string>): RepoAccess => ({
+    pick: async () => "/work/ledger",
+    open: async () => ({
+      name: "ledger",
+      fs: {
+        list: async (dir) =>
+          dir === "" ? Object.keys(files).map((name) => ({ name, dir: false })) : Promise.reject(new Error("none")),
+        read: async (file) => files[file] ?? null,
+      },
+    }),
+  });
+
+  it("checks the tech options once and shows the evidence on the round", async () => {
+    const queries: string[] = [];
+    const searchPort = () => ({
+      name: "Bocha",
+      search: async (query: string) => {
+        queries.push(query);
+        return [{ title: "Result", url: "https://example.com", snippet: "current" }];
+      },
+    });
+    const db = openDatabase(":memory:");
+    const service = new ProjectService(
+      db,
+      () => createSimulatedLlm(),
+      () => "zh-CN",
+      { searchPort },
+    );
+    let project = await service.create("从零做一个团队需求管理平台", null);
+    project = await service.advance(project.id, true);
+    expect(project.openRound?.research ?? null).toBeNull();
+    project = await service.advance(project.id, true);
+    expect(project.stage).toBe("tech");
+    expect(project.openRound?.research).toMatchObject({ status: "verified", service: "Bocha" });
+    const searched = queries.length;
+    expect(searched).toBeGreaterThan(0);
+    expect(searched).toBeLessThanOrEqual(3);
+
+    // The next round reuses the evidence instead of searching again.
+    const { roundId, answers } = recommended(project);
+    project = await service.answer(project.id, roundId, answers);
+    if (!project.openRound) project = await service.askMore(project.id);
+    expect(project.openRound?.research).toMatchObject({ status: "verified" });
+    expect(queries.length).toBe(searched);
+  });
+
+  it("marks the tech stage unverified without a search service", async () => {
+    const { service } = setup();
+    let project = await service.create("从零做一个团队需求管理平台", null);
+    project = await service.advance(project.id, true);
+    project = await service.advance(project.id, true);
+    expect(project.openRound?.research).toEqual({ status: "unverified", service: null, findings: [] });
+  });
+
+  it("scans a linked repository and keeps its stack in the tech stage", async () => {
+    const db = openDatabase(":memory:");
+    const repo = repoAccess({
+      "package.json": JSON.stringify({ dependencies: { react: "19", express: "5", pg: "8" } }),
+    });
+    const service = new ProjectService(
+      db,
+      () => createSimulatedLlm(),
+      () => "zh-CN",
+      { repo },
+    );
+    let project = await service.create("从零做一个团队需求管理平台", "/work/ledger");
+    expect(project.repoPath).toBe("/work/ledger");
+    expect(project.repoScan?.stack.map((item) => item.name)).toEqual(["React", "Express", "PostgreSQL"]);
+    expect(project.triage?.hasCodebase).toBe(true);
+    expect(project.decisions.filter((decision) => decision.stage === "tech").map((d) => [d.key, d.value.text])).toEqual(
+      [
+        ["frontend", "React"],
+        ["backend", "Express"],
+        ["storage", "PostgreSQL"],
+      ],
+    );
+
+    project = await service.advance(project.id, true);
+    project = await service.advance(project.id, true);
+    // Of the required layers, only the one the scan could not see is asked about.
+    expect(project.openRound?.questions.map((question) => question.decisionKey)).toEqual(["deployment", "auth_impl"]);
+  });
+
+  it("refuses a repository it cannot open", async () => {
+    const { service } = setup();
+    await expect(service.create("给现有的博客加上评论功能", "/nowhere")).rejects.toMatchObject({ kind: "config" });
   });
 });
