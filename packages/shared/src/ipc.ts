@@ -18,6 +18,7 @@ import {
 } from "./documents";
 import { ProjectPath, ProjectSummary } from "./domain";
 import type { AppErrorShape } from "./errors";
+import { HandoffPackage } from "./handoff";
 import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
 import { AgentConfig, MoveAgentInput, OverrideTaskInput, RoutingPlan, UpdateAgentInput } from "./routing";
 import { AppInfo, Preferences } from "./settings";
@@ -76,6 +77,8 @@ export const ipcContract = {
   "routing.get": channel(z.object({ projectId: z.number().int().positive() }), RoutingPlan.nullable()),
   "routing.plan": channel(z.object({ projectId: z.number().int().positive() }), RoutingPlan),
   "task.override": channel(OverrideTaskInput, RoutingPlan),
+
+  "handoff.build": channel(z.object({ projectId: z.number().int().positive() }), HandoffPackage),
 } as const;
 
 export type IpcContract = typeof ipcContract;

@@ -3,6 +3,7 @@ import type { AppInfo } from "@km0/shared";
 import type { Handlers } from "./ipc/router";
 import type { AgentStore } from "./services/agent-store";
 import type { DocumentService } from "./services/document-service";
+import type { HandoffService } from "./services/handoff-service";
 import type { ProjectService } from "./services/project-service";
 import type { RoutingService } from "./services/routing-service";
 import type { SettingsStore } from "./services/settings-store";
@@ -12,6 +13,7 @@ export interface HandlerDeps {
   projects: ProjectService;
   documents: DocumentService;
   routing: RoutingService;
+  handoff: HandoffService;
   agents: AgentStore;
   gateway: Gateway;
   appInfo: () => AppInfo;
@@ -22,6 +24,7 @@ export function createHandlers({
   projects,
   documents,
   routing,
+  handoff,
   agents,
   gateway,
   appInfo,
@@ -75,5 +78,7 @@ export function createHandlers({
     "routing.get": ({ projectId }) => routing.get(projectId),
     "routing.plan": ({ projectId }) => routing.plan(projectId),
     "task.override": ({ projectId, taskId, override }) => routing.override(projectId, taskId, override),
+
+    "handoff.build": ({ projectId }) => handoff.build(projectId),
   };
 }

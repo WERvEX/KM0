@@ -151,25 +151,34 @@ KM0 是编码 Agent 的上游：把一句任务描述变成谈清楚的需求、
 
 第一期只生成和导出交接包，不替用户启动 Agent，也不写入目标仓库。
 
-每个交接包包含：任务目标与 EARS 验收标准；任务引用到的决策；PRD 和技术方案中的相关小节摘录；文件提示、测试命令、约束；上游任务产出说明；失败升级说明。
+交接包是一个 zip，解压到目标代码库根目录后全部文件都在 `km0/` 文件夹里，不会覆盖代码库自己的文件：
 
-| Agent | 项目说明文件 | 启动方式 | 接口状态 |
+```
+km0/README.md          使用说明：任务表（档位、Agent、模型、启动命令）和各 Agent 的用法
+km0/docs/PRD.md        最新版本的文档（轻量通道是 BRIEF.md，快速通道没有）
+km0/docs/TECH_DESIGN.md
+km0/tasks.json         机器可读的任务清单
+km0/tasks/01.md …      每个任务一份自包含的说明
+km0/agents/CLAUDE.md   各 Agent 的项目说明，按 README 放到对应位置；已有同名文件时合并
+km0/agents/AGENTS.md
+km0/agents/km0.mdc
+```
+
+每份任务说明包含：目标与 EARS 验收标准；可能涉及的文件；前置任务；任务引用的决策（附理由）；所引用文档小节的摘录；约束（范围、查证、测试、按风险类型追加的注意事项）；完成后的自查要求；失败升级说明（整个任务升一档重做，不在中途换模型；T3 失败则交给人）。
+
+上下文裁剪：只放任务引用的决策和小节；任务没有引用时，决策退回到交付形态和技术选型，小节退回到架构与模块（文档类任务退回到背景与功能需求）。每个小节最多 4000 字，整份摘录最多 12000 字，超出部分截断并指向完整文档。
+
+启动命令统一让 Agent 自己读任务文件（“阅读 km0/tasks/01.md 并完成其中描述的任务”），避免在命令行里塞长文本，也不依赖具体的 shell。
+
+| Agent | 项目说明文件 | 启动方式 | 核实情况（2026-10） |
 | --- | --- | --- | --- |
-| Claude Code | `CLAUDE.md` 片段 | `claude -p "<任务提示词>" --model <模型 ID>` | 明确 |
-| Codex | `AGENTS.md` 片段 | `codex exec -m <模型 ID> "<任务提示词>"` | 明确 |
-| Cursor | 项目规则文件 | 在 Cursor 对话中粘贴；有命令行入口则一并给出 | 待核实 |
-| Pi | 待核实 | `pi` 命令，参数待核实 | 待核实 |
-| DSH | 待核实 | 在 `dsh web` 中粘贴 | 0.x 候选版，待核实 |
-| ZCode | 待核实 | 在桌面端粘贴；档位映射到 GLM 系列 | 待核实 |
-| 通用 | 无 | 单个 Markdown 提示词 | 兜底 |
-
-```
-docs/PRD.md
-docs/TECH_DESIGN.md
-tasks.json
-AGENTS.md / CLAUDE.md
-handoff/task-01.md …
-```
+| Claude Code | `CLAUDE.md`（没有 CLAUDE.md 时也读 AGENTS.md） | `claude --model <模型> -p "<提示>"` | 官方文档 |
+| Codex | `AGENTS.md` | `codex exec -m <模型> -s workspace-write "<提示>"` | 官方文档 |
+| Cursor | `.cursor/rules/km0.mdc`（`alwaysApply: true`）；也读 AGENTS.md | `agent -p "<提示>" --model <模型>`，或在编辑器中粘贴 | 官方文档 |
+| Pi | `AGENTS.md`（也读 CLAUDE.md） | `pi -p "<提示>" --model <provider/模型>`；包名 `@earendil-works/pi-coding-agent` | 仓库文档 |
+| DSH（DeepSeek Harness） | `AGENTS.md`（也读 CLAUDE.md） | `npx @deepseek-ai/dsh headless "<提示>"`，或 `dsh web` 中粘贴；没有模型参数，在设置中选 | 仓库源码；0.x 候选版 |
+| ZCode | `AGENTS.md` | 桌面端粘贴，或 `zcode --prompt "<提示>" --mode build`（不写 `--mode` 默认 yolo）；模型在设置中选 | 仓库源码 |
+| 通用 | 无 | 粘贴任务文件 | 兜底 |
 
 第二期：直接拉起本地 Agent 并回写状态、MCP 服务器、执行后对照验收标准检查、经确认后写入目标仓库。
 
@@ -233,7 +242,7 @@ km0/
 | `documents` | PRD、技术方案、精简版的各个版本；每版存渲染好的 Markdown 和各小节（正文、是否手动编辑、写作时依据的决策值） |
 | `tasks` | 任务、特征、依赖、人工覆盖（档位、Agent、成本读取时计算） |
 | `routing_plans` | 每个项目最近一次拆解所依据的文档版本 |
-| `handoffs` | 生成过的交接包 |
+| `handoffs` | 生成过的交接包：任务、Agent、文件清单 |
 | `agents`、`model_catalog` | Agent 启用与偏好；Agent × 档位 → 模型与单价 |
 | `llm_profiles` | KM0 自己调用的模型（密钥加密存储、结构化输出方式） |
 | `llm_calls` | 调用日志：用途、token、成本、耗时、错误 |
@@ -248,7 +257,7 @@ IPC 通道定义在 `packages/shared/src/ipc.ts`，主进程按 zod schema 校�
 | `decision.update` | 回改决策，返回需复核的内容 |
 | `document.*` | 读取某个版本、生成（流式，进度通过 `document.progress` 事件推送）、保存小节、按小节修订、恢复旧版本 |
 | `routing.*` / `task.override` | 读取路由结果；拆任务并路由；覆盖或恢复某个任务的档位、Agent、模型 |
-| `handoff.*` | 生成交接包；导出 zip |
+| `handoff.build` | 按当前路由生成交接包（zip 在界面里打包下载） |
 | `settings.*` | 模型配置与连接测试、角色、Agent 启用与排序和模型目录、偏好 |
 | `repo.scan` | 只读扫描本地仓库 |
 

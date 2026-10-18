@@ -20,6 +20,7 @@ import { Input, Select } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { call, errorMessage } from "@/lib/ipc";
 import { useIpcQuery } from "@/lib/queries";
+import { HandoffPanel } from "../handoff/HandoffPanel";
 import { decisionLabel } from "../project/labels";
 import { projectKey } from "../project/useProject";
 import { agentName } from "../settings/AgentsTab";
@@ -123,7 +124,7 @@ export function RoutingPanel({ projectId, blockedReason }: Props) {
         onOverride={(taskId, value) => override.mutate({ taskId, override: value })}
       />
 
-      <p className="text-sm text-muted">{t("routing.nextStep")}</p>
+      <HandoffPanel projectId={projectId} plan={data} />
 
       <Dialog
         open={confirmReplan}

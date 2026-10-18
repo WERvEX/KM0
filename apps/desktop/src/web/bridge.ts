@@ -8,6 +8,7 @@ import { createHandlers } from "../main/handlers";
 import { createDispatcher } from "../main/ipc/router";
 import { AgentStore } from "../main/services/agent-store";
 import { DocumentService } from "../main/services/document-service";
+import { HandoffService } from "../main/services/handoff-service";
 import { llmPort } from "../main/services/llm-port";
 import { ProjectService } from "../main/services/project-service";
 import { RoutingService } from "../main/services/routing-service";
@@ -63,12 +64,14 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db);
   const routing = new RoutingService(db, llmFor, language, agents);
+  const handoff = new HandoffService(db, routing, language);
   const dispatch = createDispatcher(
     createHandlers({
       settings,
       projects,
       documents,
       routing,
+      handoff,
       agents,
       gateway,
       appInfo: () => ({

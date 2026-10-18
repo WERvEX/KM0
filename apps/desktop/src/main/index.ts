@@ -9,6 +9,7 @@ import { createHandlers } from "./handlers";
 import { createDispatcher } from "./ipc/router";
 import { AgentStore } from "./services/agent-store";
 import { DocumentService } from "./services/document-service";
+import { HandoffService } from "./services/handoff-service";
 import { llmPort } from "./services/llm-port";
 import { ProjectService } from "./services/project-service";
 import { RoutingService } from "./services/routing-service";
@@ -103,6 +104,7 @@ void app.whenReady().then(() => {
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db);
   const routing = new RoutingService(db, llmFor, language, agents);
+  const handoff = new HandoffService(db, routing, language);
 
   const dispatch = createDispatcher(
     createHandlers({
@@ -110,6 +112,7 @@ void app.whenReady().then(() => {
       projects,
       documents,
       routing,
+      handoff,
       agents,
       gateway,
       appInfo: () => ({

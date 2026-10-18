@@ -4,6 +4,7 @@ import { openDatabase } from "../db/database";
 import { createHandlers } from "../handlers";
 import { AgentStore } from "../services/agent-store";
 import { DocumentService } from "../services/document-service";
+import { HandoffService } from "../services/handoff-service";
 import { ProjectService } from "../services/project-service";
 import { RoutingService } from "../services/routing-service";
 import { PlainSecretStore } from "../services/secrets";
@@ -14,6 +15,12 @@ function setup(provider = new FakeProvider([])) {
   const db = openDatabase(":memory:");
   const settings = new SettingsStore(db, new PlainSecretStore());
   const gateway = createGateway({ providerFor: () => provider, recordCall: (record) => settings.recordCall(record) });
+  const routing = new RoutingService(
+    db,
+    () => createSimulatedLlm(),
+    () => "zh-CN",
+    new AgentStore(db),
+  );
   const dispatch = createDispatcher(
     createHandlers({
       settings,
@@ -28,12 +35,8 @@ function setup(provider = new FakeProvider([])) {
         () => "zh-CN",
         () => undefined,
       ),
-      routing: new RoutingService(
-        db,
-        () => createSimulatedLlm(),
-        () => "zh-CN",
-        new AgentStore(db),
-      ),
+      routing,
+      handoff: new HandoffService(db, routing, () => "zh-CN"),
       agents: new AgentStore(db),
       gateway,
       appInfo: () => ({

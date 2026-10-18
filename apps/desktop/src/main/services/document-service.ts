@@ -68,9 +68,9 @@ export function latestDocument(
   db: Database,
   projectId: number,
   kind: DocumentKind,
-): { version: number; sections: StoredSection[] } | null {
+): { version: number; markdown: string; sections: StoredSection[] } | null {
   const row = latestRow(db, projectId, kind);
-  return row ? { version: row.version, sections: parseSections(row) } : null;
+  return row ? { version: row.version, markdown: row.content, sections: parseSections(row) } : null;
 }
 
 /** Version and staleness of each document the path produces, for the project page. */

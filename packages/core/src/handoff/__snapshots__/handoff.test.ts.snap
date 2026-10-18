@@ -1,0 +1,263 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`adapters > claude_code renders its instructions and command consistently 1`] = `
+{
+  "command": "claude --model model-x -p "阅读 km0/tasks/01.md 并完成其中描述的任务。"",
+  "commandWithoutModel": "claude -p "Do it."",
+  "howTo": {
+    "en": "Run the command at the repository root (\`-p\` runs non-interactively; drop it for an interactive session). Merge into an existing CLAUDE.md; Claude Code reads AGENTS.md only when there is no CLAUDE.md.",
+    "zh-CN": "在代码库根目录运行表中的命令（\`-p\` 为非交互模式，去掉 \`-p\` 则进入交互会话）。代码库里已有 CLAUDE.md 时，把内容合并进去；Claude Code 只在没有 CLAUDE.md 时才读 AGENTS.md。",
+  },
+  "instructions": {
+    "content": "# 项目
+
+概览
+",
+    "packagedAs": "CLAUDE.md",
+    "target": "CLAUDE.md",
+  },
+}
+`;
+
+exports[`adapters > codex renders its instructions and command consistently 1`] = `
+{
+  "command": "codex exec -m model-x -s workspace-write "阅读 km0/tasks/01.md 并完成其中描述的任务。"",
+  "commandWithoutModel": "codex exec -s workspace-write "Do it."",
+  "howTo": {
+    "en": "Run the command at the repository root (\`codex exec\` runs non-interactively; \`-s workspace-write\` limits edits to this repository). Drop \`exec\` for an interactive session.",
+    "zh-CN": "在代码库根目录运行表中的命令（\`codex exec\` 为非交互模式，\`-s workspace-write\` 只允许改动当前代码库）。去掉 \`exec\` 则进入交互会话。",
+  },
+  "instructions": {
+    "content": "# 项目
+
+概览
+",
+    "packagedAs": "AGENTS.md",
+    "target": "AGENTS.md",
+  },
+}
+`;
+
+exports[`adapters > cursor renders its instructions and command consistently 1`] = `
+{
+  "command": "agent -p "阅读 km0/tasks/01.md 并完成其中描述的任务。" --model model-x",
+  "commandWithoutModel": "agent -p "Do it."",
+  "howTo": {
+    "en": "Run the command with the Cursor CLI (\`agent\`, formerly \`cursor-agent\`), or paste the task file into an agent chat in the editor. Add \`--trust\` to skip the workspace-trust prompt in unattended runs; \`agent models\` lists model IDs.",
+    "zh-CN": "用 Cursor CLI（\`agent\`，旧名 \`cursor-agent\`）运行表中的命令，或在编辑器的 Agent 对话中粘贴任务文件。无人值守运行时可以加 \`--trust\` 跳过工作区信任确认；\`agent models\` 可以查看可用的模型 ID。",
+  },
+  "instructions": {
+    "content": "---
+description: 项目概览，以及如何完成 KM0 任务
+alwaysApply: true
+---
+
+# 项目
+
+概览
+",
+    "packagedAs": "km0.mdc",
+    "target": ".cursor/rules/km0.mdc",
+  },
+}
+`;
+
+exports[`adapters > dsh renders its instructions and command consistently 1`] = `
+{
+  "command": "npx @deepseek-ai/dsh headless "阅读 km0/tasks/01.md 并完成其中描述的任务。"",
+  "commandWithoutModel": "npx @deepseek-ai/dsh headless "Do it."",
+  "howTo": {
+    "en": "DSH (DeepSeek Harness, currently a 0.x release candidate) needs \`DEEPSEEK_API_KEY\`. Run the command for an unattended run, or run \`npx @deepseek-ai/dsh web\` and paste the task file into the web UI (http://127.0.0.1:3080). DSH has no model flag; pick the suggested model in its settings.",
+    "zh-CN": "DSH（DeepSeek Harness，目前是 0.x 候选版）需要 \`DEEPSEEK_API_KEY\`。运行表中的命令无人值守执行，或者运行 \`npx @deepseek-ai/dsh web\` 打开网页界面（http://127.0.0.1:3080）粘贴任务文件。DSH 没有命令行模型参数，请在它的设置里选择表中建议的模型。",
+  },
+  "instructions": {
+    "content": "# 项目
+
+概览
+",
+    "packagedAs": "AGENTS.md",
+    "target": "AGENTS.md",
+  },
+}
+`;
+
+exports[`adapters > generic renders its instructions and command consistently 1`] = `
+{
+  "command": null,
+  "commandWithoutModel": null,
+  "howTo": {
+    "en": "Paste the task file into any coding agent; it is self-contained.",
+    "zh-CN": "把任务文件的内容整段粘贴给任意编码 Agent；它是自包含的。",
+  },
+  "instructions": null,
+}
+`;
+
+exports[`adapters > pi renders its instructions and command consistently 1`] = `
+{
+  "command": "pi -p "阅读 km0/tasks/01.md 并完成其中描述的任务。" --model model-x",
+  "commandWithoutModel": "pi -p "Do it."",
+  "howTo": {
+    "en": "Install \`@earendil-works/pi-coding-agent\`, then run the command (\`-p\` runs non-interactively). Pi names models as \`provider/model-id\`, e.g. \`anthropic/claude-sonnet-5-5\`; \`pi --list-models\` lists them.",
+    "zh-CN": "安装 \`@earendil-works/pi-coding-agent\` 后运行表中的命令（\`-p\` 为非交互模式）。Pi 的模型写作 \`provider/模型 ID\`，例如 \`anthropic/claude-sonnet-5-5\`；\`pi --list-models\` 可以查看。",
+  },
+  "instructions": {
+    "content": "# 项目
+
+概览
+",
+    "packagedAs": "AGENTS.md",
+    "target": "AGENTS.md",
+  },
+}
+`;
+
+exports[`adapters > zcode renders its instructions and command consistently 1`] = `
+{
+  "command": "zcode --prompt "阅读 km0/tasks/01.md 并完成其中描述的任务。" --mode build",
+  "commandWithoutModel": "zcode --prompt "Do it." --mode build",
+  "howTo": {
+    "en": "Paste the task file into the ZCode desktop app, or run the command with its CLI. The command sets \`--mode build\` on purpose: without it the CLI runs in yolo mode and executes tools without asking. Pick the model (GLM series) in ZCode's settings.",
+    "zh-CN": "在 ZCode 桌面端粘贴任务文件，或者用它的命令行运行表中的命令。命令里写明了 \`--mode build\`：不指定时默认是 yolo 模式，工具调用不经确认就会执行。模型在 ZCode 的设置里选择（GLM 系列）。",
+  },
+  "instructions": {
+    "content": "# 项目
+
+概览
+",
+    "packagedAs": "AGENTS.md",
+    "target": "AGENTS.md",
+  },
+}
+`;
+
+exports[`hand-off package > falls back to the stack and architecture, and adds risk rules and escalation for uncited tasks 1`] = `
+"# 任务 02：设计权限
+
+> 由 KM0 生成 · 项目：博客评论 · 档位 T3 · 建议模型 gpt-codex-max
+
+## 目标
+
+目标
+
+## 验收标准
+
+- 当用户提交评论时，系统应当保存并显示它。
+
+## 前置任务
+
+- 任务 01：加评论表 (\`km0/tasks/01.md\`)
+
+这些任务应已完成。开始前先确认它们的产出在代码库中。
+
+## 相关决策
+
+- 交付形态：开源项目
+- 数据存储：SQLite（单机即可）
+- 后端：FastAPI
+
+## 文档摘录
+
+### 技术方案 · 架构概览
+
+单体 FastAPI 应用。
+
+完整文档：\`km0/docs/TECH_DESIGN.md\`
+
+## 约束
+
+- 只做本任务范围内的改动，不要顺手重构无关代码。
+- 不确定的地方先在代码库和文档里查证；仍不确定就停下来说明，不要猜。
+- 这一块还没有测试：为验收标准补上能自动运行的测试。
+- 涉及安全：不要放宽权限检查，不要把密钥写进代码或日志。
+
+## 完成后
+
+- 逐条对照验收标准自查，在回复里写出每条是否满足、怎么验证的。
+- 简要列出改动的文件。
+
+## 失败升级
+
+如果多次尝试后仍不能满足验收标准，就停下来说明卡在哪里，交给人来决定。
+"
+`;
+
+exports[`hand-off package > gives a task only the decisions and sections it cites 1`] = `
+"# 任务 01：加评论表
+
+> 由 KM0 生成 · 项目：博客评论 · 档位 T1 · 建议模型 claude-haiku-5-5
+
+## 目标
+
+目标
+
+## 验收标准
+
+- 当用户提交评论时，系统应当保存并显示它。
+
+## 可能涉及的文件
+
+- \`src/db/schema.ts\`
+
+仅供参考，以代码库实际情况为准。
+
+## 前置任务
+
+无
+
+## 相关决策
+
+- 数据存储：SQLite（单机即可）
+
+## 文档摘录
+
+### 技术方案 · 数据模型
+
+comments 表。
+
+完整文档：\`km0/docs/TECH_DESIGN.md\`
+
+## 约束
+
+- 只做本任务范围内的改动，不要顺手重构无关代码。
+- 不确定的地方先在代码库和文档里查证；仍不确定就停下来说明，不要猜。
+- 运行现有测试，确认没有回归；新增的行为补上测试。
+
+## 完成后
+
+- 逐条对照验收标准自查，在回复里写出每条是否满足、怎么验证的。
+- 简要列出改动的文件。
+
+## 失败升级
+
+如果多次尝试后仍不能满足验收标准，就停下来说明卡在哪里。这个任务会整体升到 T2 重做（当前 T1），不要在中途换模型。
+"
+`;
+
+exports[`hand-off package > writes the README and the instructions in English too 1`] = `
+"# KM0 hand-off package · 博客评论
+
+1. Put the whole \`km0/\` folder at the root of the target repository.
+2. \`km0/agents/\` holds project instructions for each agent; move them where the table says. If the repository already has such a file, merge the content instead of overwriting it.
+3. Then run the tasks below in order, either with the command shown or by pasting the task file into the agent.
+
+| # | Task | Tier | Agent | Model | How to start |
+| --- | --- | --- | --- | --- | --- |
+| 01 | [加评论表](tasks/01.md) | T1 | Claude Code | claude-haiku-5-5 | \`claude --model claude-haiku-5-5 -p "Read km0/tasks/01.md and complete the task it describes."\` |
+| 02 | [设计权限](tasks/02.md) | T3 | Codex | gpt-codex-max | \`codex exec -m gpt-codex-max -s workspace-write "Read km0/tasks/02.md and complete the task it describes."\` |
+
+## Using each agent
+
+### Claude Code
+
+Run the command at the repository root (\`-p\` runs non-interactively; drop it for an interactive session). Merge into an existing CLAUDE.md; Claude Code reads AGENTS.md only when there is no CLAUDE.md.
+
+Project instructions: \`km0/agents/CLAUDE.md\` → move to \`CLAUDE.md\`
+
+### Codex
+
+Run the command at the repository root (\`codex exec\` runs non-interactively; \`-s workspace-write\` limits edits to this repository). Drop \`exec\` for an interactive session.
+
+Project instructions: \`km0/agents/AGENTS.md\` → move to \`AGENTS.md\`
+"
+`;

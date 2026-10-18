@@ -117,6 +117,17 @@ test("tasks are routed by rules, can be overridden, and show the saving once pri
   await page.getByRole("tab", { name: "任务与路由" }).click();
   await expect(page.getByText(/预估成本 \$/)).toBeVisible();
   await expect(page.getByText(/节省约 \d+%/)).toBeVisible();
+
+  // The hand-off package collects a brief per task and downloads as one zip.
+  await page.getByRole("button", { name: "生成交接包" }).click();
+  const files = page.getByRole("navigation", { name: "包内文件" });
+  await expect(files.getByRole("button", { name: "km0/tasks/03.md" })).toBeVisible();
+  await expect(files.getByRole("button", { name: "km0/agents/CLAUDE.md" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /任务 01：搭建项目骨架与说明文档/ })).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下载 zip" }).click();
+  expect((await download).suggestedFilename()).toMatch(/^km0-handoff-\d+\.zip$/);
+  await page.screenshot({ path: "test-results/screenshots/web-handoff.png", fullPage: true });
 });
 
 test("the real-model build asks for a model first and offers the simulated one", async ({ page }) => {

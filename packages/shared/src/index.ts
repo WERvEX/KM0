@@ -2,6 +2,7 @@ export * from "./discussion";
 export * from "./documents";
 export * from "./domain";
 export * from "./errors";
+export * from "./handoff";
 export * from "./ipc";
 export * from "./llm";
 export * from "./routing";
