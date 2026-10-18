@@ -63,6 +63,16 @@ function parseSections(row: DocumentRow): StoredSection[] {
   return StoredSections.parse(JSON.parse(row.sections_json));
 }
 
+/** The latest version of a document with its sections, if it has been written. */
+export function latestDocument(
+  db: Database,
+  projectId: number,
+  kind: DocumentKind,
+): { version: number; sections: StoredSection[] } | null {
+  const row = latestRow(db, projectId, kind);
+  return row ? { version: row.version, sections: parseSections(row) } : null;
+}
+
 /** Version and staleness of each document the path produces, for the project page. */
 export function documentSummaries(
   db: Database,

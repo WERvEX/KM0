@@ -5,13 +5,14 @@ import {
   type DocumentView,
   splitSections,
 } from "@km0/shared";
-import { AlertTriangle, Copy, Download, FileText, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, Copy, Download, FileText, ListChecks, Loader2, RefreshCw } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
+import { RoutingPanel } from "../routing/RoutingPanel";
 import { Markdown } from "./Markdown";
 import { SectionCard } from "./SectionCard";
 import { type DocumentActions, useDocument } from "./useDocuments";
@@ -28,11 +29,12 @@ function useDocTitle() {
   return (kind: DocumentKind) => DOCUMENT_TEMPLATES[kind].title[i18n.language === "en" ? "en" : "zh-CN"];
 }
 
-/** The documents of a project whose discussion is complete, one tab per document. */
+/** What a finished discussion produces: one tab per document, then the routed tasks. */
 export function DocumentsPanel({ projectId, summaries, actions, streams }: PanelProps) {
   const { t } = useTranslation();
   const docTitle = useDocTitle();
-  const [active, setActive] = useState<DocumentKind>(summaries[0]?.kind ?? "prd");
+  const [active, setActive] = useState<DocumentKind | "routing">(summaries[0]?.kind ?? "prd");
+  const documentsMissing = summaries.some((summary) => summary.version === null);
   const missing = summaries.filter((summary) => summary.version === null && !actions.pending[summary.kind]);
 
   return (
@@ -61,6 +63,19 @@ export function DocumentsPanel({ projectId, summaries, actions, streams }: Panel
               ) : null}
             </button>
           ))}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={active === "routing"}
+            className={cn(
+              "-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm",
+              active === "routing" ? "border-accent font-medium" : "border-transparent text-muted hover:text-fg",
+            )}
+            onClick={() => setActive("routing")}
+          >
+            <ListChecks className="size-4" />
+            {t("routing.tab")}
+          </button>
         </div>
         {summaries.length > 1 && missing.length > 1 ? (
           <Button
@@ -85,7 +100,9 @@ export function DocumentsPanel({ projectId, summaries, actions, streams }: Panel
           />
         ) : null,
       )}
-      <p className="text-sm text-muted">{t("documents.nextStep")}</p>
+      {active === "routing" ? (
+        <RoutingPanel projectId={projectId} blockedReason={documentsMissing ? t("routing.needDocuments") : null} />
+      ) : null}
     </section>
   );
 }

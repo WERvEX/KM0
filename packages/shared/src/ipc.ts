@@ -19,6 +19,7 @@ import {
 import { ProjectPath, ProjectSummary } from "./domain";
 import type { AppErrorShape } from "./errors";
 import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
+import { AgentConfig, MoveAgentInput, OverrideTaskInput, RoutingPlan, UpdateAgentInput } from "./routing";
 import { AppInfo, Preferences } from "./settings";
 
 interface ChannelSpec<I extends z.ZodType, O extends z.ZodType> {
@@ -48,6 +49,9 @@ export const ipcContract = {
   "settings.roles.set": channel(RoleAssignment, RoleAssignment),
   "settings.preferences.get": channel(z.void(), Preferences),
   "settings.preferences.set": channel(Preferences.partial(), Preferences),
+  "settings.agents.list": channel(z.void(), z.array(AgentConfig)),
+  "settings.agents.update": channel(UpdateAgentInput, z.array(AgentConfig)),
+  "settings.agents.move": channel(MoveAgentInput, z.array(AgentConfig)),
 
   "project.list": channel(z.void(), z.array(ProjectSummary)),
   "project.create": channel(CreateProjectInput, ProjectDetail),
@@ -68,6 +72,10 @@ export const ipcContract = {
   "document.saveSection": channel(SaveSectionInput, DocumentView),
   "document.revise": channel(ReviseSectionsInput, DocumentView),
   "document.restore": channel(RestoreDocumentInput, DocumentView),
+
+  "routing.get": channel(z.object({ projectId: z.number().int().positive() }), RoutingPlan.nullable()),
+  "routing.plan": channel(z.object({ projectId: z.number().int().positive() }), RoutingPlan),
+  "task.override": channel(OverrideTaskInput, RoutingPlan),
 } as const;
 
 export type IpcContract = typeof ipcContract;

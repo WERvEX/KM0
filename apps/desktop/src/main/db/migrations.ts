@@ -197,4 +197,31 @@ CREATE TABLE documents (
 );
 `,
   },
+  {
+    id: 4,
+    name: "routing",
+    // Agents start enabled in hand-off order; Claude Code comes with its model IDs, prices are left to the user.
+    sql: `
+CREATE TABLE routing_plans (
+  project_id INTEGER PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+  based_on_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX tasks_project ON tasks (project_id, seq);
+
+INSERT INTO agents (id, enabled, preference) VALUES
+  ('claude_code', 1, 0),
+  ('codex', 1, 1),
+  ('cursor', 1, 2),
+  ('pi', 1, 3),
+  ('dsh', 1, 4),
+  ('zcode', 1, 5),
+  ('generic', 1, 6);
+
+INSERT INTO model_catalog (agent_id, tier, model_id) VALUES
+  ('claude_code', 'T1', 'claude-haiku-5-5'),
+  ('claude_code', 'T2', 'claude-sonnet-5-5'),
+  ('claude_code', 'T3', 'claude-opus-5-5');
+`,
+  },
 ];

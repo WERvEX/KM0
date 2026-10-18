@@ -72,6 +72,53 @@ test("documents are written after the discussion and can be edited, revised and 
   await page.screenshot({ path: "test-results/screenshots/web-documents.png", fullPage: true });
 });
 
+test("tasks are routed by rules, can be overridden, and show the saving once prices are set", async ({ page }) => {
+  await page.goto("./?simulated=1#/");
+  await page.getByRole("textbox", { name: "从一句话开始" }).fill("给现有的博客加上评论功能");
+  await page.getByRole("button", { name: "开始分诊" }).click();
+  await page.getByRole("button", { name: "跳过剩余问题，进入下一阶段" }).click();
+  await expect(page.getByRole("heading", { name: "6. 待定问题" })).toBeVisible();
+
+  await page.getByRole("tab", { name: "任务与路由" }).click();
+  await page.getByRole("button", { name: "拆解任务并路由" }).click();
+  const table = page.getByRole("table");
+  await expect(table.getByRole("row")).toHaveCount(4);
+  await expect(page.getByText("共 3 个任务")).toBeVisible();
+  await expect(page.getByText("3 个任务的模型没有填价格，未计入合计。")).toBeVisible();
+  await expect(table.getByText("claude-opus-5-5")).toBeVisible();
+  await expect(table.getByText("建议拆分")).toBeVisible();
+
+  // Open the design task, read why it is T3, and move it to T2 by hand.
+  await table.getByRole("button", { name: "设计数据模型与权限" }).click();
+  await expect(page.getByText("需要设计决策 → T3")).toBeVisible();
+  await page.getByRole("combobox", { name: "档位" }).selectOption("T2");
+  await expect(table.getByText("已手动调整")).toBeVisible();
+  await expect(table.getByText("claude-sonnet-5-5")).toHaveCount(2);
+  await page.screenshot({ path: "test-results/screenshots/web-routing.png", fullPage: true });
+  await page.getByRole("button", { name: "恢复规则结果" }).click();
+  await expect(table.getByText("已手动调整")).toHaveCount(0);
+
+  // With prices for Claude Code the plan is totalled and compared with running all on T3.
+  await page.getByRole("link", { name: "去设置 → Agent 填写价格" }).click();
+  await page.getByRole("tab", { name: "Agent" }).click();
+  const claude = page.getByRole("region", { name: "Claude Code" });
+  for (const [tier, input, output] of [
+    ["T1", "1", "5"],
+    ["T2", "3", "15"],
+    ["T3", "5", "25"],
+  ]) {
+    await claude.getByRole("textbox", { name: `Claude Code ${tier} 输入单价` }).fill(input);
+    await claude.getByRole("textbox", { name: `Claude Code ${tier} 输出单价` }).fill(output);
+  }
+  await claude.getByRole("button", { name: "保存" }).click();
+  await expect(claude.getByRole("button", { name: "保存" })).toHaveCount(0);
+
+  await page.getByRole("navigation", { name: "任务" }).getByText("给现有的博客加上评论功能").click();
+  await page.getByRole("tab", { name: "任务与路由" }).click();
+  await expect(page.getByText(/预估成本 \$/)).toBeVisible();
+  await expect(page.getByText(/节省约 \d+%/)).toBeVisible();
+});
+
 test("the real-model build asks for a model first and offers the simulated one", async ({ page }) => {
   await page.goto("./#/");
   await expect(page.getByRole("link", { name: "改用模拟模型" })).toBeVisible();

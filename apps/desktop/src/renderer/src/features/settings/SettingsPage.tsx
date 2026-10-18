@@ -4,14 +4,15 @@ import { useTranslation } from "react-i18next";
 import { Field, Select } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { useIpcMutation, useIpcQuery } from "@/lib/queries";
+import { AgentsTab } from "./AgentsTab";
 import { ModelsTab } from "./ModelsTab";
 
-type Tab = "models" | "general" | "about";
+type Tab = "models" | "agents" | "general" | "about";
 
 export function SettingsPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>("models");
-  const tabs: Tab[] = ["models", "general", "about"];
+  const tabs: Tab[] = ["models", "agents", "general", "about"];
 
   return (
     <div className="mx-auto max-w-3xl px-8 py-10">
@@ -33,7 +34,15 @@ export function SettingsPage() {
           </button>
         ))}
       </div>
-      {tab === "models" ? <ModelsTab /> : tab === "general" ? <GeneralTab /> : <AboutTab />}
+      {tab === "models" ? (
+        <ModelsTab />
+      ) : tab === "agents" ? (
+        <AgentsTab />
+      ) : tab === "general" ? (
+        <GeneralTab />
+      ) : (
+        <AboutTab />
+      )}
     </div>
   );
 }

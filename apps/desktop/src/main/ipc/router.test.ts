@@ -2,8 +2,10 @@ import { createGateway, createSimulatedLlm, FakeProvider, ProviderError, toolRep
 import { describe, expect, it } from "vitest";
 import { openDatabase } from "../db/database";
 import { createHandlers } from "../handlers";
+import { AgentStore } from "../services/agent-store";
 import { DocumentService } from "../services/document-service";
 import { ProjectService } from "../services/project-service";
+import { RoutingService } from "../services/routing-service";
 import { PlainSecretStore } from "../services/secrets";
 import { SettingsStore } from "../services/settings-store";
 import { createDispatcher } from "./router";
@@ -26,6 +28,13 @@ function setup(provider = new FakeProvider([])) {
         () => "zh-CN",
         () => undefined,
       ),
+      routing: new RoutingService(
+        db,
+        () => createSimulatedLlm(),
+        () => "zh-CN",
+        new AgentStore(db),
+      ),
+      agents: new AgentStore(db),
       gateway,
       appInfo: () => ({
         name: "KM0",

@@ -32,6 +32,11 @@ test("a small fix takes the fast path and finishes in one round", async () => {
   await page.getByRole("button", { name: "完成讨论" }).click();
   await expect(page.getByText("讨论完成")).toBeVisible();
   await expect(page.getByRole("complementary", { name: "决策账本" }).getByText("采用推荐")).toHaveCount(2);
+
+  // The fast path goes straight to one cheap task.
+  await page.getByRole("button", { name: "拆解任务并路由" }).click();
+  await expect(page.getByRole("table").getByRole("row")).toHaveCount(2);
+  await expect(page.getByRole("table").getByText("claude-haiku-5-5")).toBeVisible();
 });
 
 test("a new project walks the four stages, and editing a decision flags its dependents", async () => {

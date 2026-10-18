@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/field";
 import { errorMessage } from "@/lib/ipc";
 import { DocumentsPanel } from "../documents/DocumentsPanel";
 import { useDocumentActions, useDocumentStreams } from "../documents/useDocuments";
+import { RoutingPanel } from "../routing/RoutingPanel";
 import { DecisionLedger } from "./DecisionLedger";
 import { QuestionRoundCard } from "./QuestionRoundCard";
 import { StageStepper } from "./StageStepper";
@@ -115,13 +116,16 @@ export function ProjectPage({ projectId }: { projectId: number }) {
           ) : detail.discussionComplete && writesDocuments ? (
             <DocumentsPanel projectId={projectId} summaries={detail.documents} actions={documents} streams={streams} />
           ) : detail.discussionComplete ? (
-            <section className="rounded-lg border border-border bg-panel p-5">
-              <h2 className="flex items-center gap-2 font-medium">
-                <CheckCircle2 className="size-5 text-success" />
-                {t("project.done.title")}
-              </h2>
-              <p className="mt-1 text-sm text-muted">{t("project.done.body")}</p>
-            </section>
+            <>
+              <section className="rounded-lg border border-border bg-panel p-5">
+                <h2 className="flex items-center gap-2 font-medium">
+                  <CheckCircle2 className="size-5 text-success" />
+                  {t("project.done.title")}
+                </h2>
+                <p className="mt-1 text-sm text-muted">{t("project.done.body")}</p>
+              </section>
+              <RoutingPanel projectId={projectId} blockedReason={null} />
+            </>
           ) : null}
         </div>
       </div>

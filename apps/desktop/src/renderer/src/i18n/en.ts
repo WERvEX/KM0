@@ -36,7 +36,7 @@ export const en: Messages = {
   },
   settings: {
     title: "Settings",
-    tabs: { models: "Models", general: "General", about: "About" },
+    tabs: { models: "Models", agents: "Agents", general: "General", about: "About" },
     models: {
       intro:
         "KM0 tiers itself too: the router model triages and asks questions, the planner model writes documents and splits tasks.",
@@ -88,6 +88,18 @@ export const en: Messages = {
       required: "Required",
       invalidUrl: "Enter a valid URL",
       invalidNumber: "Enter a valid number",
+    },
+    agents: {
+      intro:
+        "A task goes to the first enabled agent that has a model for its tier. Prices are USD per million tokens and feed the cost estimate; leave them empty to keep a model out of the totals.",
+      generic: "Generic (Markdown prompt)",
+      model: "Model ID",
+      priceIn: "Input price",
+      priceOut: "Output price",
+      tierHint: { T1: "Low cost, e.g. a small model", T2: "Standard", T3: "Strong reasoning" },
+      up: "Move up",
+      down: "Move down",
+      save: "Save",
     },
     general: {
       language: "Language",
@@ -158,7 +170,7 @@ export const en: Messages = {
     },
     done: {
       title: "Discussion complete",
-      body: "Scope and acceptance are in the ledger. The fast path writes no documents; task breakdown and routing come next (in development, arriving in a later version).",
+      body: "Scope and acceptance are in the ledger. The fast path writes no documents and goes straight to tasks, models and agents.",
     },
     error: { title: "This step did not finish", retry: "Retry", settings: "Open settings" },
     ledger: {
@@ -177,7 +189,6 @@ export const en: Messages = {
   documents: {
     title: "Documents",
     generateAll: "Write all documents",
-    nextStep: "Next: task breakdown and routing (in development, arriving in a later version).",
     empty: {
       title: "No {{name}} yet",
       body: "The planner model writes it from the decision ledger in one go; this usually takes a minute or two.",
@@ -226,6 +237,49 @@ export const en: Messages = {
         "You edited these sections by hand and the AI rewrite will replace them: {{sections}}. The old text stays in the version list.",
       continue: "Continue",
       cancel: "Cancel",
+    },
+  },
+  routing: {
+    tab: "Tasks and routing",
+    empty: {
+      title: "Break the work into tasks",
+      body: "The planner splits the work using the documents and decisions; tiers, agents and costs come from fixed rules, and you can change each of them.",
+      action: "Break down and route",
+    },
+    needDocuments: "Write all documents first, then break the work down.",
+    planning: "Breaking the work down…",
+    replan: "Break down again",
+    replanTitle: "Break the work down again",
+    replanBody: "The tasks are rebuilt from the latest documents and your tier, agent and model changes are cleared.",
+    cancel: "Cancel",
+    outdated: "The documents changed after the breakdown; the tasks may be out of date.",
+    error: "This step did not finish: {{message}}",
+    summary: "Summary",
+    taskCount: "{{count}} tasks",
+    cost: "Estimated cost {{value}}",
+    costAllT3: "all on T3 about {{value}}",
+    saving: "about {{value}}% saved",
+    unpriced: "{{count}} tasks use a model without a price and are left out of the totals.",
+    setPrices: "Add prices in Settings → Agents",
+    estimateNote: "Costs are rough ranges based on task size, meant for comparison.",
+    nextStep: "Next: hand-off packages (in development, arriving in a later version).",
+    columns: { task: "Task", tier: "Tier", agent: "Agent", cost: "Estimated cost" },
+    after: "after #{{value}}",
+    split: "Consider splitting",
+    overridden: "Changed by hand",
+    noModel: "No model for this tier",
+    detail: {
+      acceptance: "Acceptance criteria",
+      files: "Files",
+      basis: "Based on",
+      why: "Why this routing",
+      tokens: "Estimated usage: {{input}} input tokens, {{output}} output tokens",
+      override: "Change by hand",
+      byRules: "By the rules ({{tier}})",
+      automatic: "Automatic",
+      model: "Model",
+      apply: "Apply",
+      reset: "Back to the rules",
     },
   },
   errors: {

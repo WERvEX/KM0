@@ -114,5 +114,63 @@ function simulate(purpose: string, prompt: string): unknown {
       })),
     };
   }
+  if (purpose === "breakdown") return simulateBreakdown(prompt);
   throw new Error(`The simulated model has no answer for ${purpose}`);
+}
+
+/** One small task on the fast path; otherwise three tasks that land on T1, T2 and T3. */
+function simulateBreakdown(prompt: string): unknown {
+  const features = (overrides: Record<string, unknown>) => ({
+    scope: "single_file",
+    ambiguity: "low",
+    reasoning: "follow",
+    context: "small",
+    has_tests: false,
+    risks: [],
+    kind: "code",
+    ...overrides,
+  });
+  const acceptance = ["当用户完成操作时，系统应当保存结果并提示成功。"];
+  if (/^Path: fast$/m.test(prompt)) {
+    return {
+      tasks: [
+        {
+          title: "按确认的范围完成改动",
+          goal: "（模拟）按决策账本中的范围完成改动。",
+          acceptance,
+          features: features({}),
+        },
+      ],
+    };
+  }
+  return {
+    tasks: [
+      {
+        title: "搭建项目骨架与说明文档",
+        goal: "（模拟）初始化目录结构、依赖和 README。",
+        acceptance,
+        files: ["README.md", "package.json"],
+        sections: ["tech_design.modules", "brief.approach"],
+        features: features({ scope: "few_files", kind: "boilerplate" }),
+      },
+      {
+        title: "实现核心功能",
+        goal: "（模拟）实现 MVP 的主要功能。",
+        acceptance,
+        files: ["src/features/**"],
+        depends_on: [1],
+        sections: ["prd.functional", "brief.scope"],
+        features: features({ scope: "few_files", ambiguity: "medium", reasoning: "judgement" }),
+      },
+      {
+        title: "设计数据模型与权限",
+        goal: "（模拟）设计数据表、迁移和访问控制。",
+        acceptance,
+        files: ["src/db/**", "src/auth/**"],
+        depends_on: [1, 2],
+        sections: ["tech_design.data_model", "tech_design.security"],
+        features: features({ scope: "new_subsystem", reasoning: "design", context: "large", risks: ["security"] }),
+      },
+    ],
+  };
 }

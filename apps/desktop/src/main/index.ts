@@ -7,9 +7,11 @@ import { openDatabase } from "./db/database";
 import { ElectronSecretStore } from "./electron-secrets";
 import { createHandlers } from "./handlers";
 import { createDispatcher } from "./ipc/router";
+import { AgentStore } from "./services/agent-store";
 import { DocumentService } from "./services/document-service";
 import { llmPort } from "./services/llm-port";
 import { ProjectService } from "./services/project-service";
+import { RoutingService } from "./services/routing-service";
 import { SettingsStore } from "./services/settings-store";
 
 const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL;
@@ -99,12 +101,16 @@ void app.whenReady().then(() => {
   const emit: EmitEvent = (event, payload) => mainWindow?.webContents.send(IPC_EVENT, { event, payload });
   const projects = new ProjectService(db, llmFor, language);
   const documents = new DocumentService(db, llmFor, language, emit);
+  const agents = new AgentStore(db);
+  const routing = new RoutingService(db, llmFor, language, agents);
 
   const dispatch = createDispatcher(
     createHandlers({
       settings,
       projects,
       documents,
+      routing,
+      agents,
       gateway,
       appInfo: () => ({
         name: "KM0",

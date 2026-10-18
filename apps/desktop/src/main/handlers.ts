@@ -1,19 +1,31 @@
 import type { Gateway } from "@km0/core";
 import type { AppInfo } from "@km0/shared";
 import type { Handlers } from "./ipc/router";
+import type { AgentStore } from "./services/agent-store";
 import type { DocumentService } from "./services/document-service";
 import type { ProjectService } from "./services/project-service";
+import type { RoutingService } from "./services/routing-service";
 import type { SettingsStore } from "./services/settings-store";
 
 export interface HandlerDeps {
   settings: SettingsStore;
   projects: ProjectService;
   documents: DocumentService;
+  routing: RoutingService;
+  agents: AgentStore;
   gateway: Gateway;
   appInfo: () => AppInfo;
 }
 
-export function createHandlers({ settings, projects, documents, gateway, appInfo }: HandlerDeps): Handlers {
+export function createHandlers({
+  settings,
+  projects,
+  documents,
+  routing,
+  agents,
+  gateway,
+  appInfo,
+}: HandlerDeps): Handlers {
   return {
     "app.info": () => appInfo(),
 
@@ -34,6 +46,9 @@ export function createHandlers({ settings, projects, documents, gateway, appInfo
     "settings.roles.set": (roles) => settings.setRoles(roles),
     "settings.preferences.get": () => settings.getPreferences(),
     "settings.preferences.set": (partial) => settings.setPreferences(partial),
+    "settings.agents.list": () => agents.list(),
+    "settings.agents.update": ({ id, enabled, models }) => agents.update(id, enabled, models),
+    "settings.agents.move": ({ id, direction }) => agents.move(id, direction),
 
     "project.list": () => projects.list(),
     "project.create": ({ description, repoPath }) => projects.create(description, repoPath),
@@ -56,5 +71,9 @@ export function createHandlers({ settings, projects, documents, gateway, appInfo
     "document.revise": ({ projectId, kind, baseVersion, sectionIds, instruction }) =>
       documents.revise(projectId, kind, baseVersion, sectionIds, instruction),
     "document.restore": ({ projectId, kind, version }) => documents.restore(projectId, kind, version),
+
+    "routing.get": ({ projectId }) => routing.get(projectId),
+    "routing.plan": ({ projectId }) => routing.plan(projectId),
+    "task.override": ({ projectId, taskId, override }) => routing.override(projectId, taskId, override),
   };
 }
