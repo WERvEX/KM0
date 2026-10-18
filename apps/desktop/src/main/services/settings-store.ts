@@ -9,7 +9,7 @@ import {
   type RoleAssignment,
   type StructuredMode,
 } from "@km0/shared";
-import { type Database, nowIso } from "../db/database";
+import { type Database, nowIso } from "../db/sql";
 import { keyHint, type SecretStore } from "./secrets";
 
 interface ProfileRow {

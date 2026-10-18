@@ -10,13 +10,24 @@ export class PlainSecretStore implements SecretStore {
   readonly secure = false;
 
   encrypt(plain: string): string {
-    return `plain:${Buffer.from(plain, "utf8").toString("base64")}`;
+    return `plain:${toBase64(plain)}`;
   }
 
   decrypt(cipher: string): string {
     if (!cipher.startsWith("plain:")) throw new Error("Unknown secret format");
-    return Buffer.from(cipher.slice("plain:".length), "base64").toString("utf8");
+    return fromBase64(cipher.slice("plain:".length));
   }
+}
+
+// Runs in Node and in the browser debug build, so no Buffer.
+function toBase64(text: string): string {
+  let binary = "";
+  for (const byte of new TextEncoder().encode(text)) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function fromBase64(encoded: string): string {
+  return new TextDecoder().decode(Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0)));
 }
 
 export function keyHint(key: string): string {

@@ -34,7 +34,7 @@ import {
   toAppError,
 } from "@km0/shared";
 import { z } from "zod";
-import { type Database, nowIso, transaction } from "../db/database";
+import { type Database, nowIso, transaction } from "../db/sql";
 
 interface ProjectRow {
   id: number;

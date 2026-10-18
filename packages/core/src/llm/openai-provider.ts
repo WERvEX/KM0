@@ -23,6 +23,8 @@ export class OpenAIProvider implements ChatProvider {
       baseURL: options.baseUrl ?? undefined,
       timeout: REQUEST_TIMEOUT_MS,
       maxRetries: 2,
+      // The browser debug build calls providers straight from the page with the user's own key.
+      dangerouslyAllowBrowser: true,
       ...(options.fetch ? { fetch: options.fetch } : {}),
     });
     this.officialEndpoint = !options.baseUrl || new URL(options.baseUrl).hostname === "api.openai.com";

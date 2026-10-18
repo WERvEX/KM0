@@ -2,6 +2,12 @@ export const zhCN = {
   app: {
     tagline: "一切从零公里出发",
   },
+  web: {
+    banner: "网页调试版：项目和 API Key 只保存在当前浏览器，密钥没有加密，请勿在公用电脑上使用。",
+    simulatedOn: "当前使用模拟模型，不调用真实 API。",
+    useSimulated: "改用模拟模型",
+    useReal: "改用真实模型",
+  },
   nav: {
     newTask: "新建任务",
     projects: "任务",

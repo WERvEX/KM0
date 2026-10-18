@@ -180,6 +180,16 @@ KM0 是桌面应用：Electron + TypeScript 全栈，不起本地 Web 服务，�
 
 数据库没有采用最初规划的 Drizzle：Drizzle 正式版尚不支持 `node:sqlite`，而改用 `node:sqlite` 可以完全避免原生模块，三平台打包更简单。
 
+### 网页调试版
+
+为了不必每次下载安装包，同一套界面和服务还能构建成纯静态网页（`pnpm web:build`，CI 部署到 GitHub Pages 的 `gh-pages` 分支）：
+
+- 服务层只依赖一个很小的同步 `Database` 接口（`src/main/db/sql.ts`）。桌面版用 `node:sqlite` 实现；网页版用 sql.js（WebAssembly 版 SQLite）实现，整个库文件存在 IndexedDB，改动后延迟约 300 ms 写回，页面隐藏时立即写回。迁移和业务代码两边完全相同。
+- 网页入口（`src/web`）在页面内创建 `SettingsStore`、`ProjectService` 和同一个分发器，赋值给 `window.km0`，界面代码不需要区分环境。
+- 模型调用直接从浏览器发出（SDK 开启 `dangerouslyAllowBrowser`）；Anthropic、OpenAI、DeepSeek、Qwen、GLM 的接口都允许跨域请求。
+- 密钥只做混淆，页面顶部常驻提示。`?simulated=1` 切换到模拟模型，模拟数据和真实数据分库保存。
+- 它只用于调试，不是正式交付形态。
+
 ```
 km0/
 ├─ packages/core     领域逻辑与模型网关（纯 TS）

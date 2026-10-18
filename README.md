@@ -12,6 +12,12 @@ KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断�
 - 支持 OpenAI 兼容接口（OpenAI、DeepSeek、Qwen、GLM、MiMo 等）和 Anthropic 接口。
 - API Key 由操作系统凭据存储加密；KM0 不执行代码、不修改你的仓库。
 
+## 网页调试版
+
+不想安装也可以直接在浏览器里试用：<https://wervex.github.io/StartSpec/>（加 `?simulated=1` 使用模拟模型，不需要 API Key）。
+
+网页版和桌面版运行同一套代码，数据保存在当前浏览器的 IndexedDB 里，API Key 没有加密，只适合测试。每次推送到 `master` 或 `claude/*` 分支，CI 都会重新部署。首次使用需要在仓库 Settings → Pages 里把 Source 设为 “Deploy from a branch”，分支选 `gh-pages`、目录选 `/ (root)`。
+
 ## 开发
 
 需要 Node.js 22.12+ 和 pnpm 10。
@@ -19,22 +25,24 @@ KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断�
 ```bash
 pnpm install
 pnpm dev          # 启动开发版应用
+pnpm web:dev      # 在浏览器里启动网页调试版（打开 /web.html）
+pnpm web:build    # 构建网页调试版到 apps/desktop/out/web
 pnpm test         # 单元与组件测试
 pnpm typecheck    # 类型检查
 pnpm lint         # Biome 检查
 pnpm build        # 构建到 apps/desktop/out
-pnpm e2e          # Playwright 端到端测试（需先 pnpm build；Linux 无显示环境时用 xvfb-run -a pnpm e2e）
+pnpm e2e          # Playwright 端到端测试，包括桌面版和网页版（需先 pnpm build；Linux 无显示环境时用 xvfb-run -a pnpm e2e）
 pnpm package      # 生成当前平台的安装包到 apps/desktop/release
 ```
 
-GitHub Actions 会在每次推送时运行检查，并分别在 Windows、macOS、Linux 上构建安装包（作为构建产物上传，暂未签名）。
+GitHub Actions 会在每次推送时运行检查，分别在 Windows、macOS、Linux 上构建安装包（作为构建产物上传，暂未签名），并部署网页调试版。
 
 ## 目录结构
 
 ```
 packages/core     领域逻辑与模型网关（纯 TypeScript，不依赖 Electron）
 packages/shared   zod schema、IPC 契约、共享类型
-apps/desktop      Electron 应用：主进程、预加载脚本、React 界面
+apps/desktop      Electron 应用：主进程、预加载脚本、React 界面，以及网页调试版入口
 e2e/              Playwright 端到端测试
 docs/DESIGN.md    设计文档
 ```

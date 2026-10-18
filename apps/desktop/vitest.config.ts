@@ -13,6 +13,13 @@ export default defineConfig({
         },
       },
       {
+        test: {
+          name: "web",
+          environment: "node",
+          include: ["src/web/**/*.test.ts"],
+        },
+      },
+      {
         plugins: [react()],
         resolve: { alias: { "@": resolve(import.meta.dirname, "src/renderer/src") } },
         test: {

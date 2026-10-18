@@ -4,6 +4,13 @@ export const en: Messages = {
   app: {
     tagline: "Every road starts at kilometer zero",
   },
+  web: {
+    banner:
+      "Web debug build: projects and API keys stay in this browser and keys are not encrypted. Do not use it on a shared computer.",
+    simulatedOn: "Using the simulated model; no real API is called.",
+    useSimulated: "Use the simulated model",
+    useReal: "Use a real model",
+  },
   nav: {
     newTask: "New task",
     projects: "Tasks",

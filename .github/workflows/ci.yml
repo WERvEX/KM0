@@ -23,8 +23,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - name: Install Electron system libraries
-        run: npx playwright install-deps chromium
+      - name: Install Chromium and Electron system libraries
+        run: pnpm exec playwright install --with-deps chromium
       - name: End-to-end tests
         run: xvfb-run -a pnpm e2e
       - name: Upload screenshots
@@ -34,6 +34,34 @@ jobs:
           name: e2e-screenshots
           path: test-results/
           if-no-files-found: ignore
+
+  web:
+    name: Deploy web debug build
+    needs: check
+    # The latest push to master or a working branch is what the Pages site shows.
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/claude/'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm web:build
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: apps/desktop/out/web
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: "Deploy web debug build from ${{ github.sha }}"
 
   package:
     name: Package (${{ matrix.os }})
