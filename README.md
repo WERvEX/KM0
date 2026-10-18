@@ -34,7 +34,7 @@ KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断�
 
 ## 网页调试版
 
-不想安装也可以直接在浏览器里试用：<https://wervex.github.io/StartSpec/>（加 `?simulated=1` 使用模拟模型，不需要 API Key）。
+不想安装也可以直接在浏览器里试用：<https://wervex.github.io/KM0/>（加 `?simulated=1` 使用模拟模型，不需要 API Key）。
 
 网页版和桌面版运行同一套代码，数据保存在当前浏览器的 IndexedDB 里，API Key 没有加密，只适合测试。网页版不能启动本地进程，所以不支持本地 MCP 服务器；关联本地仓库需要 Chrome 或 Edge（用浏览器的文件夹选择框，刷新页面后要重新选择）。每次推送到 `master` 或 `claude/*` 分支，CI 都会重新部署。首次使用需要在仓库 Settings → Pages 里把 Source 设为 “Deploy from a branch”，分支选 `gh-pages`、目录选 `/ (root)`。
 
