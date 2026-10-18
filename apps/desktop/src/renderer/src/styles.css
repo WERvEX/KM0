@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-bg: var(--km0-bg);
+  --color-panel: var(--km0-panel);
+  --color-sunken: var(--km0-sunken);
+  --color-border: var(--km0-border);
+  --color-fg: var(--km0-fg);
+  --color-muted: var(--km0-muted);
+  --color-accent: var(--km0-accent);
+  --color-accent-fg: var(--km0-accent-fg);
+  --color-danger: var(--km0-danger);
+  --color-success: var(--km0-success);
+  --color-warning: var(--km0-warning);
+  --font-sans: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+}
+
+:root {
+  --km0-bg: #f7f7f5;
+  --km0-panel: #ffffff;
+  --km0-sunken: #efefec;
+  --km0-border: #e2e2dd;
+  --km0-fg: #1c1c1a;
+  --km0-muted: #6b6b66;
+  --km0-accent: #2f5bd3;
+  --km0-accent-fg: #ffffff;
+  --km0-danger: #c93a32;
+  --km0-success: #23824e;
+  --km0-warning: #a86400;
+  color-scheme: light;
+}
+
+.dark {
+  --km0-bg: #161615;
+  --km0-panel: #1f1f1d;
+  --km0-sunken: #121211;
+  --km0-border: #33332f;
+  --km0-fg: #ecece8;
+  --km0-muted: #9a9a94;
+  --km0-accent: #6d8ff0;
+  --km0-accent-fg: #0d1430;
+  --km0-danger: #ef6b62;
+  --km0-success: #5cc489;
+  --km0-warning: #e3a443;
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--km0-bg);
+  color: var(--km0-fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}

@@ -1,0 +1,27 @@
+{
+  "name": "km0",
+  "private": true,
+  "version": "0.1.0",
+  "description": "KM0: discuss requirements, route tasks to the right model and agent, and hand off to coding agents.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @km0/desktop dev",
+    "build": "pnpm --filter @km0/desktop build",
+    "package": "pnpm --filter @km0/desktop package",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "typescript": "7.0.2",
+    "@playwright/test": "1.64.1"
+  }
+}

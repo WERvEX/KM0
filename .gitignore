@@ -1,78 +1,30 @@
-# Codex and local implementation scratch files
-.agents/
-.codex/
-.codex-staging/
-.worktrees/
-.superpowers/
-.review-tmp/
-docs/HANDOVER.md
-docs/superpowers/
+# Dependencies and build output
+node_modules/
+out/
+dist/
+release/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# Test output
+test-results/
+playwright-report/
+blob-report/
 
 # Local environment and editor settings
 .env
 .env.*
 !.env.example
-.envrc
-.venv/
-venv/
 .idea/
 .vscode/
 *.local
 *.log
-*.swp
-*.swo
-*~
 .DS_Store
 Thumbs.db
 Desktop.ini
 
-# Python build, runtime, and test outputs (source tests remain tracked)
-__pycache__/
-*.py[cod]
-*.egg-info/
-.eggs/
-pip-wheel-metadata/
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-.pyright/
-.hypothesis/
-.tox/
-.nox/
-**/.pytest_tmp*/
-.coverage
-.coverage.*
-coverage.xml
-junit.xml
-htmlcov/
-backend/build/
-backend/dist/
-backend/.test-tmp*/
-backend/.tmp-pytest*/
-backend/.runtime-check-*/
-
-# Frontend dependencies, caches, test output, and builds
-frontend/node_modules/
-frontend/dist/
-frontend/coverage/
-frontend/.vite/
-frontend/.vitest/
-frontend/.npm-cache/
-frontend/.eslintcache
-*.tsbuildinfo
-frontend/.runtime-check-*/
-test-results/
-playwright-report/
-blob-report/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Local StartSpec runtime data (legacy paths retained for compatibility)
-.searchagent/
-backend/.searchagent/
-searchagent.db
-searchagent.db-*
-secret.key
-reports/
+# Local KM0 runtime data
+*.db
+*.db-shm
+*.db-wal
