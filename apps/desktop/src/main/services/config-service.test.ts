@@ -65,6 +65,7 @@ describe("ConfigService", () => {
       searchCreated: 1,
       searchUpdated: 0,
       agentsUpdated: 7,
+      localServersDisabled: 0,
       rolesSet: true,
     });
     const names = (id: number | null) => target.settings.listProfiles().find((profile) => profile.id === id)?.name;
@@ -90,5 +91,34 @@ describe("ConfigService", () => {
     const profile = app.settings.listProfiles().find((item) => item.name === "Fast");
     expect(profile).toMatchObject({ model: "m2", hasApiKey: true });
     expect(app.search.list()[0]?.hasSecret).toBe(true);
+  });
+
+  it("imports a local MCP server disabled unless its command is already trusted here", () => {
+    const app = install();
+    const local = {
+      name: "Local",
+      enabled: true,
+      config: {
+        kind: "mcp_stdio" as const,
+        command: "npx",
+        args: ["-y", "search-a"],
+        toolName: "search",
+        queryArg: "query",
+      },
+    };
+    const bundle = { ...app.config.export(false), searchServices: [local] };
+    expect(app.config.import(bundle).localServersDisabled).toBe(1);
+    expect(app.search.list()[0]?.enabled).toBe(false);
+
+    // Once the user enables it, importing the same command again leaves it enabled.
+    const id = app.search.list()[0]?.id as number;
+    app.search.update(id, { ...local, enabled: true });
+    expect(app.config.import(bundle).localServersDisabled).toBe(0);
+    expect(app.search.list()[0]?.enabled).toBe(true);
+
+    // A different command is disabled again.
+    const changed = { ...local, config: { ...local.config, args: ["-y", "something-else"] } };
+    expect(app.config.import({ ...bundle, searchServices: [changed] }).localServersDisabled).toBe(1);
+    expect(app.search.list()[0]?.enabled).toBe(false);
   });
 });

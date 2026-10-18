@@ -71,6 +71,14 @@ describe("SearchStore", () => {
     expect(store.activePort()?.name).toBe("On");
   });
 
+  it("skips local MCP servers where no process can be started", () => {
+    const { store } = setup();
+    store.create({ name: "Local", config: { kind: "mcp_stdio", command: "npx", toolName: "search" } });
+    expect(store.activePort()).toBeNull();
+    store.create({ name: "Bocha", config: { kind: "bocha" }, secret: "k" });
+    expect(store.activePort()?.name).toBe("Bocha");
+  });
+
   it("searches through an MCP server and passes the configured environment", async () => {
     const seen: { query?: string; env?: Record<string, string> } = {};
     const { store } = setup({ stdio: memoryMcp(seen) });

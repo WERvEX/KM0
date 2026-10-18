@@ -135,7 +135,11 @@ function ConfigSection() {
       }
       const summary: ImportSummary = await call("settings.import", bundle.data);
       await queryClient.invalidateQueries();
-      setMessage({ ok: true, text: t("settings.general.config.imported", summary) });
+      const disabled =
+        summary.localServersDisabled > 0
+          ? ` ${t("settings.general.config.localDisabled", { count: summary.localServersDisabled })}`
+          : "";
+      setMessage({ ok: true, text: `${t("settings.general.config.imported", summary)}${disabled}` });
     } catch (error) {
       setMessage({ ok: false, text: errorMessage(error) });
     } finally {

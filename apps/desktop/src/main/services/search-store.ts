@@ -110,9 +110,11 @@ export class SearchStore {
 
   /** The first enabled service, or null when research should be skipped. */
   activePort(): SearchPort | null {
-    const row = this.db.prepare("SELECT * FROM search_services WHERE enabled = 1 ORDER BY id LIMIT 1").get() as
-      | ServiceRow
-      | undefined;
+    const rows = this.db
+      .prepare("SELECT * FROM search_services WHERE enabled = 1 ORDER BY id")
+      .all() as unknown as ServiceRow[];
+    // Local MCP servers are skipped where processes cannot be started (the web build).
+    const row = rows.find((item) => item.kind !== "mcp_stdio" || this.deps.stdio);
     return row ? this.portFor(row) : null;
   }
 
@@ -130,17 +132,26 @@ export class SearchStore {
     });
   }
 
-  /** Create or update by name. Returns whether a new service was created. */
-  upsertByName(input: SearchServiceInput): boolean {
-    const existing = this.db.prepare("SELECT id FROM search_services WHERE name = ?").get(input.name) as
-      | { id: number }
+  /**
+   * Create or update by name. A local MCP server runs a command on this computer, so one that is new
+   * or whose command changed arrives disabled until the user has looked at it.
+   */
+  upsertByName(input: SearchServiceInput): { created: boolean; disabled: boolean } {
+    const data = SearchServiceInput.parse(input);
+    const existing = this.db.prepare("SELECT * FROM search_services WHERE name = ?").get(data.name) as
+      | ServiceRow
       | undefined;
-    if (existing) {
-      this.update(existing.id, input);
-      return false;
-    }
-    this.create(input);
-    return true;
+    const before = existing ? parseConfig(existing) : null;
+    const sameCommand =
+      before?.kind === "mcp_stdio" &&
+      data.config.kind === "mcp_stdio" &&
+      before.command === data.config.command &&
+      JSON.stringify(before.args) === JSON.stringify(data.config.args);
+    const disabled = data.config.kind === "mcp_stdio" && data.enabled && !sameCommand;
+    const safe = disabled ? { ...data, enabled: false } : data;
+    if (existing) this.update(existing.id, safe);
+    else this.create(safe);
+    return { created: !existing, disabled };
   }
 
   private portFor(row: ServiceRow): SearchPort {

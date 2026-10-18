@@ -54,6 +54,7 @@ export class ConfigService {
       searchCreated: 0,
       searchUpdated: 0,
       agentsUpdated: 0,
+      localServersDisabled: 0,
       rolesSet: false,
     };
     for (const input of bundle.profiles) {
@@ -87,8 +88,10 @@ export class ConfigService {
     if (bundle.agents.length > 0) this.agents.reorder(bundle.agents.map((agent) => agent.id));
 
     for (const input of bundle.searchServices) {
-      if (this.search.upsertByName(input)) summary.searchCreated += 1;
+      const result = this.search.upsertByName(input);
+      if (result.created) summary.searchCreated += 1;
       else summary.searchUpdated += 1;
+      if (result.disabled) summary.localServersDisabled += 1;
     }
     return summary;
   }

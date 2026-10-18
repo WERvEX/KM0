@@ -39,6 +39,8 @@ export const ImportSummary = z.object({
   searchCreated: z.number().int(),
   searchUpdated: z.number().int(),
   agentsUpdated: z.number().int(),
+  /** Imported local MCP servers left disabled: they run a command, so the user enables them by hand. */
+  localServersDisabled: z.number().int(),
   rolesSet: z.boolean(),
 });
 export type ImportSummary = z.infer<typeof ImportSummary>;

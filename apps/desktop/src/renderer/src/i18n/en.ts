@@ -193,6 +193,8 @@ export const en: Messages = {
         import: "Import settings",
         imported:
           "Imported: {{profilesCreated}} models added, {{profilesUpdated}} updated; {{searchCreated}} search services added, {{searchUpdated}} updated; {{agentsUpdated}} agents updated.",
+        localDisabled:
+          "{{count}} local MCP servers run a command on this computer, so they were imported disabled. Check their commands under Search before enabling them.",
         invalid: "This file is not a valid KM0 settings file.",
       },
     },

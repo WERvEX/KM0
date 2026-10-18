@@ -17,18 +17,19 @@ export function WorkspacePage() {
   const roles = useIpcQuery("settings.roles.get");
   const info = useIpcQuery("app.info");
   const [description, setDescription] = useState("");
-  const [repoPath, setRepoPath] = useState<string | null>(null);
+  // The repository that will be linked; what the user sees is exactly what gets sent.
+  const [linked, setLinked] = useState<{ path: string; scan: RepoScan } | null>(null);
   const simulated = info.data?.simulatedModel ?? false;
   const hasModel = simulated || roles.data?.router != null;
   const steps = ["triage", "discuss", "route", "handoff"] as const;
 
   const create = useMutation({
-    mutationFn: () => call("project.create", { description: description.trim(), repoPath }),
+    mutationFn: () => call("project.create", { description: description.trim(), repoPath: linked?.path ?? null }),
     onSuccess: (detail) => {
       queryClient.setQueryData(projectKey(detail.id), detail);
       void queryClient.invalidateQueries({ queryKey: ["project.list"] });
       setDescription("");
-      setRepoPath(null);
+      setLinked(null);
       scan.reset();
       void navigate({ to: "/projects/$projectId", params: { projectId: String(detail.id) } });
     },
@@ -40,11 +41,11 @@ export function WorkspacePage() {
       if (!path) return null;
       return { path, scan: await call("repo.scan", { path }) };
     },
+    // Cancelling the dialog or a failed scan keeps the repository linked before.
     onSuccess: (result) => {
-      if (result) setRepoPath(result.path);
+      if (result) setLinked(result);
     },
   });
-  const linked = repoPath && scan.data?.path === repoPath ? scan.data.scan : null;
   const configError = create.error instanceof IpcError && create.error.shape.kind === "config";
   const canSubmit = hasModel && description.trim().length >= 4 && !create.isPending && !scan.isPending;
 
@@ -74,13 +75,13 @@ export function WorkspacePage() {
           }}
         />
         <RepoLink
-          scan={linked}
+          scan={linked?.scan ?? null}
           busy={scan.isPending}
           disabled={!hasModel || create.isPending}
           error={scan.error ? errorMessage(scan.error) : null}
           onPick={() => scan.mutate()}
           onRemove={() => {
-            setRepoPath(null);
+            setLinked(null);
             scan.reset();
           }}
         />

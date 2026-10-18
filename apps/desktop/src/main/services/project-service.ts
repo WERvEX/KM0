@@ -398,7 +398,7 @@ export class ProjectService {
     if (plan.questions.length === 0 && mode !== "review") {
       const missing = missingKeys(stage, this.decisions(projectId));
       // The model found nothing worth asking; decide whatever is still required.
-      if (missing.length > 0) await this.fill(projectId, stage, missing);
+      if (missing.length > 0) await this.fill(projectId, stage, missing, research);
       this.setStageStatus(projectId, stage, "ready");
     }
     return this.detail(projectId, null);
@@ -449,9 +449,16 @@ export class ProjectService {
     return parsed.success ? parsed.data : null;
   }
 
-  private async fill(projectId: number, stage: DiscussionStage, keys: string[]): Promise<void> {
+  /** `research` is evidence gathered for a round that ended up asking nothing, so it was not stored. */
+  private async fill(
+    projectId: number,
+    stage: DiscussionStage,
+    keys: string[],
+    research: Research | null = null,
+  ): Promise<void> {
     if (keys.length === 0) return;
-    const drafts = await fillDecisions(this.llmFor(projectId), this.context(projectId, stage), keys);
+    const context = this.context(projectId, stage);
+    const drafts = await fillDecisions(this.llmFor(projectId), research ? { ...context, research } : context, keys);
     transaction(this.db, () => {
       for (const draft of drafts) this.upsertDecision(projectId, draft);
     });
