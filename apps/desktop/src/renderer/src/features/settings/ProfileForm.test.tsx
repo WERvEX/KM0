@@ -52,18 +52,26 @@ describe("ProfileForm", () => {
     expect(screen.getByLabelText("Base URL")).toHaveValue("https://api.deepseek.com/anthropic");
   });
 
-  it("keeps the stored key unless the user types or clears one", async () => {
+  it("shows a saved key as dots, keeps it unless edited, and removes it when emptied", async () => {
     const { onSubmit, user } = setup(saved);
-    expect(screen.getByText(/••••9f2c/)).toBeInTheDocument();
+    const keyField = screen.getByLabelText(/API Key/i);
+    expect(keyField).toHaveAttribute("type", "password");
+    expect((keyField as HTMLInputElement).value).not.toBe("");
     await user.click(screen.getByRole("button", { name: /保存|Save/ }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledOnce());
     expect(onSubmit.mock.calls[0]?.[0]).not.toHaveProperty("apiKey");
     expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({ priceInPerMTok: 0.4, structuredMode: "tool" });
 
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(keyField);
+    await user.keyboard("sk-replaced");
     await user.click(screen.getByRole("button", { name: /保存|Save/ }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2));
-    expect(onSubmit.mock.calls[1]?.[0]).toMatchObject({ apiKey: "" });
+    expect(onSubmit.mock.calls[1]?.[0]).toMatchObject({ apiKey: "sk-replaced" });
+
+    await user.clear(keyField);
+    await user.click(screen.getByRole("button", { name: /保存|Save/ }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(3));
+    expect(onSubmit.mock.calls[2]?.[0]).toMatchObject({ apiKey: "" });
   });
 
   it("rejects an invalid URL and a missing model", async () => {

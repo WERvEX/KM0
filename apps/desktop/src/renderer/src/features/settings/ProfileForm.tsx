@@ -21,13 +21,15 @@ const FormSchema = z.object({
     .refine((value) => value === "" || URL.canParse(value), "invalidUrl"),
   model: z.string().trim().min(1, "required"),
   apiKey: z.string(),
-  clearKey: z.boolean(),
   structuredMode: z.enum(["auto", "json_schema", "tool", "prompt"]),
   temperature: optionalNumber,
   priceIn: optionalNumber,
   priceOut: optionalNumber,
 });
 type FormValues = z.infer<typeof FormSchema>;
+
+/** Stands in for a saved key in the password field; it is never sent to the main process. */
+const SAVED_KEY = "••••••••••••";
 
 function toNumber(value: string): number | null {
   return value.trim() === "" ? null : Number(value);
@@ -47,8 +49,8 @@ function initialValues(profile: LlmProfile | null): FormValues {
       provider: profile.provider,
       baseUrl: profile.baseUrl ?? "",
       model: profile.model,
-      apiKey: "",
-      clearKey: false,
+      // The saved key never reaches the renderer; a placeholder shows as dots until the user edits it.
+      apiKey: profile.hasApiKey ? SAVED_KEY : "",
       structuredMode: profile.structuredMode,
       temperature: profile.temperature?.toString() ?? "",
       priceIn: profile.priceInPerMTok?.toString() ?? "",
@@ -63,7 +65,6 @@ function initialValues(profile: LlmProfile | null): FormValues {
     baseUrl: preset?.urls.openai ?? "",
     model: preset?.modelHint ?? "",
     apiKey: "",
-    clearKey: false,
     structuredMode: "auto",
     temperature: "",
     priceIn: "",
@@ -82,8 +83,7 @@ interface ProfileFormProps {
 export function ProfileForm({ profile, submitting, error, onSubmit, onCancel }: ProfileFormProps) {
   const { t } = useTranslation();
   const form = useForm<FormValues>({ resolver: zodResolver(FormSchema), defaultValues: initialValues(profile) });
-  const { register, handleSubmit, setValue, getValues, watch, formState } = form;
-  const clearKey = watch("clearKey");
+  const { register, handleSubmit, setValue, getValues, formState } = form;
 
   const fieldError = (name: keyof FormValues) => {
     const message = formState.errors[name]?.message;
@@ -109,9 +109,9 @@ export function ProfileForm({ profile, submitting, error, onSubmit, onCancel }: 
   };
 
   const submit = handleSubmit((values) => {
+    // Unchanged placeholder keeps the saved key, an empty field removes it, anything else replaces it.
     let apiKey: string | undefined;
-    if (values.clearKey) apiKey = "";
-    else if (values.apiKey.trim()) apiKey = values.apiKey.trim();
+    if (values.apiKey !== SAVED_KEY) apiKey = values.apiKey.trim() || (profile?.hasApiKey ? "" : undefined);
     onSubmit({
       name: values.name,
       provider: values.provider,
@@ -160,19 +160,17 @@ export function ProfileForm({ profile, submitting, error, onSubmit, onCancel }: 
       >
         <Input id="baseUrl" {...register("baseUrl")} />
       </Field>
-      <Field
-        label={t("settings.form.apiKey")}
-        htmlFor="apiKey"
-        hint={profile?.hasApiKey ? t("settings.form.apiKeyKeep", { hint: profile.apiKeyHint }) : undefined}
-        className="col-span-2"
-      >
-        <Input id="apiKey" type="password" autoComplete="off" disabled={clearKey} {...register("apiKey")} />
-        {profile?.hasApiKey ? (
-          <label className="mt-1 flex items-center gap-2 text-xs text-muted">
-            <input type="checkbox" {...register("clearKey")} />
-            {t("settings.form.apiKeyClear")}
-          </label>
-        ) : null}
+      <Field label={t("settings.form.apiKey")} htmlFor="apiKey" className="col-span-2">
+        <Input
+          id="apiKey"
+          type="password"
+          autoComplete="off"
+          {...register("apiKey")}
+          onFocus={(event) => {
+            // Typing replaces the saved key instead of appending to the placeholder.
+            if (event.target.value === SAVED_KEY) event.target.select();
+          }}
+        />
       </Field>
       <Field label={t("settings.form.structuredMode")} htmlFor="structuredMode" className="col-span-2">
         <Select id="structuredMode" {...register("structuredMode")}>

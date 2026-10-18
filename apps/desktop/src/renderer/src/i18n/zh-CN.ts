@@ -62,8 +62,6 @@ export const zhCN = {
       baseUrlHint: "填写 API 根地址，不要带 /chat/completions",
       model: "模型 ID",
       apiKey: "API Key",
-      apiKeyKeep: "已保存（{{hint}}），留空保持不变",
-      apiKeyClear: "清除已保存的密钥",
       structuredMode: "结构化输出方式",
       modes: {
         auto: "自动检测（推荐）",

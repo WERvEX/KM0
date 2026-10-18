@@ -66,8 +66,6 @@ export const en: Messages = {
       baseUrlHint: "The API root, without /chat/completions",
       model: "Model ID",
       apiKey: "API key",
-      apiKeyKeep: "Saved ({{hint}}); leave empty to keep it",
-      apiKeyClear: "Remove the saved key",
       structuredMode: "Structured output",
       modes: {
         auto: "Detect automatically (recommended)",
