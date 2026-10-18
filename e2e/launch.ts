@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type ElectronApplication, _electron as electron, type Page } from "@playwright/test";
+import { type ElectronApplication, _electron as electron, expect, type Page } from "@playwright/test";
 
 const appDir = join(import.meta.dirname, "../apps/desktop");
 
@@ -20,6 +20,10 @@ export async function launchApp(env: Record<string, string> = {}): Promise<Launc
     env: { ...process.env, KM0_USER_DATA_DIR: dataDir, LANG: "zh_CN.UTF-8", ...env },
   });
   const page = await app.firstWindow();
+  // The window stays hidden until its first paint; a screenshot of a hidden window fails.
+  await expect
+    .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible() ?? false))
+    .toBe(true);
   await page.setViewportSize({ width: 1360, height: 860 });
   return {
     app,
