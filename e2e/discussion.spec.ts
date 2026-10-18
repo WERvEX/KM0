@@ -39,24 +39,26 @@ test("a new project walks the four stages, and editing a decision flags its depe
   await expect(page.getByRole("combobox", { name: "通道" })).toHaveValue("full");
   await expect(page.getByText("A 定位与规模 · 第 1 轮")).toBeVisible();
 
-  // Answer the first round by hand: pick a delivery form, let the AI decide another question.
+  // Answer the first round by hand: pick a delivery form, take an option, and type a custom answer.
   const round = page.locator("section").filter({ hasText: "第 1 轮" });
   await round.getByRole("radio", { name: /企业级系统/ }).check();
   await round.getByRole("group").nth(1).getByRole("radio").first().check();
-  await round.getByRole("group").nth(2).getByLabel("交给 AI 决定").check();
+  await round.getByRole("group").nth(2).getByRole("textbox").fill("只处理内部数据");
   await page.screenshot({ path: "test-results/screenshots/full-round.png" });
   await page.getByRole("button", { name: "提交回答" }).click();
   await expect(page.getByText("本阶段的关键决策已确定")).toBeVisible();
 
   const ledger = page.getByRole("complementary", { name: "决策账本" });
   await expect(ledger.getByText("企业级系统")).toBeVisible();
-  await expect(ledger.getByText("AI 决定", { exact: true })).toBeVisible();
+  await expect(ledger.getByText("只处理内部数据")).toBeVisible();
 
   await page.getByRole("button", { name: "进入下一阶段" }).click();
   for (const stage of ["B 产品需求", "C 技术选型", "D 实现方案"]) {
     await expect(page.getByText(`${stage} · 第 1 轮`)).toBeVisible();
-    await page.getByRole("button", { name: "全部采用推荐，进入下一阶段" }).click();
+    await page.getByRole("button", { name: "跳过剩余问题，进入下一阶段" }).click();
   }
+  // Skipped questions and leftover keys are decided by the AI and marked as such.
+  await expect(ledger.getByText("AI 决定", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("讨论完成")).toBeVisible();
   await page.screenshot({ path: "test-results/screenshots/full-done.png" });
 

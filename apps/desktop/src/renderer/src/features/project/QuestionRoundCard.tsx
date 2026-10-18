@@ -22,10 +22,10 @@ interface Props {
   round: QuestionRound;
   busy: boolean;
   onSubmit: (answers: Answer[]) => void;
-  onAdoptAll: () => void;
+  onSkipRest: () => void;
 }
 
-export function QuestionRoundCard({ round, busy, onSubmit, onAdoptAll }: Props) {
+export function QuestionRoundCard({ round, busy, onSubmit, onSkipRest }: Props) {
   const { t } = useTranslation();
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const unanswered = round.questions.filter((question) => !isAnswered(drafts[question.id])).length;
@@ -38,7 +38,8 @@ export function QuestionRoundCard({ round, busy, onSubmit, onAdoptAll }: Props) 
       Object.fromEntries(
         round.questions.map((question) => {
           const recommended = question.options.filter((option) => option.recommended).map((option) => option.id);
-          return [question.id, { optionIds: recommended, text: "", delegate: recommended.length === 0 }];
+          // Open-text questions have no recommendation; let the AI fill them.
+          return [question.id, { optionIds: recommended, text: "", delegate: question.type === "text" }];
         }),
       ),
     );
@@ -81,20 +82,23 @@ export function QuestionRoundCard({ round, busy, onSubmit, onAdoptAll }: Props) 
           />
         ))}
       </div>
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
-        <span className="text-xs text-muted">
-          {unanswered > 0 ? t("project.unanswered", { count: unanswered }) : ""}
-        </span>
-        <div className="flex gap-2">
-          {round.review ? null : (
-            <Button onClick={onAdoptAll} disabled={busy}>
-              {t("project.adoptAll")}
+      <footer className="flex flex-col gap-2 border-t border-border px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs text-muted">
+            {unanswered > 0 ? t("project.unanswered", { count: unanswered }) : ""}
+          </span>
+          <div className="flex gap-2">
+            {round.review ? null : (
+              <Button onClick={onSkipRest} disabled={busy}>
+                {t("project.skipRest")}
+              </Button>
+            )}
+            <Button variant="primary" onClick={submit} disabled={busy || unanswered > 0}>
+              {t("project.submit")}
             </Button>
-          )}
-          <Button variant="primary" onClick={submit} disabled={busy || unanswered > 0}>
-            {t("project.submit")}
-          </Button>
+          </div>
         </div>
+        {round.review ? null : <p className="text-right text-xs text-muted">{t("project.skipRestHint")}</p>}
       </footer>
     </section>
   );
@@ -196,14 +200,16 @@ function QuestionCard({ index, question, draft, disabled, onChange }: QuestionCa
         </div>
       )}
 
-      <label className="mt-3 flex w-fit items-center gap-2 text-xs text-muted">
-        <input
-          type="checkbox"
-          checked={draft.delegate}
-          onChange={(event) => onChange({ delegate: event.target.checked })}
-        />
-        {t("project.delegate")}
-      </label>
+      {question.type === "text" ? (
+        <label className="mt-3 flex w-fit items-center gap-2 text-xs text-muted">
+          <input
+            type="checkbox"
+            checked={draft.delegate}
+            onChange={(event) => onChange({ delegate: event.target.checked })}
+          />
+          {t("project.delegate")}
+        </label>
+      ) : null}
     </fieldset>
   );
 }

@@ -73,7 +73,7 @@ export function ProjectPage({ projectId }: { projectId: number }) {
               round={detail.openRound}
               busy={busy}
               onSubmit={(answers) => answer.mutate({ projectId, roundId: detail.openRound?.id ?? 0, answers })}
-              onAdoptAll={() => advance.mutate({ projectId, adoptRecommended: true })}
+              onSkipRest={() => advance.mutate({ projectId, adoptRecommended: true })}
             />
           ) : current?.status === "ready" ? (
             <section className="rounded-lg border border-border bg-panel p-5">

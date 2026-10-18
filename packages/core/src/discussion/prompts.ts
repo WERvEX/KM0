@@ -26,9 +26,10 @@ const STAGE_PURPOSE: Record<DiscussionStage, string> = {
   confirm: "Confirm the exact scope of a small task and how to tell it is done.",
   brief: "Settle scope, approach and acceptance of a medium-sized task in as few questions as possible.",
   scale: "Stage A: positioning and scale. These answers set defaults for everything after.",
-  requirements: "Stage B: product requirements.",
-  tech: "Stage C: technology choices, layer by layer.",
-  implementation: "Stage D: implementation plan. Propose concrete plans and let the user confirm or adjust.",
+  requirements: "Stage B: product requirements: who uses it, what they do, and what the first release contains.",
+  tech: "Stage C: technology choices, layer by layer, consistent with the delivery form and requirements already decided.",
+  implementation:
+    "Stage D: implementation plan. Offer 2-3 complete, concrete alternatives per key (for example a named architecture with its components, or an ordered milestone list) and let the user pick or adjust.",
 };
 
 function describeDecision(decision: Decision): string {
@@ -53,12 +54,15 @@ export interface RoundPromptInput {
 export function roundSystem(input: RoundPromptInput): string {
   const rules = [
     "You are KM0's requirements interviewer. You help the user settle decisions before any code is written.",
-    `Ask at most ${input.maxQuestions} questions, only the ones that change the outcome most. Fewer is better.`,
+    "Infer first, ask second. Whenever the task description, the triage or earlier decisions make a key reasonably clear, put it in `inferred` with the value and a one-sentence rationale instead of asking. The user can correct inferred decisions later, so lean towards inferring.",
+    `Ask at most ${input.maxQuestions} questions, only the ones whose answer changes the outcome most. Fewer is better; zero is fine.`,
+    "Ask required keys first. Ask at most one optional key per round, and only when it clearly matters for this task.",
     "Each question settles exactly one decision key from the list you are given, and uses that key in `key`.",
-    "Prefer `single` with 2-4 concrete, meaningfully different options. Use `multi` for lists (scenarios, features, integrations). Use `text` only when options make no sense.",
-    "Mark exactly one option `recommended` for single questions, chosen from the task context and earlier decisions; for multi questions mark the sensible defaults.",
-    "Option labels are short (at most 16 Chinese characters or 6 English words); `description` gives the trade-off in one sentence.",
-    "If the task description or earlier decisions already answer a key, do not ask it: put it in `inferred` with the value and a one-sentence rationale.",
+    "Write for someone who may not be a developer: plain words, no jargon without a short explanation, one idea per question.",
+    "Options must be concrete and specific to this task: real technology names (for example 'PostgreSQL', 'Next.js', 'Electron'), real features and real user groups taken from the description. Never offer generic placeholders such as 'option A', 'simple approach' or 'other'; the user can always type their own answer.",
+    "Prefer `single` with 2-4 meaningfully different options. Use `multi` for lists such as scenarios, features or integrations, drawing candidates from the description plus the obvious additions. Use `text` only when options make no sense.",
+    "Mark as `recommended` what you would actually choose for this task (exactly one for single questions; the sensible defaults for multi questions), and start that option's `description` with the reason. Every other description states its trade-off in one sentence.",
+    "Option labels are short (at most 16 Chinese characters or 6 English words).",
     "Never ask about keys that are already decided unless they are flagged for review.",
     "Write prompts as direct questions to the user.",
   ];
@@ -113,7 +117,7 @@ export function roundPrompt(input: RoundPromptInput): string {
 export function fillSystem(language: Language): string {
   return [
     "You are KM0. The user asked you to make some decisions for them.",
-    "Decide every listed key with a concrete, sensible value that fits the task and the decisions already made.",
+    "Decide every listed key with a concrete value that fits the task and the decisions already made: name real technologies, features or steps, never a vague placeholder.",
     "Prefer the simplest choice that satisfies the requirements. Give a one-sentence rationale for each.",
     languageRule(language),
   ].join("\n");

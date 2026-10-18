@@ -98,13 +98,13 @@ describe("planRound", () => {
             options: [{ label: "本地工具" }, { label: "在线部署", recommended: true }],
           },
           {
-            key: "auth",
-            prompt: "需要账号吗？",
+            key: "compliance",
+            prompt: "数据敏感吗？",
             type: "single",
-            options: [{ label: "需要", recommended: true }, { label: "不需要" }],
+            options: [{ label: "普通数据", recommended: true }, { label: "含个人隐私" }],
           },
           { key: "backend", prompt: "跨阶段的问题应被丢弃", type: "text" },
-          { key: "auth", prompt: "重复的 key 应被丢弃", type: "text" },
+          { key: "compliance", prompt: "重复的 key 应被丢弃", type: "text" },
         ],
       },
     ]);
@@ -118,7 +118,7 @@ describe("planRound", () => {
         alternatives: [],
       },
     ]);
-    expect(plan.questions.map((question) => question.decisionKey)).toEqual(["scale", "auth"]);
+    expect(plan.questions.map((question) => question.decisionKey)).toEqual(["scale", "compliance"]);
     // The scale question always has the four fixed delivery forms, with the model's pick carried over.
     expect(plan.questions[0]?.options.map((option) => option.id)).toEqual([
       "local_tool",
@@ -128,6 +128,20 @@ describe("planRound", () => {
     ]);
     expect(plan.questions[0]?.options.find((option) => option.recommended)?.id).toBe("online_service");
     expect(calls[0]?.prompt).toContain("scale (required)");
+  });
+
+  it("keeps at most one optional question while required keys are open", async () => {
+    const { llm } = scriptedLlm([
+      {
+        questions: [
+          { key: "compliance", prompt: "数据敏感吗？", type: "text" },
+          { key: "timeline", prompt: "什么时候要？", type: "text" },
+          { key: "user_scale", prompt: "多少人用？", type: "text" },
+        ],
+      },
+    ]);
+    const plan = await planRound(llm, { ...baseCtx, stage: "scale", decisions: [] });
+    expect(plan.questions.map((question) => question.decisionKey)).toEqual(["compliance", "user_scale"]);
   });
 
   it("skips the model when nothing is left to ask", async () => {
@@ -305,7 +319,8 @@ describe("fillDecisions", () => {
 
 describe("catalog", () => {
   it("lists the required keys of each stage", () => {
-    expect(requiredKeys("scale")).toEqual(["scale", "user_scale", "auth"]);
+    expect(requiredKeys("scale")).toEqual(["scale", "user_scale"]);
+    expect(requiredKeys("requirements")).toEqual(["target_users", "core_scenarios", "auth", "mvp_features"]);
     expect(
       missingKeys("confirm", [decision("scope", "confirm", "x"), decision("acceptance", "confirm", "y", true)]),
     ).toEqual(["acceptance"]);

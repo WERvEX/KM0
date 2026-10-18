@@ -133,10 +133,12 @@ export const en: Messages = {
     recommended: "Recommended",
     other: "Other",
     otherPlaceholder: "Write your own answer",
-    delegate: "Let the AI decide",
+    delegate: "Not sure, let the AI fill this in",
     fillRecommended: "Use recommended answers",
     submit: "Submit answers",
-    adoptAll: "Adopt all recommendations and move on",
+    skipRest: "Skip the rest and move on",
+    skipRestHint:
+      "Unanswered questions take the recommended option and the AI settles what is left in this stage. Everything lands in the decision ledger, where you can change it.",
     unanswered: "{{count}} unanswered",
     ready: {
       title: "The key decisions of this stage are made",

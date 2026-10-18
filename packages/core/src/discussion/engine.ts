@@ -150,7 +150,14 @@ export async function planRound(llm: DiscussionLlm, ctx: RoundContext): Promise<
   }
   const inferredKeys = new Set(inferred.map((draft) => draft.key));
   const current = new Map(ctx.decisions.map((decision) => [decision.key, decision.value]));
-  const questions = normalizeQuestions(output.questions, {
+  let optionalSeen = 0;
+  // While required keys are open, a round carries at most one optional question.
+  const raw = output.questions.filter((item) => {
+    if (ctx.mode !== "required" || keyDef(item.key)?.required) return true;
+    optionalSeen += 1;
+    return optionalSeen <= 1;
+  });
+  const questions = normalizeQuestions(raw, {
     allowed: new Set(targetKeys.filter((name) => !inferredKeys.has(name))),
     roundNo: ctx.roundNo,
     language: ctx.language,

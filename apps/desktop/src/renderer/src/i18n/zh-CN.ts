@@ -129,10 +129,11 @@ export const zhCN = {
     recommended: "推荐",
     other: "其他",
     otherPlaceholder: "写下你的答案",
-    delegate: "交给 AI 决定",
+    delegate: "不确定，让 AI 填写",
     fillRecommended: "填入推荐答案",
     submit: "提交回答",
-    adoptAll: "全部采用推荐，进入下一阶段",
+    skipRest: "跳过剩余问题，进入下一阶段",
+    skipRestHint: "未回答的题按推荐项处理，本阶段其余待定内容由 AI 决定；结果都写进决策账本，可以随时修改。",
     unanswered: "还有 {{count}} 题未回答",
     ready: {
       title: "本阶段的关键决策已确定",

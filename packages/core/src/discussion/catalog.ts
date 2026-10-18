@@ -85,15 +85,6 @@ export const DECISION_KEYS: readonly DecisionKeyDef[] = [
   ),
   key(
     "scale",
-    "auth",
-    true,
-    ["scale"],
-    "账号与权限",
-    "Accounts and access",
-    "Whether accounts, roles or multi-tenancy are needed.",
-  ),
-  key(
-    "scale",
     "compliance",
     false,
     ["scale"],
@@ -113,6 +104,15 @@ export const DECISION_KEYS: readonly DecisionKeyDef[] = [
     "核心场景",
     "Core scenarios",
     "The two or three most important things users do.",
+  ),
+  key(
+    "requirements",
+    "auth",
+    true,
+    ["scale", "target_users"],
+    "账号与权限",
+    "Accounts and access",
+    "Whether people sign in, which roles exist, and whether data is separated per team or tenant.",
   ),
   key(
     "requirements",
