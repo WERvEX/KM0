@@ -1,8 +1,12 @@
-import { Link, Outlet } from "@tanstack/react-router";
-import { Plus, Settings } from "lucide-react";
+import type { ProjectSummary } from "@km0/shared";
+import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
+import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { useIpcQuery } from "@/lib/queries";
+import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/field";
+import { useIpcMutation, useIpcQuery } from "@/lib/queries";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -31,16 +35,7 @@ export function AppShell() {
             {projects.data && projects.data.length > 0 ? (
               <ul className="flex flex-col gap-0.5">
                 {projects.data.map((project) => (
-                  <li key={project.id}>
-                    <Link
-                      to="/projects/$projectId"
-                      params={{ projectId: String(project.id) }}
-                      className="block truncate rounded-md px-2 py-1.5 text-sm hover:bg-sunken"
-                      activeProps={{ className: "bg-sunken font-medium" }}
-                    >
-                      {project.title}
-                    </Link>
-                  </li>
+                  <ProjectItem key={project.id} project={project} />
                 ))}
               </ul>
             ) : (
@@ -77,5 +72,107 @@ function WebBanner({ simulated }: { simulated: boolean }) {
         {simulated ? t("web.useReal") : t("web.useSimulated")}
       </a>
     </div>
+  );
+}
+
+type Editing = { mode: "rename" | "delete"; project: ProjectSummary } | null;
+
+/** A project in the sidebar, with its stage and rename / delete actions on hover. */
+function ProjectItem({ project }: { project: ProjectSummary }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const params = useParams({ strict: false }) as { projectId?: string };
+  const [editing, setEditing] = useState<Editing>(null);
+  const [title, setTitle] = useState("");
+  const rename = useIpcMutation("project.rename", ["project.list"]);
+  const remove = useIpcMutation("project.delete", ["project.list"]);
+  const close = () => setEditing(null);
+
+  return (
+    <li className="group relative">
+      <Link
+        to="/projects/$projectId"
+        params={{ projectId: String(project.id) }}
+        className="block rounded-md px-2 py-1.5 pr-14 hover:bg-sunken"
+        activeProps={{ className: "bg-sunken" }}
+      >
+        <span className="block truncate text-sm">{project.title}</span>
+        <span className="block text-[11px] text-muted">{t(`nav.stage.${project.stage}`)}</span>
+      </Link>
+      <div className="absolute top-1.5 right-1 flex gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+        <button
+          type="button"
+          className="rounded p-1 text-muted hover:bg-panel hover:text-fg"
+          aria-label={`${t("nav.rename")} ${project.title}`}
+          onClick={() => {
+            setTitle(project.title);
+            setEditing({ mode: "rename", project });
+          }}
+        >
+          <Pencil className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          className="rounded p-1 text-muted hover:bg-panel hover:text-danger"
+          aria-label={`${t("nav.delete")} ${project.title}`}
+          onClick={() => setEditing({ mode: "delete", project })}
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      </div>
+
+      <Dialog
+        open={editing?.mode === "rename"}
+        onOpenChange={(open) => !open && close()}
+        title={t("nav.renameTitle")}
+        footer={
+          <>
+            <Button onClick={close}>{t("nav.cancel")}</Button>
+            <Button
+              variant="primary"
+              disabled={!title.trim() || rename.isPending}
+              onClick={() => rename.mutate({ id: project.id, title: title.trim() }, { onSuccess: close })}
+            >
+              {t("nav.save")}
+            </Button>
+          </>
+        }
+      >
+        <Input
+          aria-label={t("nav.renameTitle")}
+          value={title}
+          maxLength={120}
+          onChange={(event) => setTitle(event.target.value)}
+        />
+      </Dialog>
+      <Dialog
+        open={editing?.mode === "delete"}
+        onOpenChange={(open) => !open && close()}
+        title={t("nav.deleteTitle")}
+        description={t("nav.deleteBody", { name: project.title })}
+        footer={
+          <>
+            <Button onClick={close}>{t("nav.cancel")}</Button>
+            <Button
+              variant="danger"
+              disabled={remove.isPending}
+              onClick={() =>
+                remove.mutate(
+                  { id: project.id },
+                  {
+                    onSuccess: () => {
+                      close();
+                      if (params.projectId === String(project.id)) void navigate({ to: "/" });
+                    },
+                  },
+                )
+              }
+            >
+              {t("nav.delete")}
+            </Button>
+          </>
+        }
+      />
+    </li>
   );
 }

@@ -87,3 +87,40 @@ test("a new project walks the four stages, and editing a decision flags its depe
   await expect(page.getByText(/复核/).first()).toBeVisible();
   await expect(page.getByText("这些决策依赖的内容变了")).toBeVisible();
 });
+
+test("a full-path task goes from one sentence to a hand-off package, then is renamed and deleted", async () => {
+  await startTask("从零做一个内部知识库平台");
+  for (const stage of ["A 定位与规模", "B 产品需求", "C 技术选型", "D 实现方案"]) {
+    await expect(page.getByText(`${stage} · 第 1 轮`)).toBeVisible();
+    if (stage === "A 定位与规模") await page.screenshot({ path: "test-results/screenshots/p5-1-questions.png" });
+    await page.getByRole("button", { name: "跳过剩余问题，进入下一阶段" }).click();
+  }
+  await expect(page.getByRole("heading", { name: "8. 待定问题" })).toBeVisible();
+  await page.getByRole("tab", { name: /技术方案/ }).click();
+  await expect(page.getByRole("heading", { name: "10. 风险" })).toBeVisible();
+  await page.getByRole("tab", { name: /产品需求文档/ }).click();
+  await page.screenshot({ path: "test-results/screenshots/p5-2-documents.png" });
+
+  await page.getByRole("tab", { name: "任务与路由" }).click();
+  await page.getByRole("button", { name: "拆解任务并路由" }).click();
+  await expect(page.getByRole("table").getByRole("row")).toHaveCount(4);
+  await page.screenshot({ path: "test-results/screenshots/p5-3-routing.png" });
+
+  await page.getByRole("button", { name: "生成交接包" }).click();
+  await expect(page.getByRole("navigation", { name: "包内文件" }).getByText("km0/docs/TECH_DESIGN.md")).toBeVisible();
+  const progress = page.getByRole("list", { name: "进度" });
+  await expect(progress.locator('[aria-current="step"]')).toHaveText("交接");
+  await page.screenshot({ path: "test-results/screenshots/p5-4-handoff.png", fullPage: true });
+
+  const sidebar = page.getByRole("navigation", { name: "任务" });
+  await expect(sidebar.getByText("已生成交接包")).toBeVisible();
+  await sidebar.getByRole("button", { name: "重命名 从零做一个内部知识库平台" }).click();
+  await page.getByRole("dialog").getByRole("textbox").fill("内部知识库");
+  await page.getByRole("dialog").getByRole("button", { name: "保存" }).click();
+  await expect(sidebar.getByText("内部知识库", { exact: true })).toBeVisible();
+
+  await sidebar.getByRole("button", { name: "删除 内部知识库" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "删除" }).click();
+  await expect(sidebar.getByText("内部知识库", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("从一句话开始");
+});

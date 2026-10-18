@@ -189,7 +189,7 @@ function Header({
           {triage.reasons.length > 0 ? <span className="text-muted">· {triage.reasons.join("；")}</span> : null}
         </div>
       ) : null}
-      <StageStepper stages={detail.stages} />
+      <StageStepper detail={detail} />
     </header>
   );
 }

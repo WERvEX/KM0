@@ -58,6 +58,7 @@ export function RoutingPanel({ projectId, blockedReason }: Props) {
   const onPlan = (next: RoutingPlan) => {
     queryClient.setQueryData(routingKey(projectId), next);
     void queryClient.invalidateQueries({ queryKey: projectKey(projectId) });
+    void queryClient.invalidateQueries({ queryKey: ["project.list"] });
   };
   const replan = useMutation({ mutationFn: () => call("routing.plan", { projectId }), onSuccess: onPlan });
   const override = useMutation({

@@ -57,6 +57,7 @@ export function HandoffPanel({ projectId, plan }: { projectId: number; plan: Rou
       setBuilt({ pkg, signature: routingSignature(plan) });
       setPreview(pkg.tasks[0]?.promptPath ?? null);
       void queryClient.invalidateQueries({ queryKey: projectKey(projectId) });
+      void queryClient.invalidateQueries({ queryKey: ["project.list"] });
     },
   });
   const outdated = built !== null && built.signature !== routingSignature(plan);
