@@ -107,10 +107,12 @@ export function createGateway(deps: GatewayDeps) {
     mode: ConcreteMode | "text",
     attempt: number,
     request: ChatRequest,
+    onDelta?: (text: string) => void,
   ): Promise<ChatResponse> {
     const started = now();
     try {
-      const response = await providerFor(ctx.profile).complete(request);
+      const provider = providerFor(ctx.profile);
+      const response = onDelta ? await provider.stream(request, onDelta) : await provider.complete(request);
       deps.recordCall({
         profileId: ctx.profile.id,
         model: ctx.profile.model,
@@ -235,7 +237,18 @@ export function createGateway(deps: GatewayDeps) {
   }
 
   async function text(call: TextCall): Promise<string> {
-    const request: ChatRequest = {
+    const response = await send(call, "text", 1, textRequest(call));
+    return response.text;
+  }
+
+  /** A plain-text answer passed on as it arrives; resolves with the whole text. */
+  async function stream(call: TextCall, onDelta: (text: string) => void): Promise<string> {
+    const response = await send(call, "text", 1, textRequest(call), onDelta);
+    return response.text;
+  }
+
+  function textRequest(call: TextCall): ChatRequest {
+    return {
       model: call.profile.model,
       messages: [{ role: "user", content: call.prompt }],
       temperature: call.profile.temperature,
@@ -244,8 +257,6 @@ export function createGateway(deps: GatewayDeps) {
       ...(call.effort ? { effort: call.effort } : {}),
       ...(call.signal ? { signal: call.signal } : {}),
     };
-    const response = await send(call, "text", 1, request);
-    return response.text;
   }
 
   /**
@@ -288,5 +299,5 @@ export function createGateway(deps: GatewayDeps) {
     };
   }
 
-  return { structured, text, testConnection };
+  return { structured, text, stream, testConnection };
 }

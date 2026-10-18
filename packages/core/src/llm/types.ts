@@ -42,6 +42,8 @@ export interface ChatResponse {
 /** One API compatibility format (OpenAI or Anthropic), bound to a base URL and key. */
 export interface ChatProvider {
   complete(request: ChatRequest): Promise<ChatResponse>;
+  /** Plain text, passed on piece by piece as it arrives; resolves with the whole answer. */
+  stream(request: ChatRequest, onDelta: (text: string) => void): Promise<ChatResponse>;
 }
 
 export type ProviderErrorKind =

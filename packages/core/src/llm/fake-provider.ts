@@ -19,6 +19,13 @@ export class FakeProvider implements ChatProvider {
     if (reply instanceof Error) throw reply;
     return reply;
   }
+
+  /** Replays the scripted text in a few pieces. */
+  async stream(request: ChatRequest, onDelta: (text: string) => void): Promise<ChatResponse> {
+    const reply = await this.complete(request);
+    for (const piece of reply.text.match(/[\s\S]{1,40}/g) ?? []) onDelta(piece);
+    return reply;
+  }
 }
 
 export function textReply(text: string, usage = { inputTokens: 10, outputTokens: 5 }): ChatResponse {

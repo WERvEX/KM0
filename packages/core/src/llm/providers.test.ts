@@ -202,3 +202,106 @@ describe("strictSchema", () => {
     });
   });
 });
+
+function sse(events: { event?: string; data: unknown }[]) {
+  const bodies: Record<string, unknown>[] = [];
+  const text = events
+    .map(
+      (item) =>
+        `${item.event ? `event: ${item.event}\n` : ""}data: ${typeof item.data === "string" ? item.data : JSON.stringify(item.data)}\n\n`,
+    )
+    .join("");
+  const fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+    bodies.push(JSON.parse(String(init?.body ?? "{}")));
+    return new Response(text, { status: 200, headers: { "content-type": "text/event-stream" } });
+  }) as typeof globalThis.fetch;
+  return { fetch, bodies };
+}
+
+describe("streaming", () => {
+  it("passes OpenAI content deltas on, skips reasoning, and reads usage from the last chunk", async () => {
+    const chunk = (delta: Record<string, unknown>, usage: unknown = null) => ({
+      id: "c",
+      object: "chat.completion.chunk",
+      created: 0,
+      model: "m",
+      choices: usage ? [] : [{ index: 0, delta, finish_reason: null }],
+      ...(usage ? { usage } : {}),
+    });
+    const { fetch, bodies } = sse([
+      { data: chunk({ reasoning_content: "thinking…" }) },
+      { data: chunk({ content: "Hello" }) },
+      { data: chunk({ content: " world" }) },
+      { data: chunk({}, { prompt_tokens: 7, completion_tokens: 2, total_tokens: 9 }) },
+      { data: "[DONE]" },
+    ]);
+    const provider = new OpenAIProvider({ apiKey: "k", baseUrl: "https://api.deepseek.com", fetch });
+    const deltas: string[] = [];
+    const response = await provider.stream({ model: "m", messages: [{ role: "user", content: "hi" }] }, (text) =>
+      deltas.push(text),
+    );
+    expect(bodies[0]).toMatchObject({ stream: true, stream_options: { include_usage: true } });
+    expect(deltas).toEqual(["Hello", " world"]);
+    expect(response).toEqual({ text: "Hello world", usage: { inputTokens: 7, outputTokens: 2 } });
+  });
+
+  it("streams Anthropic text deltas and ignores thinking", async () => {
+    const message = {
+      id: "m",
+      type: "message",
+      role: "assistant",
+      model: "glm",
+      content: [],
+      stop_reason: null,
+      stop_sequence: null,
+      usage: { input_tokens: 11, output_tokens: 0 },
+    };
+    const { fetch, bodies } = sse([
+      { event: "message_start", data: { type: "message_start", message } },
+      {
+        event: "content_block_start",
+        data: {
+          type: "content_block_start",
+          index: 0,
+          content_block: { type: "thinking", thinking: "", signature: "" },
+        },
+      },
+      {
+        event: "content_block_delta",
+        data: { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "hmm" } },
+      },
+      { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
+      {
+        event: "content_block_start",
+        data: { type: "content_block_start", index: 1, content_block: { type: "text", text: "" } },
+      },
+      {
+        event: "content_block_delta",
+        data: { type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "Hi" } },
+      },
+      {
+        event: "content_block_delta",
+        data: { type: "content_block_delta", index: 1, delta: { type: "text_delta", text: " there" } },
+      },
+      { event: "content_block_stop", data: { type: "content_block_stop", index: 1 } },
+      {
+        event: "message_delta",
+        data: {
+          type: "message_delta",
+          delta: { stop_reason: "end_turn", stop_sequence: null },
+          usage: { output_tokens: 4 },
+        },
+      },
+      { event: "message_stop", data: { type: "message_stop" } },
+    ]);
+    const provider = new AnthropicProvider({ apiKey: "k", baseUrl: "https://open.bigmodel.cn/api/anthropic", fetch });
+    const deltas: string[] = [];
+    const response = await provider.stream(
+      { model: "glm", messages: [{ role: "user", content: "hi" }], maxTokens: 100 },
+      (text) => deltas.push(text),
+    );
+    expect(bodies[0]).toMatchObject({ stream: true, max_tokens: 100 });
+    expect(deltas).toEqual(["Hi", " there"]);
+    expect(response).toEqual({ text: "Hi there", usage: { inputTokens: 11, outputTokens: 4 } });
+  });
+});

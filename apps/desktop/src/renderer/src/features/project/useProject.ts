@@ -16,6 +16,8 @@ export function useProjectAction<C extends IpcChannel>(channel: C, projectId: nu
     onSuccess: (detail) => {
       queryClient.setQueryData(projectKey(projectId), detail);
       void queryClient.invalidateQueries({ queryKey: ["project.list"] });
+      // A changed decision can make document sections stale.
+      void queryClient.invalidateQueries({ queryKey: ["document.get", projectId] });
     },
     onError: () => {
       // A conflict means our view was stale; reload it.

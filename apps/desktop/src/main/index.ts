@@ -1,12 +1,13 @@
 import { join } from "node:path";
 import { createGateway, createSimulatedLlm } from "@km0/core";
-import { IPC_INVOKE } from "@km0/shared";
+import { type EmitEvent, IPC_EVENT, IPC_INVOKE } from "@km0/shared";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import log from "electron-log/main";
 import { openDatabase } from "./db/database";
 import { ElectronSecretStore } from "./electron-secrets";
 import { createHandlers } from "./handlers";
 import { createDispatcher } from "./ipc/router";
+import { DocumentService } from "./services/document-service";
 import { llmPort } from "./services/llm-port";
 import { ProjectService } from "./services/project-service";
 import { SettingsStore } from "./services/settings-store";
@@ -87,23 +88,23 @@ void app.whenReady().then(() => {
       if (settings.getProfile(profileId).structuredMode === "auto") settings.setStructuredMode(profileId, mode);
     },
   });
-  const projects = new ProjectService(
-    db,
-    // KM0_FAKE_LLM=1 swaps in a deterministic model for end-to-end tests and demos without an API key.
-    process.env.KM0_FAKE_LLM === "1"
-      ? () => createSimulatedLlm()
-      : (projectId) => llmPort(gateway, settings, projectId),
-    () => {
-      const language = settings.getPreferences().language;
-      if (language !== "system") return language;
-      return app.getLocale().toLowerCase().startsWith("zh") ? "zh-CN" : "en";
-    },
-  );
+  // KM0_FAKE_LLM=1 swaps in a deterministic model for end-to-end tests and demos without an API key.
+  const simulated = process.env.KM0_FAKE_LLM === "1" ? createSimulatedLlm({ streamDelayMs: 15 }) : null;
+  const llmFor = (projectId: number | null) => simulated ?? llmPort(gateway, settings, projectId);
+  const language = () => {
+    const preferred = settings.getPreferences().language;
+    if (preferred !== "system") return preferred;
+    return app.getLocale().toLowerCase().startsWith("zh") ? "zh-CN" : "en";
+  };
+  const emit: EmitEvent = (event, payload) => mainWindow?.webContents.send(IPC_EVENT, { event, payload });
+  const projects = new ProjectService(db, llmFor, language);
+  const documents = new DocumentService(db, llmFor, language, emit);
 
   const dispatch = createDispatcher(
     createHandlers({
       settings,
       projects,
+      documents,
       gateway,
       appInfo: () => ({
         name: "KM0",

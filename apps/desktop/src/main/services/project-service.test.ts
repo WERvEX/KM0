@@ -51,7 +51,8 @@ describe("fast path", () => {
     ]);
 
     project = await service.advance(project.id, false);
-    expect(project).toMatchObject({ stage: "documents", discussionComplete: true });
+    // The fast path writes no documents.
+    expect(project).toMatchObject({ stage: "routing", discussionComplete: true, documents: [] });
   });
 });
 

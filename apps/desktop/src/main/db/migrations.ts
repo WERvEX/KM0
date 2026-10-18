@@ -176,4 +176,25 @@ CREATE TABLE stage_states (
 ALTER TABLE question_rounds ADD COLUMN review INTEGER NOT NULL DEFAULT 0;
 `,
   },
+  {
+    id: 3,
+    name: "document_versions",
+    // No document was written before this migration, so the table is rebuilt rather than altered.
+    sql: `
+DROP TABLE documents;
+
+CREATE TABLE documents (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('prd', 'tech_design', 'brief')),
+  version INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  sections_json TEXT NOT NULL,
+  origin TEXT NOT NULL CHECK (origin IN ('generated', 'edited', 'revised', 'restored')),
+  note TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE (project_id, kind, version)
+);
+`,
+  },
 ];

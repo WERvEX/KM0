@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
 import { errorMessage } from "@/lib/ipc";
+import { DocumentsPanel } from "../documents/DocumentsPanel";
+import { useDocumentActions, useDocumentStreams } from "../documents/useDocuments";
 import { DecisionLedger } from "./DecisionLedger";
 import { QuestionRoundCard } from "./QuestionRoundCard";
 import { StageStepper } from "./StageStepper";
@@ -20,6 +22,8 @@ export function ProjectPage({ projectId }: { projectId: number }) {
   const setPath = useProjectAction("project.setPath", projectId);
   const retry = useProjectAction("project.retry", projectId);
   const edit = useProjectAction("decision.update", projectId);
+  const documents = useDocumentActions(projectId);
+  const streams = useDocumentStreams(projectId);
 
   const actions = [answer, advance, more, review, setPath, retry, edit];
   const busy = actions.some((action) => action.isPending);
@@ -32,6 +36,14 @@ export function ProjectPage({ projectId }: { projectId: number }) {
   const detail = project.data;
   const current = detail.stages.find((stage) => stage.status === "active" || stage.status === "ready");
   const isLast = current ? detail.stages.indexOf(current) === detail.stages.length - 1 : false;
+  const writesDocuments = detail.documents.length > 0;
+  // Finishing the discussion starts writing every document of the path at once.
+  const startDocuments = (next: ProjectDetail) => {
+    if (!next.discussionComplete) return;
+    for (const item of next.documents) {
+      if (item.version === null) void documents.generate(item.kind);
+    }
+  };
   const failure = detail.error ?? (actionError ? { kind: "internal", message: errorMessage(actionError) } : null);
 
   return (
@@ -73,7 +85,7 @@ export function ProjectPage({ projectId }: { projectId: number }) {
               round={detail.openRound}
               busy={busy}
               onSubmit={(answers) => answer.mutate({ projectId, roundId: detail.openRound?.id ?? 0, answers })}
-              onSkipRest={() => advance.mutate({ projectId, adoptRecommended: true })}
+              onSkipRest={() => advance.mutate({ projectId, adoptRecommended: true }, { onSuccess: startDocuments })}
             />
           ) : current?.status === "ready" ? (
             <section className="rounded-lg border border-border bg-panel p-5">
@@ -83,9 +95,13 @@ export function ProjectPage({ projectId }: { projectId: number }) {
                 <Button
                   variant="primary"
                   disabled={busy}
-                  onClick={() => advance.mutate({ projectId, adoptRecommended: false })}
+                  onClick={() => advance.mutate({ projectId, adoptRecommended: false }, { onSuccess: startDocuments })}
                 >
-                  {isLast ? t("project.ready.finish") : t("project.ready.next")}
+                  {isLast
+                    ? writesDocuments
+                      ? t("project.ready.finishWithDocuments")
+                      : t("project.ready.finish")
+                    : t("project.ready.next")}
                 </Button>
                 <Button
                   disabled={busy || current.roundsUsed >= current.maxRounds}
@@ -96,6 +112,8 @@ export function ProjectPage({ projectId }: { projectId: number }) {
                 </Button>
               </div>
             </section>
+          ) : detail.discussionComplete && writesDocuments ? (
+            <DocumentsPanel projectId={projectId} summaries={detail.documents} actions={documents} streams={streams} />
           ) : detail.discussionComplete ? (
             <section className="rounded-lg border border-border bg-panel p-5">
               <h2 className="flex items-center gap-2 font-medium">

@@ -207,3 +207,26 @@ describe("extractJson", () => {
     expect(() => extractJson("nothing here")).toThrow(SyntaxError);
   });
 });
+
+describe("streamed text", () => {
+  it("passes pieces on as they arrive and logs one text call with its cost", async () => {
+    const provider = new FakeProvider([textReply("x".repeat(100), { inputTokens: 1000, outputTokens: 500 })]);
+    const { gateway, calls } = setup(provider);
+    const pieces: string[] = [];
+    const text = await gateway.stream(
+      {
+        profile: profile({ priceInPerMTok: 3, priceOutPerMTok: 15 }),
+        purpose: "document.prd",
+        prompt: "write",
+        projectId: 4,
+      },
+      (piece) => pieces.push(piece),
+    );
+    expect(text).toHaveLength(100);
+    expect(pieces.length).toBeGreaterThan(1);
+    expect(pieces.join("")).toBe(text);
+    expect(calls).toMatchObject([
+      { purpose: "document.prd", mode: "text", projectId: 4, costUsd: 0.0105, error: null },
+    ]);
+  });
+});

@@ -38,6 +38,55 @@ export class AnthropicProvider implements ChatProvider {
   }
 
   async complete(request: ChatRequest): Promise<ChatResponse> {
+    const params = this.params(request);
+    let message: Anthropic.Beta.BetaMessage;
+    try {
+      if (this.withFallback(request)) {
+        // On a policy decline the API retries on the model's default fallback; a no-op on models without one.
+        message = await this.client.beta.messages.create(
+          { ...params, betas: [FALLBACK_BETA], fallbacks: "default" },
+          { signal: request.signal },
+        );
+      } else {
+        message = (await this.client.messages.create(params as Anthropic.MessageCreateParamsNonStreaming, {
+          signal: request.signal,
+        })) as unknown as Anthropic.Beta.BetaMessage;
+      }
+    } catch (error) {
+      throw toProviderError(error);
+    }
+    return readMessage(message);
+  }
+
+  async stream(request: ChatRequest, onDelta: (text: string) => void): Promise<ChatResponse> {
+    const params = this.params(request);
+    let message: Anthropic.Beta.BetaMessage;
+    try {
+      // Thinking arrives as separate events; only answer text is passed on.
+      const onText = (delta: string) => onDelta(delta);
+      if (this.withFallback(request)) {
+        const stream = this.client.beta.messages.stream(
+          { ...params, betas: [FALLBACK_BETA], fallbacks: "default" },
+          { signal: request.signal },
+        );
+        stream.on("text", onText);
+        message = await stream.finalMessage();
+      } else {
+        const stream = this.client.messages.stream(params as Anthropic.MessageStreamParams, { signal: request.signal });
+        stream.on("text", onText);
+        message = (await stream.finalMessage()) as unknown as Anthropic.Beta.BetaMessage;
+      }
+    } catch (error) {
+      throw toProviderError(error);
+    }
+    return readMessage(message);
+  }
+
+  private withFallback(request: ChatRequest): boolean {
+    return this.claudeApi && request.model.startsWith("claude-");
+  }
+
+  private params(request: ChatRequest): Anthropic.Beta.MessageCreateParamsNonStreaming {
     const output = request.output;
     const maxTokens = request.maxTokens ?? DEFAULT_MAX_TOKENS;
     const params: Anthropic.Beta.MessageCreateParamsNonStreaming = {
@@ -64,42 +113,27 @@ export class AnthropicProvider implements ChatProvider {
     }
     if (this.claudeApi && request.effort) outputConfig.effort = request.effort;
     if (Object.keys(outputConfig).length > 0) params.output_config = outputConfig;
-
-    let message: Anthropic.Beta.BetaMessage;
-    try {
-      if (this.claudeApi && request.model.startsWith("claude-")) {
-        // On a policy decline the API retries on the model's default fallback; a no-op on models without one.
-        message = await this.client.beta.messages.create(
-          { ...params, betas: [FALLBACK_BETA], fallbacks: "default" },
-          { signal: request.signal },
-        );
-      } else {
-        message = (await this.client.messages.create(params as Anthropic.MessageCreateParamsNonStreaming, {
-          signal: request.signal,
-        })) as unknown as Anthropic.Beta.BetaMessage;
-      }
-    } catch (error) {
-      throw toProviderError(error);
-    }
-
-    if (message.stop_reason === "refusal") {
-      const category = message.stop_details?.category ?? "unspecified";
-      throw new ProviderError("refusal", `declined (${category})`);
-    }
-
-    let text = "";
-    let toolInput: unknown;
-    // Read blocks by type: current models may start with (empty) thinking blocks.
-    for (const block of message.content) {
-      if (block.type === "text") text += block.text;
-      else if (block.type === "tool_use" && toolInput === undefined) toolInput = block.input;
-    }
-    return {
-      text,
-      ...(toolInput !== undefined ? { toolInput } : {}),
-      usage: { inputTokens: message.usage.input_tokens, outputTokens: message.usage.output_tokens },
-    };
+    return params;
   }
+}
+
+function readMessage(message: Anthropic.Beta.BetaMessage): ChatResponse {
+  if (message.stop_reason === "refusal") {
+    const category = message.stop_details?.category ?? "unspecified";
+    throw new ProviderError("refusal", `declined (${category})`);
+  }
+  let text = "";
+  let toolInput: unknown;
+  // Read blocks by type: current models may start with (empty) thinking blocks.
+  for (const block of message.content) {
+    if (block.type === "text") text += block.text;
+    else if (block.type === "tool_use" && toolInput === undefined) toolInput = block.input;
+  }
+  return {
+    text,
+    ...(toolInput !== undefined ? { toolInput } : {}),
+    usage: { inputTokens: message.usage.input_tokens, outputTokens: message.usage.output_tokens },
+  };
 }
 
 /**

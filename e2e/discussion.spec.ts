@@ -59,13 +59,21 @@ test("a new project walks the four stages, and editing a decision flags its depe
   }
   // Skipped questions and leftover keys are decided by the AI and marked as such.
   await expect(ledger.getByText("AI 决定", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("讨论完成")).toBeVisible();
-  await page.screenshot({ path: "test-results/screenshots/full-done.png" });
+
+  // Closing the last stage writes the PRD and the technical design side by side.
+  await expect(page.getByRole("tab", { name: /产品需求文档/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "8. 待定问题" })).toBeVisible();
+  await page.getByRole("tab", { name: /技术方案/ }).click();
+  await expect(page.getByRole("heading", { name: "10. 风险" })).toBeVisible();
+  await page.getByRole("tab", { name: /产品需求文档/ }).click();
+  await page.screenshot({ path: "test-results/screenshots/full-documents.png" });
 
   await ledger.getByRole("button", { name: "修改 交付形态" }).click();
   await page.getByRole("dialog").getByRole("textbox").fill("在线部署");
   await page.getByRole("dialog").getByRole("button", { name: "保存" }).click();
   await expect(ledger.getByText("需复核").first()).toBeVisible();
+  // Only the sections written from the delivery form are marked stale.
+  await expect(page.getByText("4 个小节依据的决策已改动：背景与目标、项目定位与规模、非功能需求、待定问题")).toBeVisible();
   await page.screenshot({ path: "test-results/screenshots/needs-review.png" });
 
   await ledger.getByRole("button", { name: "复核此阶段" }).first().click();

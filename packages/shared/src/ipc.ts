@@ -7,6 +7,15 @@ import {
   ProjectDetail,
   UpdateDecisionInput,
 } from "./discussion";
+import {
+  DocumentProgress,
+  DocumentView,
+  GenerateDocumentInput,
+  GetDocumentInput,
+  RestoreDocumentInput,
+  ReviseSectionsInput,
+  SaveSectionInput,
+} from "./documents";
 import { ProjectPath, ProjectSummary } from "./domain";
 import type { AppErrorShape } from "./errors";
 import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
@@ -53,6 +62,12 @@ export const ipcContract = {
   "stage.more": channel(z.object({ projectId: z.number().int().positive() }), ProjectDetail),
   "stage.review": channel(z.object({ projectId: z.number().int().positive(), stage: DiscussionStage }), ProjectDetail),
   "decision.update": channel(UpdateDecisionInput, ProjectDetail),
+
+  "document.get": channel(GetDocumentInput, DocumentView.nullable()),
+  "document.generate": channel(GenerateDocumentInput, DocumentView),
+  "document.saveSection": channel(SaveSectionInput, DocumentView),
+  "document.revise": channel(ReviseSectionsInput, DocumentView),
+  "document.restore": channel(RestoreDocumentInput, DocumentView),
 } as const;
 
 export type IpcContract = typeof ipcContract;
@@ -62,12 +77,21 @@ export type IpcOutput<C extends IpcChannel> = z.output<IpcContract[C]["output"]>
 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: AppErrorShape };
 
-/** main → renderer push events (streaming document generation arrives here in P2). */
-export const ipcEvents = {} as const;
+/** main → renderer push events. */
+export const ipcEvents = {
+  "document.progress": DocumentProgress,
+} as const;
 
-export { IPC_INVOKE } from "./bridge";
+export type IpcEvents = typeof ipcEvents;
+export type IpcEvent = keyof IpcEvents;
+export type IpcEventPayload<E extends IpcEvent> = z.output<IpcEvents[E]>;
+export type EmitEvent = <E extends IpcEvent>(event: E, payload: IpcEventPayload<E>) => void;
+
+export { IPC_EVENT, IPC_INVOKE } from "./bridge";
 
 /** API exposed on `window.km0` by the preload script. */
 export interface Km0Bridge {
   invoke<C extends IpcChannel>(channel: C, input: IpcInput<C>): Promise<IpcResult<IpcOutput<C>>>;
+  /** Subscribe to a push event; returns the unsubscribe function. */
+  on<E extends IpcEvent>(event: E, listener: (payload: IpcEventPayload<E>) => void): () => void;
 }

@@ -35,6 +35,8 @@ import {
 } from "@km0/shared";
 import { z } from "zod";
 import { type Database, nowIso, transaction } from "../db/sql";
+import { documentSummaries } from "./document-service";
+import { KeyedLock } from "./lock";
 
 interface ProjectRow {
   id: number;
@@ -85,7 +87,7 @@ const Strings = z.array(z.string());
  * answer the same round twice or race a stage transition.
  */
 export class ProjectService {
-  private readonly locks = new Map<number, Promise<unknown>>();
+  private readonly locks = new KeyedLock<number>();
 
   /**
    * @param llmFor gives the model port for a project, so calls are logged against it
@@ -214,7 +216,8 @@ export class ProjectService {
           this.setStageStatus(projectId, next, "active");
           this.setProjectStage(projectId, next);
         } else {
-          this.setProjectStage(projectId, "documents");
+          // The fast path writes no documents and goes straight to task routing.
+          this.setProjectStage(projectId, project.path === "fast" ? "routing" : "documents");
         }
       });
       return this.advanceDiscussion(projectId);
@@ -393,18 +396,7 @@ export class ProjectService {
   // --- persistence ---------------------------------------------------------------------------
 
   private withLock<T>(projectId: number, work: () => Promise<T>): Promise<T> {
-    const previous = this.locks.get(projectId) ?? Promise.resolve();
-    const next = previous.catch(() => undefined).then(work);
-    // The stored tail never rejects; the caller still sees the real outcome through `next`.
-    const tail = next.then(
-      () => undefined,
-      () => undefined,
-    );
-    this.locks.set(projectId, tail);
-    void tail.then(() => {
-      if (this.locks.get(projectId) === tail) this.locks.delete(projectId);
-    });
-    return next;
+    return this.locks.run(projectId, work);
   }
 
   private row(id: number): ProjectRow {
@@ -496,20 +488,7 @@ export class ProjectService {
   }
 
   private decisions(projectId: number): Decision[] {
-    const rows = this.db
-      .prepare("SELECT * FROM decisions WHERE project_id = ? ORDER BY id")
-      .all(projectId) as unknown as DecisionRow[];
-    return rows.map((row) => ({
-      key: row.key,
-      stage: row.stage,
-      value: JSON.parse(row.value_json) as DecisionValue,
-      source: row.source,
-      rationale: row.rationale,
-      alternatives: Strings.parse(JSON.parse(row.alternatives_json)),
-      dependsOn: Strings.parse(JSON.parse(row.depends_on_json)),
-      needsReview: row.needs_review === 1,
-      updatedAt: row.updated_at,
-    }));
+    return readDecisions(this.db, projectId);
   }
 
   /** Write a decision; when an existing value changes, flag the decisions that depend on it. */
@@ -556,7 +535,8 @@ export class ProjectService {
     const row = this.row(id);
     const path = row.path ?? "full";
     const pathStages = PATH_STAGES[path];
-    const decisions = this.decisions(id).filter((decision) => pathStages.includes(decision.stage));
+    const allDecisions = this.decisions(id);
+    const decisions = allDecisions.filter((decision) => pathStages.includes(decision.stage));
     const stageRows = this.db
       .prepare("SELECT stage, status, rounds_used FROM stage_states WHERE project_id = ?")
       .all(id) as unknown as StageRow[];
@@ -591,7 +571,26 @@ export class ProjectService {
           }
         : null,
       discussionComplete: stages.every((stage) => stage.status === "complete"),
+      documents: documentSummaries(this.db, id, path, allDecisions),
       error,
     };
   }
+}
+
+/** The project's decision ledger, oldest first. */
+export function readDecisions(db: Database, projectId: number): Decision[] {
+  const rows = db
+    .prepare("SELECT * FROM decisions WHERE project_id = ? ORDER BY id")
+    .all(projectId) as unknown as DecisionRow[];
+  return rows.map((row) => ({
+    key: row.key,
+    stage: row.stage,
+    value: JSON.parse(row.value_json) as DecisionValue,
+    source: row.source,
+    rationale: row.rationale,
+    alternatives: Strings.parse(JSON.parse(row.alternatives_json)),
+    dependsOn: Strings.parse(JSON.parse(row.depends_on_json)),
+    needsReview: row.needs_review === 1,
+    updatedAt: row.updated_at,
+  }));
 }

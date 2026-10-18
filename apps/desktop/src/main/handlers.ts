@@ -1,17 +1,19 @@
 import type { Gateway } from "@km0/core";
 import type { AppInfo } from "@km0/shared";
 import type { Handlers } from "./ipc/router";
+import type { DocumentService } from "./services/document-service";
 import type { ProjectService } from "./services/project-service";
 import type { SettingsStore } from "./services/settings-store";
 
 export interface HandlerDeps {
   settings: SettingsStore;
   projects: ProjectService;
+  documents: DocumentService;
   gateway: Gateway;
   appInfo: () => AppInfo;
 }
 
-export function createHandlers({ settings, projects, gateway, appInfo }: HandlerDeps): Handlers {
+export function createHandlers({ settings, projects, documents, gateway, appInfo }: HandlerDeps): Handlers {
   return {
     "app.info": () => appInfo(),
 
@@ -46,5 +48,13 @@ export function createHandlers({ settings, projects, gateway, appInfo }: Handler
     "stage.more": ({ projectId }) => projects.askMore(projectId),
     "stage.review": ({ projectId, stage }) => projects.review(projectId, stage),
     "decision.update": ({ projectId, key, value }) => projects.updateDecision(projectId, key, value),
+
+    "document.get": ({ projectId, kind, version }) => documents.get(projectId, kind, version),
+    "document.generate": ({ projectId, kind, keepEdited }) => documents.generate(projectId, kind, keepEdited),
+    "document.saveSection": ({ projectId, kind, baseVersion, sectionId, body }) =>
+      documents.saveSection(projectId, kind, baseVersion, sectionId, body),
+    "document.revise": ({ projectId, kind, baseVersion, sectionIds, instruction }) =>
+      documents.revise(projectId, kind, baseVersion, sectionIds, instruction),
+    "document.restore": ({ projectId, kind, version }) => documents.restore(projectId, kind, version),
   };
 }

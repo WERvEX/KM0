@@ -1,11 +1,12 @@
 import { createGateway, createSimulatedLlm } from "@km0/core";
-import type { Km0Bridge } from "@km0/shared";
+import type { EmitEvent, Km0Bridge } from "@km0/shared";
 import initSqlJs from "sql.js";
 import sqlWasmUrl from "sql.js/dist/sql-wasm-browser.wasm?url";
 import { migrations } from "../main/db/migrations";
 import { migrate } from "../main/db/sql";
 import { createHandlers } from "../main/handlers";
 import { createDispatcher } from "../main/ipc/router";
+import { DocumentService } from "../main/services/document-service";
 import { llmPort } from "../main/services/llm-port";
 import { ProjectService } from "../main/services/project-service";
 import { PlainSecretStore } from "../main/services/secrets";
@@ -44,19 +45,25 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
       if (settings.getProfile(profileId).structuredMode === "auto") settings.setStructuredMode(profileId, mode);
     },
   });
-  const projects = new ProjectService(
-    db,
-    simulated ? () => createSimulatedLlm() : (projectId) => llmPort(gateway, settings, projectId),
-    () => {
-      const language = settings.getPreferences().language;
-      if (language !== "system") return language;
-      return navigator.language.toLowerCase().startsWith("zh") ? "zh-CN" : "en";
-    },
-  );
+  const fake = simulated ? createSimulatedLlm({ streamDelayMs: 15 }) : null;
+  const llmFor = (projectId: number | null) => fake ?? llmPort(gateway, settings, projectId);
+  const language = () => {
+    const preferred = settings.getPreferences().language;
+    if (preferred !== "system") return preferred;
+    return navigator.language.toLowerCase().startsWith("zh") ? "zh-CN" : "en";
+  };
+  const listeners = new Map<string, Set<(payload: unknown) => void>>();
+  const emit: EmitEvent = (event, payload) => {
+    const copy = structuredClone(payload);
+    for (const listener of listeners.get(event) ?? []) listener(copy);
+  };
+  const projects = new ProjectService(db, llmFor, language);
+  const documents = new DocumentService(db, llmFor, language, emit);
   const dispatch = createDispatcher(
     createHandlers({
       settings,
       projects,
+      documents,
       gateway,
       appInfo: () => ({
         name: "KM0",
@@ -72,5 +79,14 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   return {
     // A structured clone mirrors what Electron IPC does, so the UI never shares objects with the services.
     invoke: async (channel, input) => structuredClone(await dispatch(channel, input)) as never,
+    on: (event, listener) => {
+      const set = listeners.get(event) ?? new Set();
+      listeners.set(event, set);
+      const wrapped = listener as (payload: unknown) => void;
+      set.add(wrapped);
+      return () => {
+        set.delete(wrapped);
+      };
+    },
   };
 }

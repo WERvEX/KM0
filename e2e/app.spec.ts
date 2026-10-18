@@ -53,5 +53,5 @@ test("never exposes Node APIs to the page", async () => {
     process: typeof (globalThis as { process?: unknown }).process,
     bridge: Object.keys((globalThis as unknown as { km0: object }).km0),
   }));
-  expect(exposed).toEqual({ require: "undefined", process: "undefined", bridge: ["invoke"] });
+  expect(exposed).toEqual({ require: "undefined", process: "undefined", bridge: ["invoke", "on"] });
 });

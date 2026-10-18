@@ -1,16 +1,62 @@
+import { SECTION_MARKER } from "@km0/shared";
 import type { z } from "zod";
-import type { DiscussionLlm } from "./engine";
+import type { DocumentLlm } from "../documents/engine";
+
+export interface SimulatedLlmOptions {
+  /** Pause between streamed pieces, so the UI shows a document arriving. */
+  streamDelayMs?: number;
+}
 
 /**
  * A deterministic stand-in for the model, used by tests and by `KM0_FAKE_LLM=1` end-to-end runs.
  * It reads the keys listed in the prompt and answers with plausible, fixed structures.
  */
-export function createSimulatedLlm(): DiscussionLlm {
+export function createSimulatedLlm(options: SimulatedLlmOptions = {}): DocumentLlm {
+  const delay = options.streamDelayMs ?? 0;
   return {
     async structured<S extends z.ZodType>(_role: unknown, call: { purpose: string; prompt: string; schema: S }) {
       return call.schema.parse(simulate(call.purpose, call.prompt));
     },
-  } as DiscussionLlm;
+    async stream(_role: unknown, call: { purpose: string; prompt: string }, onDelta: (text: string) => void) {
+      const text = simulateDocument(call.prompt);
+      for (const piece of text.match(/[\s\S]{1,60}/g) ?? []) {
+        if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+        onDelta(piece);
+      }
+      return text;
+    },
+  } as DocumentLlm;
+}
+
+/** One marker-delimited body per listed section, quoting the instruction of a revision. */
+function simulateDocument(prompt: string): string {
+  const revising = prompt.includes("Sections to rewrite:");
+  const ids = listedKeys(prompt, revising ? "Sections to rewrite:" : "Sections, in order:");
+  const instruction = /^Instruction: (.*)$/m.exec(prompt)?.[1] ?? "";
+  const ledger = listedLines(prompt, "Decision ledger:").slice(0, 3);
+  return ids
+    .map((id) => {
+      const lines = [`${SECTION_MARKER}${id}`, `（模拟）本节「${id}」根据决策账本生成。`, ""];
+      if (revising) lines.push(`已按要求修订：${instruction}`, "");
+      lines.push(...ledger.map((line) => line.replace(/ \[.*\]$/, "")));
+      lines.push("", "- 当用户提交表单时，系统应当保存内容并提示成功。");
+      return lines.join("\n");
+    })
+    .join("\n\n");
+}
+
+function listedLines(prompt: string, heading: string): string[] {
+  const start = prompt.indexOf(heading);
+  if (start === -1) return [];
+  const lines: string[] = [];
+  for (const line of prompt
+    .slice(start + heading.length)
+    .split("\n")
+    .slice(1)) {
+    if (!line.startsWith("- ")) break;
+    lines.push(line);
+  }
+  return lines;
 }
 
 function listedKeys(prompt: string, heading: string): string[] {

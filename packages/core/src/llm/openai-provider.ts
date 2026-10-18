@@ -31,6 +31,65 @@ export class OpenAIProvider implements ChatProvider {
   }
 
   async complete(request: ChatRequest): Promise<ChatResponse> {
+    let completion: OpenAI.Chat.ChatCompletion;
+    try {
+      completion = await this.client.chat.completions.create(this.params(request), { signal: request.signal });
+    } catch (error) {
+      throw toProviderError(error);
+    }
+
+    const message = completion.choices[0]?.message;
+    const toolCall = message?.tool_calls?.find((call) => call.type === "function");
+    let toolInput: unknown;
+    if (toolCall && toolCall.type === "function") {
+      try {
+        toolInput = JSON.parse(toolCall.function.arguments);
+      } catch {
+        // Leave malformed arguments as text so the gateway can ask for a repair.
+        toolInput = toolCall.function.arguments;
+      }
+    }
+    return {
+      text: message?.content ?? "",
+      ...(toolInput !== undefined ? { toolInput } : {}),
+      usage: {
+        inputTokens: completion.usage?.prompt_tokens ?? 0,
+        outputTokens: completion.usage?.completion_tokens ?? 0,
+      },
+    };
+  }
+
+  /** Plain text only; structured output is never streamed. */
+  async stream(request: ChatRequest, onDelta: (text: string) => void): Promise<ChatResponse> {
+    const params: OpenAI.Chat.ChatCompletionCreateParamsStreaming = {
+      ...this.params({ ...request, output: undefined }),
+      stream: true,
+      // Usage arrives in a final chunk only when asked for; endpoints that do not know the option ignore it.
+      stream_options: { include_usage: true },
+    };
+    let text = "";
+    const usage = { inputTokens: 0, outputTokens: 0 };
+    try {
+      const stream = await this.client.chat.completions.create(params, { signal: request.signal });
+      for await (const chunk of stream) {
+        // Reasoning models on compatible endpoints send `reasoning_content` deltas; only content is kept.
+        const delta = chunk.choices[0]?.delta?.content;
+        if (delta) {
+          text += delta;
+          onDelta(delta);
+        }
+        if (chunk.usage) {
+          usage.inputTokens = chunk.usage.prompt_tokens ?? 0;
+          usage.outputTokens = chunk.usage.completion_tokens ?? 0;
+        }
+      }
+    } catch (error) {
+      throw toProviderError(error);
+    }
+    return { text, usage };
+  }
+
+  private params(request: ChatRequest): OpenAI.Chat.ChatCompletionCreateParamsNonStreaming {
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
     if (request.system) messages.push({ role: "system", content: request.system });
     for (const message of request.messages) messages.push({ role: message.role, content: message.content });
@@ -57,33 +116,7 @@ export class OpenAIProvider implements ChatProvider {
       ];
       params.tool_choice = { type: "function", function: { name: output.name } };
     }
-
-    let completion: OpenAI.Chat.ChatCompletion;
-    try {
-      completion = await this.client.chat.completions.create(params, { signal: request.signal });
-    } catch (error) {
-      throw toProviderError(error);
-    }
-
-    const message = completion.choices[0]?.message;
-    const toolCall = message?.tool_calls?.find((call) => call.type === "function");
-    let toolInput: unknown;
-    if (toolCall && toolCall.type === "function") {
-      try {
-        toolInput = JSON.parse(toolCall.function.arguments);
-      } catch {
-        // Leave malformed arguments as text so the gateway can ask for a repair.
-        toolInput = toolCall.function.arguments;
-      }
-    }
-    return {
-      text: message?.content ?? "",
-      ...(toolInput !== undefined ? { toolInput } : {}),
-      usage: {
-        inputTokens: completion.usage?.prompt_tokens ?? 0,
-        outputTokens: completion.usage?.completion_tokens ?? 0,
-      },
-    };
+    return params;
   }
 }
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DocumentSummary } from "./documents";
 import { ProjectPath, ProjectSummary } from "./domain";
 import { AppErrorShape } from "./errors";
 
@@ -118,6 +119,8 @@ export const ProjectDetail = ProjectSummary.extend({
   openRound: QuestionRound.nullable(),
   /** Every discussion stage of the path is complete. */
   discussionComplete: z.boolean(),
+  /** The documents this project's path produces, generated or not. */
+  documents: z.array(DocumentSummary),
   /** A failure from the last step (for example question generation), so the UI can offer a retry. */
   error: AppErrorShape.nullable(),
 });
