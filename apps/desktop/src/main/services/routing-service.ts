@@ -19,6 +19,7 @@ import {
   TaskFailure,
   TaskFeatures,
   TaskOverride,
+  type Tier,
   Triage,
 } from "@km0/shared";
 import { z } from "zod";
@@ -54,6 +55,7 @@ const TaskSpec = z.object({
   files: z.array(z.string()),
   decisionKeys: z.array(z.string()),
   sections: z.array(SectionRef),
+  testCommand: z.string().nullable().optional(),
 });
 const BasedOn = z.array(z.object({ kind: z.enum(["prd", "tech_design", "brief"]), version: z.number().int() }));
 const Seqs = z.array(z.number().int());
@@ -144,6 +146,7 @@ export class RoutingService {
             files: task.files,
             decisionKeys: task.decisionKeys,
             sections: task.sections,
+            testCommand: task.testCommand,
           };
           this.db
             .prepare(
@@ -193,9 +196,36 @@ export class RoutingService {
       const failures = this.failures(projectId, taskId);
       const task = this.get(projectId)?.tasks.find((item) => item.id === taskId);
       if (!task) throw new AppError("not_found", `Task ${taskId} does not exist.`);
-      failures.push({ tier: task.tier, at: nowIso() });
+      failures.push({ tier: task.tier, at: nowIso(), source: "user" });
       this.saveFailures(taskId, failures);
       return this.get(projectId) as RoutingPlan;
+    });
+  }
+
+  /**
+   * Record or drop KM0's rejection of a KM0 Runner change, keyed by when it was judged. A rejection lifts the
+   * task one tier above the tier the Runner finished on, so the next hand-off starts there.
+   */
+  setRunnerRejection(
+    projectId: number,
+    seq: number,
+    judgedAt: string,
+    rejection: { tier: Tier | null; reason: string } | null,
+  ): Promise<void> {
+    return this.locks.run(projectId, async () => {
+      const row = this.db.prepare("SELECT id FROM tasks WHERE project_id = ? AND seq = ?").get(projectId, seq) as
+        | { id: number }
+        | undefined;
+      // The plan was made again since the run: its tasks are new and owe nothing to the old run.
+      if (!row) return;
+      const kept = this.failures(projectId, row.id).filter(
+        (failure) => !(failure.source === "runner" && failure.at === judgedAt),
+      );
+      if (rejection) {
+        const tier = rejection.tier ?? this.get(projectId)?.tasks.find((task) => task.id === row.id)?.tier ?? "T1";
+        kept.push({ tier, at: judgedAt, source: "runner", reason: rejection.reason });
+      }
+      this.saveFailures(row.id, kept);
     });
   }
 

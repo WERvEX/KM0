@@ -244,4 +244,30 @@ UPDATE agents SET capabilities_json = '["backend","testing"]' WHERE id = 'codex'
 UPDATE agents SET capabilities_json = '["frontend"]' WHERE id = 'cursor';
 `,
   },
+  {
+    id: 7,
+    name: "runner_runs",
+    // Runs of KM0 Runner imported for acceptance; a verdict is kept here even when the run folder is gone.
+    sql: `
+CREATE TABLE runner_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  run_id TEXT NOT NULL,
+  path TEXT NOT NULL,
+  imported_at TEXT NOT NULL,
+  write_back_pending INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (project_id, run_id)
+);
+
+CREATE TABLE runner_results (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_ref INTEGER NOT NULL REFERENCES runner_runs(id) ON DELETE CASCADE,
+  seq INTEGER NOT NULL,
+  report_json TEXT NOT NULL,
+  diff TEXT,
+  verdict_json TEXT,
+  UNIQUE (run_ref, seq)
+);
+`,
+  },
 ];

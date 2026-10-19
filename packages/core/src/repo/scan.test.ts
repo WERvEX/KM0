@@ -79,6 +79,22 @@ describe("scanRepo", () => {
     expect(scan.stack.map((item) => item.name)).toEqual(["FastAPI", "SQLAlchemy", "PostgreSQL"]);
     expect(scan.languages).toEqual([{ name: "Python", files: 2 }]);
     expect(scan.hasTests).toBe(true);
+    expect(scan.testCommand).toBe(null); // pyproject.toml without pytest says nothing about the runner
+  });
+
+  it("detects the test command from the root files", async () => {
+    const detect = async (files: Record<string, string>) => (await scanRepo(memoryFs(files), opts)).testCommand;
+    expect(await detect({ "package.json": '{"scripts":{"test":"vitest run"}}', "pnpm-lock.yaml": "" })).toBe(
+      "pnpm test",
+    );
+    expect(
+      await detect({ "package.json": '{"scripts":{"test":"echo \\"Error: no test specified\\" && exit 1"}}' }),
+    ).toBe(null);
+    expect(await detect({ "pyproject.toml": "[tool.pytest.ini_options]\naddopts = '-q'", "uv.lock": "" })).toBe(
+      "uv run pytest",
+    );
+    expect(await detect({ "go.mod": "module x" })).toBe("go test ./...");
+    expect(await detect({ Makefile: "build:\n\tgo build\ntest:\n\tgo test ./...", "go.mod": "" })).toBe("make test");
   });
 
   it("finds nothing in an empty folder without failing", async () => {

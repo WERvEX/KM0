@@ -8,6 +8,7 @@ import { DocumentService } from "../services/document-service";
 import { HandoffService } from "../services/handoff-service";
 import { ProjectService } from "../services/project-service";
 import { RoutingService } from "../services/routing-service";
+import { RunnerService } from "../services/runner-service";
 import { SearchStore } from "../services/search-store";
 import { PlainSecretStore } from "../services/secrets";
 import { SettingsStore } from "../services/settings-store";
@@ -41,6 +42,19 @@ function setup(provider = new FakeProvider([])) {
       ),
       routing,
       handoff: new HandoffService(db, routing, () => "zh-CN"),
+      runner: new RunnerService(
+        db,
+        {
+          pick: async () => null,
+          open: async () => {
+            throw new Error("no run folders in this test");
+          },
+        },
+        routing,
+        () => createSimulatedLlm(),
+        () => "zh-CN",
+        () => "simulated",
+      ),
       agents,
       search,
       config: new ConfigService(settings, agents, search),

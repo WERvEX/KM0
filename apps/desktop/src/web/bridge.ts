@@ -13,10 +13,12 @@ import { HandoffService } from "../main/services/handoff-service";
 import { llmPort } from "../main/services/llm-port";
 import { ProjectService } from "../main/services/project-service";
 import { RoutingService } from "../main/services/routing-service";
+import { RunnerService } from "../main/services/runner-service";
 import { SearchStore } from "../main/services/search-store";
 import { PlainSecretStore } from "../main/services/secrets";
 import { SettingsStore } from "../main/services/settings-store";
 import { webRepoAccess } from "./repo-access";
+import { webRunAccess } from "./run-access";
 import { indexedDbStore, SqlJsAdapter } from "./sqljs-database";
 
 export interface WebBridgeOptions {
@@ -72,6 +74,9 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   const config = new ConfigService(settings, agents, search);
   const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules);
   const handoff = new HandoffService(db, routing, language);
+  const runner = new RunnerService(db, webRunAccess(), routing, llmFor, language, () =>
+    simulated ? "simulated" : settings.profileForRole("planner").model,
+  );
   const dispatch = createDispatcher(
     createHandlers({
       settings,
@@ -79,6 +84,7 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
       documents,
       routing,
       handoff,
+      runner,
       agents,
       search,
       config,

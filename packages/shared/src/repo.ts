@@ -25,6 +25,8 @@ export const RepoScan = z.object({
   stack: z.array(StackItem),
   packageManagers: z.array(z.string()),
   hasTests: z.boolean(),
+  /** The command that runs the repository's tests, from its manifests; null when none is evident. */
+  testCommand: z.string().nullable().default(null),
   hasCi: z.boolean(),
   /** Top-level entries, for the model's orientation. */
   topLevel: z.array(z.string()),

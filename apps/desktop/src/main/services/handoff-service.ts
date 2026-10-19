@@ -1,5 +1,12 @@
 import { buildHandoff, type Language } from "@km0/core";
-import { AppError, type HandoffPackage, PATH_DOCUMENTS, type ProjectPath } from "@km0/shared";
+import {
+  AppError,
+  type HandoffPackage,
+  type HandoffTarget,
+  PATH_DOCUMENTS,
+  type ProjectPath,
+  RepoScan,
+} from "@km0/shared";
 import { type Database, nowIso, transaction } from "../db/sql";
 import { latestDocument } from "./document-service";
 import { readDecisions } from "./project-service";
@@ -13,16 +20,20 @@ export class HandoffService {
     private readonly language: () => Language,
   ) {}
 
-  build(projectId: number): HandoffPackage {
+  build(projectId: number, target: HandoffTarget = "agents"): HandoffPackage {
     const plan = this.routing.get(projectId);
     if (!plan || plan.tasks.length === 0) {
       throw new AppError("conflict", "Break the work into tasks before building the hand-off package.");
     }
-    const project = this.db.prepare("SELECT title, description, path FROM projects WHERE id = ?").get(projectId) as {
+    const project = this.db
+      .prepare("SELECT title, description, path, repo_scan_json FROM projects WHERE id = ?")
+      .get(projectId) as {
       title: string;
       description: string;
       path: ProjectPath | null;
+      repo_scan_json: string | null;
     };
+    const scan = project.repo_scan_json ? RepoScan.safeParse(JSON.parse(project.repo_scan_json)) : null;
     const path = project.path ?? "full";
     const documents = PATH_DOCUMENTS[path].flatMap((kind) => {
       const doc = latestDocument(this.db, projectId, kind);
@@ -39,6 +50,8 @@ export class HandoffService {
       decisions: readDecisions(this.db, projectId),
       documents,
       plan,
+      target,
+      testCommand: scan?.success ? scan.data.testCommand : null,
     });
     transaction(this.db, () => {
       this.db

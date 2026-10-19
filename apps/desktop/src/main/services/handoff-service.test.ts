@@ -45,6 +45,7 @@ describe("hand-off", () => {
       "km0/README.md",
       "km0/docs/BRIEF.md",
       "km0/tasks.json",
+      "km0/manifest.json",
       "km0/tasks/01.md",
       "km0/tasks/02.md",
       "km0/tasks/03.md",
