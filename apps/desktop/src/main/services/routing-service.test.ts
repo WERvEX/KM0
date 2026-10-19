@@ -37,6 +37,24 @@ describe("agent catalog", () => {
     });
   });
 
+  it("starts with what each agent is good at and saves changes to it", () => {
+    const { agents } = setup();
+    const capabilities = Object.fromEntries(agents.list().map((agent) => [agent.id, agent.capabilities]));
+    expect(capabilities).toMatchObject({
+      claude_code: ["backend", "debugging", "testing", "docs", "devops"],
+      codex: ["backend", "testing"],
+      cursor: ["frontend"],
+      generic: [],
+    });
+    const codex = agents.list().find((agent) => agent.id === "codex");
+    if (!codex) throw new Error("codex missing");
+    const saved = agents.update("codex", true, codex.models, ["frontend", "frontend", "debugging"]);
+    expect(saved.find((agent) => agent.id === "codex")?.capabilities).toEqual(["frontend", "debugging"]);
+    // Leaving them out keeps what is stored.
+    const kept = agents.update("codex", false, codex.models);
+    expect(kept.find((agent) => agent.id === "codex")?.capabilities).toEqual(["frontend", "debugging"]);
+  });
+
   it("saves models and prices, and reorders by swapping neighbours", () => {
     const { agents } = setup();
     const models = { T1: null, T2: { modelId: "gpt-x", priceInPerMTok: 2, priceOutPerMTok: 8 }, T3: null };
@@ -123,6 +141,17 @@ describe("routing", () => {
     plan = await routing.override(project.id, first, null);
     expect(plan.tasks[0]).toMatchObject({ tier: "T1", agent: "claude_code", override: null });
     await expect(routing.override(project.id, 999, null)).rejects.toMatchObject({ kind: "not_found" });
+
+    // Two failed runs on T1 lift the task to T2; clearing them puts it back.
+    plan = await routing.recordFailure(project.id, first);
+    expect(plan.tasks[0]).toMatchObject({ tier: "T1", failures: [{ tier: "T1" }], escalatedFrom: null });
+    plan = await routing.recordFailure(project.id, first);
+    expect(plan.tasks[0]).toMatchObject({ tier: "T2", escalatedFrom: "T1", model: "claude-sonnet-5-5" });
+    plan = await routing.recordFailure(project.id, first);
+    expect(plan.tasks[0]?.failures.map((failure) => failure.tier)).toEqual(["T1", "T1", "T2"]);
+    plan = await routing.clearFailures(project.id, first);
+    expect(plan.tasks[0]).toMatchObject({ tier: "T1", failures: [], escalatedFrom: null });
+    await expect(routing.recordFailure(project.id, 999)).rejects.toMatchObject({ kind: "not_found" });
 
     // A newer document version makes the plan worth redoing.
     await documents.generate(project.id, "prd", false);

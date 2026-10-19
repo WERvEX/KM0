@@ -115,12 +115,21 @@ export const zhCN = {
     },
     agents: {
       intro:
-        "任务会交给已启用、排在前面、并且在对应档位配置了模型的 Agent。价格按美元 / 百万 token 填写，用来估算成本；不填就不计入合计。",
+        "任务会交给已启用、并且在对应档位配置了模型的 Agent：擅长这类任务的优先，其次按排列顺序。价格按美元 / 百万 token 填写，用来估算成本；不填就不计入合计。",
       generic: "通用（Markdown 提示词）",
       model: "模型 ID",
       priceIn: "输入单价",
       priceOut: "输出单价",
       tierHint: { T1: "低成本，例如小模型", T2: "标准", T3: "强推理" },
+      capabilities: "擅长",
+      capability: {
+        frontend: "前端",
+        backend: "后端",
+        debugging: "调试",
+        testing: "测试",
+        docs: "文档",
+        devops: "部署与配置",
+      },
       up: "上移",
       down: "下移",
       save: "保存",
@@ -363,6 +372,9 @@ export const zhCN = {
     after: "依赖 #{{value}}",
     split: "建议拆分",
     overridden: "已手动调整",
+    failures: "失败 {{count}} 次",
+    escalated: "由 {{from}} 升档",
+    needsHuman: "需要你来决定",
     noModel: "未配置该档位的模型",
     detail: {
       acceptance: "验收标准",
@@ -376,6 +388,12 @@ export const zhCN = {
       model: "模型",
       apply: "应用",
       reset: "恢复规则结果",
+      runs: "运行结果",
+      runsHint:
+        "Agent 跑完后测试或验收标准没通过，就记一次失败。同一档位失败 {{count}} 次，整个任务升一档重做；T3 也失败 {{count}} 次就交给你决定。调试和修复类任务至少从 T2 开始。",
+      failureLog: "已记录：{{value}}",
+      recordFailure: "记一次失败",
+      clearFailures: "清除失败记录",
     },
   },
   handoff: {

@@ -19,7 +19,7 @@ const Features = z.object({
   context: z.enum(["small", "large"]),
   has_tests: z.boolean(),
   risks: z.array(z.enum(["data_migration", "security", "production"])).default([]),
-  kind: z.enum(["code", "test", "docs", "boilerplate", "config"]),
+  kind: z.enum(["code", "fix", "test", "docs", "boilerplate", "config"]),
 });
 
 export const BreakdownOutput = z.object({
@@ -71,11 +71,11 @@ export function breakdownSystem(input: BreakdownInput): string {
     "You are KM0's planner. Split the agreed work into tasks for coding agents. You describe each task; KM0 picks the model tier and agent from your description with fixed rules, so describe honestly and do not mention models or agents.",
     `Return ${TASK_COUNT[input.path]} tasks. Each task must fit in one agent session and be checkable on its own.`,
     "Order tasks so that prerequisites come first. `depends_on` lists the 1-based numbers of earlier tasks it needs.",
-    "Keep risky work (data migrations, authentication and permissions, production configuration) and pure documentation or boilerplate in tasks of their own, so they can be routed differently.",
+    "Keep risky work (data migrations, authentication and permissions, production configuration), bug fixes, and pure documentation or boilerplate in tasks of their own, so they can be routed differently.",
     "For each task: `title` is a short imperative; `goal` is one or two sentences; `acceptance` holds 2-4 criteria in EARS form; `files` lists paths or globs likely touched (planned paths for new code); `decision_keys` are ledger keys the task relies on; `sections` are document sections it implements, written as `<kind>.<section id>` (for example `prd.functional`).",
     "features.scope: single_file = one file; few_files = 2-5 files; many_files = more than 5; new_subsystem = a new module, service or app.",
     "features.ambiguity: how much is still unclear after the decisions and documents. features.reasoning: follow = do as written; judgement = some local choices; design = needs design decisions about structure or interfaces.",
-    "features.context: large when the agent must read much existing code or many documents. features.has_tests: true only if existing tests already cover the area. features.risks: only real risks. features.kind: what the task mostly produces.",
+    "features.context: large when the agent must read much existing code or many documents. features.has_tests: true only if existing tests already cover the area. features.risks: only real risks. features.kind: what the task mostly produces; fix = finding and fixing a bug in existing code.",
     languageRule(input.language),
   ].join("\n");
 }

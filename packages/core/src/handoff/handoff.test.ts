@@ -26,12 +26,14 @@ const agents: AgentConfig[] = [
       T2: { modelId: "claude-sonnet-5-5", priceInPerMTok: null, priceOutPerMTok: null },
       T3: null,
     },
+    capabilities: ["backend"],
   },
   {
     id: "codex",
     enabled: true,
     preference: 1,
     models: { T1: null, T2: null, T3: { modelId: "gpt-codex-max", priceInPerMTok: null, priceOutPerMTok: null } },
+    capabilities: [],
   },
 ];
 
@@ -55,6 +57,7 @@ const basics = (seq: number, overrides: Partial<TaskBasics>): TaskBasics => ({
     kind: "code",
   },
   override: null,
+  failures: [],
   ...overrides,
 });
 
@@ -165,6 +168,24 @@ describe("hand-off package", () => {
     expect(second).toContain("这一块还没有测试");
     expect(second).toContain("任务 01：加评论表 (`km0/tasks/01.md`)");
     expect(second).toContain("交给人来决定");
+  });
+
+  it("tells the agent when failures moved the task up a tier", () => {
+    const data = input();
+    const first = data.plan.tasks[0];
+    expect(buildHandoff(data).tasks[0]?.prompt).toContain(
+      "这一档（T1）记满 2 次失败后，KM0 会把整个任务升到 T2 重做。",
+    );
+    const failed = { tier: "T1" as const, at: "2026-01-01T00:00:00.000Z" };
+    const lifted = routeTask(
+      basics(1, { title: first?.title ?? "", files: first?.files ?? [], failures: [failed, failed] }),
+      agents,
+      "zh-CN",
+    );
+    data.plan.tasks[0] = lifted;
+    const prompt = buildHandoff(data).tasks[0]?.prompt ?? "";
+    expect(prompt).toContain("档位 T2 · 建议模型 claude-sonnet-5-5");
+    expect(prompt).toContain("> 这个任务在 T1 上没有通过，已整体升到 T2 重做。");
   });
 
   it("cuts long excerpts and points to the full document", () => {

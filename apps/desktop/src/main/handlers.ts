@@ -59,7 +59,8 @@ export function createHandlers({
     "settings.preferences.get": () => settings.getPreferences(),
     "settings.preferences.set": (partial) => settings.setPreferences(partial),
     "settings.agents.list": () => agents.list(),
-    "settings.agents.update": ({ id, enabled, models }) => agents.update(id, enabled, models),
+    "settings.agents.update": ({ id, enabled, models, capabilities }) =>
+      agents.update(id, enabled, models, capabilities),
     "settings.agents.move": ({ id, direction }) => agents.move(id, direction),
     "settings.search.list": () => search.list(),
     "settings.search.create": (input) => search.create(input),
@@ -97,6 +98,8 @@ export function createHandlers({
     "routing.get": ({ projectId }) => routing.get(projectId),
     "routing.plan": ({ projectId }) => routing.plan(projectId),
     "task.override": ({ projectId, taskId, override }) => routing.override(projectId, taskId, override),
+    "task.fail": ({ projectId, taskId }) => routing.recordFailure(projectId, taskId),
+    "task.clearFailures": ({ projectId, taskId }) => routing.clearFailures(projectId, taskId),
 
     "handoff.build": ({ projectId }) => handoff.build(projectId),
   };

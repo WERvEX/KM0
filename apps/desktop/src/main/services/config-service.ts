@@ -37,7 +37,12 @@ export class ConfigService {
       }),
       roles: { router: nameOf(roles.router), planner: nameOf(roles.planner) },
       preferences: this.settings.getPreferences(),
-      agents: this.agents.list().map((agent) => ({ id: agent.id, enabled: agent.enabled, models: agent.models })),
+      agents: this.agents.list().map((agent) => ({
+        id: agent.id,
+        enabled: agent.enabled,
+        models: agent.models,
+        capabilities: agent.capabilities,
+      })),
       searchServices: this.search.exportAll(includeSecrets),
     };
   }
@@ -82,7 +87,7 @@ export class ConfigService {
     const known = new Set(this.agents.list().map((agent) => agent.id));
     for (const agent of bundle.agents) {
       if (!known.has(agent.id)) continue;
-      this.agents.update(agent.id, agent.enabled, agent.models);
+      this.agents.update(agent.id, agent.enabled, agent.models, agent.capabilities);
       summary.agentsUpdated += 1;
     }
     if (bundle.agents.length > 0) this.agents.reorder(bundle.agents.map((agent) => agent.id));

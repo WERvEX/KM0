@@ -31,11 +31,12 @@ function configured() {
   const planner = app.settings.createProfile({ name: "Strong", provider: "anthropic", model: "claude-opus-5-5" });
   app.settings.setRoles({ router: router.id, planner: planner.id });
   app.settings.setPreferences({ language: "en", theme: "dark" });
-  app.agents.update("codex", false, {
-    T1: null,
-    T2: { modelId: "gpt-x", priceInPerMTok: 1, priceOutPerMTok: 4 },
-    T3: null,
-  });
+  app.agents.update(
+    "codex",
+    false,
+    { T1: null, T2: { modelId: "gpt-x", priceInPerMTok: 1, priceOutPerMTok: 4 }, T3: null },
+    ["frontend"],
+  );
   app.agents.move("zcode", "up");
   app.search.create({ name: "Bocha", config: { kind: "bocha" }, secret: "sk-bocha-999999" });
   return app;
@@ -76,9 +77,18 @@ describe("ConfigService", () => {
     expect(target.agents.list().find((agent) => agent.id === "codex")).toMatchObject({
       enabled: false,
       models: { T2: { modelId: "gpt-x", priceInPerMTok: 1, priceOutPerMTok: 4 } },
+      capabilities: ["frontend"],
     });
     expect(target.search.list()[0]).toMatchObject({ name: "Bocha", hasSecret: true });
     expect(target.config.export(true)).toEqual(bundle);
+  });
+
+  it("keeps an agent's capabilities when the file predates them", () => {
+    const app = configured();
+    const bundle = app.config.export(false);
+    for (const agent of bundle.agents) delete agent.capabilities;
+    app.config.import(bundle);
+    expect(app.agents.list().find((agent) => agent.id === "codex")?.capabilities).toEqual(["frontend"]);
   });
 
   it("merges by name and keeps stored keys when the file has none", () => {

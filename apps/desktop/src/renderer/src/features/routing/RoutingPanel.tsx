@@ -3,6 +3,7 @@ import {
   AgentId as AgentIds,
   type CostRange,
   DOCUMENT_TEMPLATES,
+  ESCALATE_AFTER,
   type RoutedTask,
   type RoutingPlan,
   type TaskOverride,
@@ -11,7 +12,7 @@ import {
 } from "@km0/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ChevronDown, ChevronRight, Loader2, RefreshCw, Scissors } from "lucide-react";
+import { AlertTriangle, ArrowUp, ChevronDown, ChevronRight, Loader2, RefreshCw, Scissors } from "lucide-react";
 import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,15 @@ export function RoutingPanel({ projectId, blockedReason }: Props) {
       call("task.override", { projectId, ...input }),
     onSuccess: onPlan,
   });
-  const error = replan.error ?? override.error;
+  const fail = useMutation({
+    mutationFn: (taskId: number) => call("task.fail", { projectId, taskId }),
+    onSuccess: onPlan,
+  });
+  const clearFailures = useMutation({
+    mutationFn: (taskId: number) => call("task.clearFailures", { projectId, taskId }),
+    onSuccess: onPlan,
+  });
+  const error = replan.error ?? override.error ?? fail.error ?? clearFailures.error;
 
   if (plan.isLoading) return null;
   const data = plan.data;
@@ -121,8 +130,10 @@ export function RoutingPanel({ projectId, blockedReason }: Props) {
 
       <TaskTable
         plan={data}
-        busy={override.isPending}
+        busy={override.isPending || fail.isPending || clearFailures.isPending}
         onOverride={(taskId, value) => override.mutate({ taskId, override: value })}
+        onFail={(taskId) => fail.mutate(taskId)}
+        onClearFailures={(taskId) => clearFailures.mutate(taskId)}
       />
 
       <HandoffPanel projectId={projectId} plan={data} />
@@ -199,15 +210,13 @@ function Summary({ plan }: { plan: RoutingPlan }) {
   );
 }
 
-function TaskTable({
-  plan,
-  busy,
-  onOverride,
-}: {
-  plan: RoutingPlan;
-  busy: boolean;
+interface TaskActions {
   onOverride: (taskId: number, override: TaskOverride | null) => void;
-}) {
+  onFail: (taskId: number) => void;
+  onClearFailures: (taskId: number) => void;
+}
+
+function TaskTable({ plan, busy, ...actions }: { plan: RoutingPlan; busy: boolean } & TaskActions) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<number | null>(null);
   return (
@@ -254,10 +263,27 @@ function TaskTable({
                     {task.override ? (
                       <span className="rounded bg-sunken px-1.5 text-muted">{t("routing.overridden")}</span>
                     ) : null}
+                    {task.failures.length > 0 ? (
+                      <span className="rounded bg-danger/10 px-1.5 text-danger">
+                        {t("routing.failures", { count: task.failures.length })}
+                      </span>
+                    ) : null}
+                    {task.needsHuman ? (
+                      <span className="flex items-center gap-1 rounded bg-danger/15 px-1.5 text-danger">
+                        <AlertTriangle className="size-3" />
+                        {t("routing.needsHuman")}
+                      </span>
+                    ) : null}
                   </div>
                 </td>
                 <td className="px-3 py-2 align-top">
                   <TierBadge tier={task.tier} />
+                  {task.escalatedFrom ? (
+                    <div className="mt-1 flex items-center gap-0.5 text-[11px] whitespace-nowrap text-muted">
+                      <ArrowUp className="size-3" />
+                      {t("routing.escalated", { from: task.escalatedFrom })}
+                    </div>
+                  ) : null}
                 </td>
                 <td className="px-3 py-2 align-top">
                   <div>{agentName(task.agent, t)}</div>
@@ -271,7 +297,13 @@ function TaskTable({
                 <tr className="border-b border-border bg-sunken/40 last:border-0">
                   <td />
                   <td colSpan={4} className="px-3 pt-1 pb-4">
-                    <TaskDetail task={task} busy={busy} onOverride={(value) => onOverride(task.id, value)} />
+                    <TaskDetail
+                      task={task}
+                      busy={busy}
+                      onOverride={(value) => actions.onOverride(task.id, value)}
+                      onFail={() => actions.onFail(task.id)}
+                      onClearFailures={() => actions.onClearFailures(task.id)}
+                    />
                   </td>
                 </tr>
               ) : null}
@@ -287,10 +319,14 @@ function TaskDetail({
   task,
   busy,
   onOverride,
+  onFail,
+  onClearFailures,
 }: {
   task: RoutedTask;
   busy: boolean;
   onOverride: (override: TaskOverride | null) => void;
+  onFail: () => void;
+  onClearFailures: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const agents = useIpcQuery("settings.agents.list");
@@ -438,6 +474,29 @@ function TaskDetail({
               {t("routing.detail.reset")}
             </Button>
           ) : null}
+        </Block>
+        <Block title={t("routing.detail.runs")}>
+          <p className="text-xs text-muted">{t("routing.detail.runsHint", { count: ESCALATE_AFTER })}</p>
+          {task.failures.length > 0 ? (
+            <p className="mt-1 text-xs">
+              {t("routing.detail.failureLog", {
+                value: TIERS.flatMap((tier) => {
+                  const count = task.failures.filter((failure) => failure.tier === tier).length;
+                  return count > 0 ? [`${tier} × ${count}`] : [];
+                }).join(", "),
+              })}
+            </p>
+          ) : null}
+          <div className="mt-2 flex gap-2">
+            <Button size="sm" disabled={busy || task.needsHuman} onClick={onFail}>
+              {t("routing.detail.recordFailure")}
+            </Button>
+            {task.failures.length > 0 ? (
+              <Button size="sm" variant="ghost" disabled={busy} onClick={onClearFailures}>
+                {t("routing.detail.clearFailures")}
+              </Button>
+            ) : null}
+          </div>
         </Block>
       </div>
     </div>

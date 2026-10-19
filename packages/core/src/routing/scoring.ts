@@ -1,4 +1,4 @@
-import type { TaskFeatures, TaskRisk, Tier } from "@km0/shared";
+import { ESCALATE_AFTER, type TaskFailure, type TaskFeatures, type TaskRisk, type Tier } from "@km0/shared";
 import type { Language } from "../discussion/prompts";
 
 /** Points per feature value; the sum decides the tier unless a hard rule applies. */
@@ -43,7 +43,10 @@ const TEXT = {
     score: (score: number, tier: Tier) => `总分 ${score} → ${tier}`,
     cheap: "纯文档或样板代码，且不超过 5 个文件 → T1",
     risk: (names: string) => `有风险（${names}）→ 至少 T2`,
+    fix: "调试和修复 bug → 至少 T2",
     design: "需要设计决策 → T3",
+    lifted: (from: Tier, count: number, to: Tier) => `${from} 已失败 ${count} 次 → 升到 ${to}`,
+    human: (count: number) => `T3 也已失败 ${count} 次 → 需要人来决定：拆小、补充说明或手动处理`,
   },
   en: {
     scope: {
@@ -60,14 +63,18 @@ const TEXT = {
     score: (score: number, tier: Tier) => `score ${score} → ${tier}`,
     cheap: "docs or boilerplate in at most 5 files → T1",
     risk: (names: string) => `risky (${names}) → at least T2`,
+    fix: "debugging and bug fixing → at least T2",
     design: "needs design decisions → T3",
+    lifted: (from: Tier, count: number, to: Tier) => `failed ${count} times on ${from} → ${to}`,
+    human: (count: number) =>
+      `failed ${count} times on T3 too → a person has to decide: split it, clarify it or do it by hand`,
   },
 } as const;
 
 /**
  * Deterministic tier for a task. The score picks T1 (0–2), T2 (3–5) or T3 (6+); then hard rules
  * apply in this order: docs or boilerplate in at most 5 files → T1; any risk → at least T2;
- * design decisions → T3. Later rules win.
+ * debugging and bug fixing → at least T2; design decisions → T3. Later rules win.
  */
 export function decideTier(features: TaskFeatures, language: Language): TierDecision {
   const text = TEXT[language];
@@ -97,6 +104,11 @@ export function decideTier(features: TaskFeatures, language: Language): TierDeci
     tier = atLeast(tier, "T2");
     reasons.push(text.risk(risks.map((risk) => text.risks[risk]).join(language === "en" ? ", " : "、")));
   }
+  // Finding a bug means reading code that does not behave as written; small models guess.
+  if (features.kind === "fix") {
+    tier = atLeast(tier, "T2");
+    reasons.push(text.fix);
+  }
   if (features.reasoning === "design") {
     tier = "T3";
     reasons.push(text.design);
@@ -107,4 +119,35 @@ export function decideTier(features: TaskFeatures, language: Language): TierDeci
     reasons,
     splitSuggested: features.scope === "new_subsystem" || score >= SPLIT_SCORE,
   };
+}
+
+export interface Escalation {
+  tier: Tier;
+  /** The starting tier when failures lifted the task; null when they did not. */
+  escalatedFrom: Tier | null;
+  needsHuman: boolean;
+  reasons: string[];
+}
+
+/**
+ * Lift a task one tier for every tier it failed on `ESCALATE_AFTER` times, starting from the tier
+ * the rules or the user picked. Only failures on the tier it currently sits on count, so a task
+ * forced up by hand does not inherit failures from below. The whole task moves; nothing changes
+ * models halfway through a run.
+ */
+export function escalateTier(start: Tier, failures: TaskFailure[], language: Language): Escalation {
+  const text = TEXT[language];
+  const count = (tier: Tier) => failures.filter((failure) => failure.tier === tier).length;
+  const reasons: string[] = [];
+  const above = (tier: Tier): Tier | undefined => TIER_ORDER[TIER_ORDER.indexOf(tier) + 1];
+  let tier = start;
+  let next = above(tier);
+  while (next && count(tier) >= ESCALATE_AFTER) {
+    reasons.push(text.lifted(tier, count(tier), next));
+    tier = next;
+    next = above(tier);
+  }
+  const needsHuman = tier === "T3" && count("T3") >= ESCALATE_AFTER;
+  if (needsHuman) reasons.push(text.human(count("T3")));
+  return { tier, escalatedFrom: tier === start ? null : start, needsHuman, reasons };
 }

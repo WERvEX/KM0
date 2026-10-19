@@ -120,12 +120,21 @@ export const en: Messages = {
     },
     agents: {
       intro:
-        "A task goes to the first enabled agent that has a model for its tier. Prices are USD per million tokens and feed the cost estimate; leave them empty to keep a model out of the totals.",
+        "A task goes to an enabled agent that has a model for its tier: agents good at that kind of work first, then by order. Prices are USD per million tokens and feed the cost estimate; leave them empty to keep a model out of the totals.",
       generic: "Generic (Markdown prompt)",
       model: "Model ID",
       priceIn: "Input price",
       priceOut: "Output price",
       tierHint: { T1: "Low cost, e.g. a small model", T2: "Standard", T3: "Strong reasoning" },
+      capabilities: "Good at",
+      capability: {
+        frontend: "Frontend",
+        backend: "Backend",
+        debugging: "Debugging",
+        testing: "Testing",
+        docs: "Docs",
+        devops: "Deployment and config",
+      },
       up: "Move up",
       down: "Move down",
       save: "Save",
@@ -370,6 +379,9 @@ export const en: Messages = {
     after: "after #{{value}}",
     split: "Consider splitting",
     overridden: "Changed by hand",
+    failures: "failed {{count}}×",
+    escalated: "lifted from {{from}}",
+    needsHuman: "Needs your call",
     noModel: "No model for this tier",
     detail: {
       acceptance: "Acceptance criteria",
@@ -383,6 +395,12 @@ export const en: Messages = {
       model: "Model",
       apply: "Apply",
       reset: "Back to the rules",
+      runs: "Runs",
+      runsHint:
+        "When an agent run ends with failing tests or unmet acceptance criteria, record a failure. After {{count}} failures on one tier the whole task moves up a tier; after {{count}} on T3 it is your call. Debugging and bug fixes start on T2 at least.",
+      failureLog: "Recorded: {{value}}",
+      recordFailure: "Record a failure",
+      clearFailures: "Clear failures",
     },
   },
   handoff: {
