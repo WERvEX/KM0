@@ -9,10 +9,19 @@
  * KM0_LIVE_DESCRIPTION (overrides the case's one-line request), KM0_LIVE_ROUTER_MODEL and
  * KM0_LIVE_PLANNER_MODEL (default claude-sonnet-5-5), KM0_LIVE_BASE_URL, KM0_LIVE_OUT.
  * KM0_LIVE_SIMULATED=1 runs the same steps on the simulated model, to check the script itself.
+ * KM0_LIVE_BRIDGE=<folder> sends no API request: each call is written to <folder>/NNN.request.md and
+ * the run waits for something else (a person, another agent) to write the answer to NNN.response.md.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { createGateway, createSimulatedLlm, type LlmCallRecord, type ResolvedProfile } from "@km0/core";
+import {
+  type ChatProvider,
+  type ChatRequest,
+  createGateway,
+  createSimulatedLlm,
+  type LlmCallRecord,
+  type ResolvedProfile,
+} from "@km0/core";
 import { type LlmRole, PATH_DOCUMENTS, type ProjectDetail, type QuestionRound } from "@km0/shared";
 import { it } from "vitest";
 import { openDatabase } from "../src/main/db/database";
@@ -32,6 +41,7 @@ const CASES: Record<string, string> = {
 
 const simulated = process.env.KM0_LIVE_SIMULATED === "1";
 const apiKey = process.env.ANTHROPIC_API_KEY;
+const bridgeDir = process.env.KM0_LIVE_BRIDGE ? resolve(process.env.KM0_LIVE_BRIDGE) : null;
 const baseUrl = process.env.KM0_LIVE_BASE_URL ?? "https://api.anthropic.com";
 const routerModel = process.env.KM0_LIVE_ROUTER_MODEL ?? "claude-sonnet-5-5";
 const plannerModel = process.env.KM0_LIVE_PLANNER_MODEL ?? "claude-sonnet-5-5";
@@ -48,7 +58,8 @@ function profile(id: number, model: string): ResolvedProfile {
     baseUrl,
     model,
     apiKey: apiKey ?? null,
-    structuredMode: "auto",
+    // The bridge only carries text, so structured answers are asked for in the prompt.
+    structuredMode: bridgeDir ? "prompt" : "auto",
     temperature: null,
     priceInPerMTok: null,
     priceOutPerMTok: null,
@@ -73,6 +84,36 @@ function roundMarkdown(round: QuestionRound): string {
   return lines.join("\n");
 }
 
+let bridgeSeq = 0;
+
+/** Hands each request to whoever answers files in the bridge folder, and waits for the answer. */
+const bridge: ChatProvider = {
+  async complete(request) {
+    return { text: await askBridge(request), usage: { inputTokens: 0, outputTokens: 0 } };
+  },
+  async stream(request, onDelta) {
+    const text = await askBridge(request);
+    onDelta(text);
+    return { text, usage: { inputTokens: 0, outputTokens: 0 } };
+  },
+};
+
+async function askBridge(request: ChatRequest): Promise<string> {
+  if (!bridgeDir) throw new Error("No bridge folder");
+  const id = String(++bridgeSeq).padStart(3, "0");
+  const parts = [
+    `<!-- model: ${request.model} · effort: ${request.effort ?? "-"} · max_tokens: ${request.maxTokens ?? "-"} -->`,
+  ];
+  if (request.system) parts.push("# system", "", request.system, "");
+  for (const message of request.messages) parts.push(`# ${message.role}`, "", message.content, "");
+  write(join(bridgeDir, `${id}.request.md`), parts.join("\n"));
+  const answer = join(bridgeDir, `${id}.response.md`);
+  while (!existsSync(answer)) await new Promise((done) => setTimeout(done, 1000));
+  // Give the writer a moment to finish the file.
+  await new Promise((done) => setTimeout(done, 500));
+  return readFileSync(answer, "utf8");
+}
+
 async function runCase(name: string, description: string, calls: LlmCallRecord[]) {
   const out = join(outRoot, name);
   const db = openDatabase(":memory:");
@@ -82,6 +123,7 @@ async function runCase(name: string, description: string, calls: LlmCallRecord[]
   };
   const settings = { profileForRole: (role: LlmRole) => profiles[role] } as unknown as SettingsStore;
   const gateway = createGateway({
+    ...(bridgeDir ? { providerFor: () => bridge } : {}),
     recordCall: (record) => calls.push({ ...record, purpose: `${name}:${record.purpose}` }),
   });
   const fake = simulated ? createSimulatedLlm() : null;
@@ -207,7 +249,7 @@ async function runCase(name: string, description: string, calls: LlmCallRecord[]
   db.close();
 }
 
-it.skipIf(!apiKey && !simulated)(
+it.skipIf(!apiKey && !simulated && !bridgeDir)(
   "runs the whole flow against a real model",
   async () => {
     const calls: LlmCallRecord[] = [];
