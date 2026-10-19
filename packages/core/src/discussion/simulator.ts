@@ -1,4 +1,4 @@
-import { SECTION_MARKER } from "@km0/shared";
+import { OPEN_QUESTIONS_SECTION, SECTION_MARKER } from "@km0/shared";
 import type { z } from "zod";
 import type { DocumentLlm } from "../documents/engine";
 
@@ -38,6 +38,8 @@ function simulateDocument(prompt: string): string {
     .map((id) => {
       const lines = [`${SECTION_MARKER}${id}`, `（模拟）本节「${id}」根据决策账本生成。`, ""];
       if (revising) lines.push(`已按要求修订：${instruction}`, "");
+      // A simulated document settles everything, so it never lists open questions.
+      if (id === OPEN_QUESTIONS_SECTION) return [...lines, "无。"].join("\n");
       lines.push(...ledger.map((line) => line.replace(/ \[.*\]$/, "")));
       lines.push("", "- 当用户提交表单时，系统应当保存内容并提示成功。");
       return lines.join("\n");
