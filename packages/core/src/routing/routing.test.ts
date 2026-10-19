@@ -1,9 +1,17 @@
-import type { AgentConfig, TaskFeatures } from "@km0/shared";
+import type { AgentConfig, TaskFailure, TaskFeatures, Tier } from "@km0/shared";
 import { describe, expect, it } from "vitest";
 import { createSimulatedLlm } from "../discussion/simulator";
 import { breakDown } from "./breakdown";
-import { chooseAgent, estimateCost, estimateTokens, planTotals, routeTask, type TaskBasics } from "./route";
-import { decideTier } from "./scoring";
+import {
+  chooseAgent,
+  estimateCost,
+  estimateTokens,
+  planTotals,
+  routeTask,
+  type TaskBasics,
+  taskCapability,
+} from "./route";
+import { decideTier, escalateTier } from "./scoring";
 
 /** Scores 0: one file, clear, do as written, little context, covered by tests. */
 const base: TaskFeatures = {
@@ -77,6 +85,13 @@ describe("hard rules", () => {
     expect(tierOf({ reasoning: "design", kind: "docs" }).tier).toBe("T3");
   });
 
+  it("lifts debugging and bug fixes to at least T2, even small ones", () => {
+    expect(tierOf({ kind: "fix" })).toMatchObject({ score: 0, tier: "T2" });
+    expect(tierOf({ kind: "fix" }).reasons.at(-1)).toBe("调试和修复 bug → 至少 T2");
+    expect(tierOf({ kind: "fix", reasoning: "design" }).tier).toBe("T3");
+    expect(tierOf({ kind: "fix", scope: "new_subsystem", ambiguity: "high", context: "large" }).tier).toBe("T3");
+  });
+
   it("suggests splitting new subsystems and tasks scoring 8 or more", () => {
     expect(tierOf({ scope: "new_subsystem" }).splitSuggested).toBe(true);
     const busy = { scope: "many_files", ambiguity: "high", reasoning: "design" } as const;
@@ -97,14 +112,22 @@ const agents: AgentConfig[] = [
     enabled: true,
     preference: 1,
     models: { T1: null, T2: priced("codex-mid", 2, 8), T3: priced("codex-max", 10, 40) },
+    capabilities: ["frontend", "testing"],
   },
   {
     id: "claude_code",
     enabled: true,
     preference: 0,
     models: { T1: priced("claude-haiku-5-5", 1, 5), T2: null, T3: priced("claude-opus-5-5", 5, 25) },
+    capabilities: ["backend", "debugging"],
   },
-  { id: "cursor", enabled: false, preference: 2, models: { T1: null, T2: priced("x", 1, 1), T3: null } },
+  {
+    id: "cursor",
+    enabled: false,
+    preference: 2,
+    models: { T1: null, T2: priced("x", 1, 1), T3: null },
+    capabilities: ["frontend"],
+  },
 ];
 
 describe("agents", () => {
@@ -121,6 +144,88 @@ describe("agents", () => {
     expect(chooseAgent(noT2, "T2", "zh-CN")).toMatchObject({ agent: "claude_code", model: null });
     const disabled = agents.map((agent) => ({ ...agent, enabled: false }));
     expect(chooseAgent(disabled, "T2", "zh-CN")).toMatchObject({ agent: "generic", model: null });
+  });
+});
+
+describe("capabilities", () => {
+  it("reads what a task needs from its kind, and for code from its files", () => {
+    expect(taskCapability({ ...base, kind: "fix" }, [])).toBe("debugging");
+    expect(taskCapability({ ...base, kind: "test" }, ["src/App.tsx"])).toBe("testing");
+    expect(taskCapability({ ...base, kind: "docs" }, [])).toBe("docs");
+    expect(taskCapability({ ...base, kind: "config" }, [])).toBe("devops");
+    expect(taskCapability(base, ["src/components/Comment.tsx", "src/styles/app.css"])).toBe("frontend");
+    expect(taskCapability(base, ["server/routes.py", "migrations/001.sql", "src/App.tsx"])).toBe("backend");
+    expect(taskCapability({ ...base, kind: "boilerplate" }, ["src/renderer/pages/**"])).toBe("frontend");
+    // No files, or files that lean neither way: the preference order decides.
+    expect(taskCapability(base, [])).toBeNull();
+    expect(taskCapability(base, ["src/lib/util.ts"])).toBeNull();
+    expect(taskCapability(base, ["src/ui/Button.tsx", "src/api/client.ts"])).toBeNull();
+  });
+
+  it("prefers an agent good at the work among those with a model for the tier", () => {
+    expect(chooseAgent(agents, "T3", "zh-CN", { capability: "frontend" })).toMatchObject({
+      agent: "codex",
+      model: { modelId: "codex-max" },
+      reason: "擅长前端、且配置了 T3 模型的 Agent 中排在最前",
+    });
+    expect(chooseAgent(agents, "T3", "zh-CN", { capability: "backend" })).toMatchObject({ agent: "claude_code" });
+    // Nobody good at docs: the order decides, and the reason says so.
+    expect(chooseAgent(agents, "T3", "en", { capability: "docs" })).toMatchObject({
+      agent: "claude_code",
+      reason: "no agent good at docs has a T3 model; using the first enabled agent with one",
+    });
+  });
+
+  it("puts a model for the tier before the capability, and ignores disabled agents", () => {
+    // claude_code is good at debugging but has no T2 model; codex has one.
+    expect(chooseAgent(agents, "T2", "zh-CN", { capability: "debugging" })).toMatchObject({
+      agent: "codex",
+      model: { modelId: "codex-mid" },
+    });
+    // cursor is good at frontend and has a T2 model, but it is disabled.
+    expect(chooseAgent(agents, "T2", "zh-CN", { capability: "frontend" }).agent).toBe("codex");
+    expect(chooseAgent(agents, "T1", "zh-CN", { capability: "frontend", forced: "cursor" })).toMatchObject({
+      agent: "cursor",
+      reason: "手动指定",
+    });
+  });
+});
+
+describe("escalation", () => {
+  const failed = (...tiers: Tier[]): TaskFailure[] =>
+    tiers.map((tier, index) => ({ tier, at: `2026-01-0${index + 1}T00:00:00.000Z` }));
+
+  it("moves a task up one tier after two failures on its tier", () => {
+    expect(escalateTier("T1", failed("T1"), "zh-CN")).toEqual({
+      tier: "T1",
+      escalatedFrom: null,
+      needsHuman: false,
+      reasons: [],
+    });
+    expect(escalateTier("T1", failed("T1", "T1"), "zh-CN")).toEqual({
+      tier: "T2",
+      escalatedFrom: "T1",
+      needsHuman: false,
+      reasons: ["T1 已失败 2 次 → 升到 T2"],
+    });
+    expect(escalateTier("T1", failed("T1", "T1", "T2", "T2"), "zh-CN")).toMatchObject({
+      tier: "T3",
+      escalatedFrom: "T1",
+      reasons: ["T1 已失败 2 次 → 升到 T2", "T2 已失败 2 次 → 升到 T3"],
+    });
+  });
+
+  it("hands a task that keeps failing on T3 to a person", () => {
+    const result = escalateTier("T2", failed("T2", "T2", "T3", "T3"), "en");
+    expect(result).toMatchObject({ tier: "T3", escalatedFrom: "T2", needsHuman: true });
+    expect(result.reasons.at(-1)).toBe(
+      "failed 2 times on T3 too → a person has to decide: split it, clarify it or do it by hand",
+    );
+  });
+
+  it("counts only failures on the tier the task starts from or reaches", () => {
+    expect(escalateTier("T3", failed("T1", "T1"), "zh-CN")).toMatchObject({ tier: "T3", escalatedFrom: null });
+    expect(escalateTier("T1", failed("T2", "T2"), "zh-CN")).toMatchObject({ tier: "T1", escalatedFrom: null });
   });
 });
 
@@ -145,6 +250,7 @@ describe("cost", () => {
     sections: [],
     features: base,
     override: null,
+    failures: [],
     ...overrides,
   });
 
@@ -164,6 +270,26 @@ describe("cost", () => {
     expect(typed).toMatchObject({ tier: "T1", model: "claude-opus-5-5" });
     expect(typed.cost).toEqual(typed.costAllT3);
     expect(routeTask(task({ override: { model: "my-model" } }), agents, "zh-CN").cost).toBeNull();
+  });
+
+  it("routes a lifted task on the new tier and drops a model typed for the old one", () => {
+    const failures: TaskFailure[] = [
+      { tier: "T1", at: "2026-01-01T00:00:00.000Z" },
+      { tier: "T1", at: "2026-01-02T00:00:00.000Z" },
+    ];
+    const lifted = routeTask(task({ failures, override: { model: "my-model" } }), agents, "zh-CN");
+    expect(lifted).toMatchObject({
+      ruleTier: "T1",
+      tier: "T2",
+      escalatedFrom: "T1",
+      agent: "codex",
+      model: "codex-mid",
+    });
+    expect(lifted.reasons.at(-1)).toBe("T1 已失败 2 次 → 升到 T2");
+    expect(lifted.failures).toEqual(failures);
+
+    const fix = routeTask(task({ features: { ...base, kind: "fix" } }), agents, "zh-CN");
+    expect(fix).toMatchObject({ ruleTier: "T2", capability: "debugging", agent: "codex", needsHuman: false });
   });
 
   it("totals priced tasks and compares them with running everything on T3", () => {

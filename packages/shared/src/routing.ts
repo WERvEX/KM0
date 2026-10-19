@@ -19,6 +19,11 @@ export const AGENT_NAMES: Record<AgentId, string> = {
   generic: "Generic",
 };
 
+/** What an agent is good at. A task needs at most one of these; see `taskCapability` in core. */
+export const Capability = z.enum(["frontend", "backend", "debugging", "testing", "docs", "devops"]);
+export type Capability = z.infer<typeof Capability>;
+export const CAPABILITIES: readonly Capability[] = Capability.options;
+
 /** What a task touches; the model only describes it, the tier is computed from it by rules. */
 export const TaskFeatures = z.object({
   /** single_file: one file · few_files: 2–5 files · many_files: more than 5 · new_subsystem: a new module or service. */
@@ -30,7 +35,8 @@ export const TaskFeatures = z.object({
   /** Existing tests can check the result. */
   hasTests: z.boolean(),
   risks: z.array(z.enum(["data_migration", "security", "production"])),
-  kind: z.enum(["code", "test", "docs", "boilerplate", "config"]),
+  /** fix: find and fix a bug; the other kinds say what the task mostly produces. */
+  kind: z.enum(["code", "fix", "test", "docs", "boilerplate", "config"]),
 });
 export type TaskFeatures = z.infer<typeof TaskFeatures>;
 export type TaskRisk = TaskFeatures["risks"][number];
@@ -49,6 +55,8 @@ export const AgentConfig = z.object({
   /** Lower comes first. */
   preference: z.number().int(),
   models: z.object({ T1: TierModel.nullable(), T2: TierModel.nullable(), T3: TierModel.nullable() }),
+  /** Kinds of work the agent is preferred for, among agents that have a model for the tier. */
+  capabilities: z.array(Capability),
 });
 export type AgentConfig = z.infer<typeof AgentConfig>;
 
@@ -61,6 +69,13 @@ export const TaskOverride = z.object({
   model: z.string().trim().min(1).max(200).optional(),
 });
 export type TaskOverride = z.infer<typeof TaskOverride>;
+
+/** Failed runs on one tier that move a task to the next tier. */
+export const ESCALATE_AFTER = 2;
+
+/** One run that did not pass, recorded by the user, on the tier the task ran on. */
+export const TaskFailure = z.object({ tier: Tier, at: z.string() });
+export type TaskFailure = z.infer<typeof TaskFailure>;
 
 export const SectionRef = z.object({ kind: DocumentKind, sectionId: z.string() });
 export type SectionRef = z.infer<typeof SectionRef>;
@@ -82,8 +97,16 @@ export const RoutedTask = z.object({
   /** Tier from the rules, before any override. */
   ruleTier: Tier,
   tier: Tier,
-  /** Why the rules picked the tier, one line per factor. */
+  /** Why the rules picked the tier, one line per factor, then any lift from failed runs. */
   reasons: z.array(z.string()),
+  /** Failed runs, oldest first. Enough of them on one tier lift the task to the next. */
+  failures: z.array(TaskFailure),
+  /** The tier before failed runs lifted it; null when they did not. */
+  escalatedFrom: Tier.nullable(),
+  /** Failed often enough on T3 that a person has to decide. */
+  needsHuman: z.boolean(),
+  /** What the task needs the agent to be good at; null when nothing in particular. */
+  capability: Capability.nullable(),
   agent: AgentId,
   agentReason: z.string(),
   /** Null when no model is configured for that agent and tier. */
@@ -127,10 +150,14 @@ export const OverrideTaskInput = z.object({
   override: TaskOverride.nullable(),
 });
 
+export const TaskRef = z.object({ projectId: ProjectId, taskId: z.number().int().positive() });
+
 export const UpdateAgentInput = z.object({
   id: AgentId,
   enabled: z.boolean(),
   models: AgentConfig.shape.models,
+  /** Left out keeps the stored capabilities. */
+  capabilities: z.array(Capability).optional(),
 });
 
 export const MoveAgentInput = z.object({ id: AgentId, direction: z.enum(["up", "down"]) });

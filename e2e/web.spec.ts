@@ -98,6 +98,18 @@ test("tasks are routed by rules, can be overridden, and show the saving once pri
   await page.getByRole("button", { name: "恢复规则结果" }).click();
   await expect(table.getByText("已手动调整")).toHaveCount(0);
 
+  // Two failed runs on T1 move the scaffolding task up to T2; clearing them moves it back.
+  await table.getByRole("button", { name: "搭建项目骨架与说明文档" }).click();
+  await page.getByRole("button", { name: "记一次失败" }).click();
+  await expect(table.getByText("失败 1 次")).toBeVisible();
+  await page.getByRole("button", { name: "记一次失败" }).click();
+  await expect(table.getByText("由 T1 升档")).toBeVisible();
+  await expect(page.getByText("T1 已失败 2 次 → 升到 T2")).toBeVisible();
+  await expect(table.getByText("claude-sonnet-5-5")).toHaveCount(2);
+  await page.getByRole("button", { name: "清除失败记录" }).click();
+  await expect(table.getByText("由 T1 升档")).toHaveCount(0);
+  await expect(table.getByText("claude-haiku-5-5")).toBeVisible();
+
   // With prices for Claude Code the plan is totalled and compared with running all on T3.
   await page.getByRole("link", { name: "去设置 → Agent 填写价格" }).click();
   await page.getByRole("tab", { name: "Agent" }).click();

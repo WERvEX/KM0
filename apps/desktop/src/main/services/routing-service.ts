@@ -7,6 +7,7 @@ import {
   type ProjectStage,
   type RoutingPlan,
   SectionRef,
+  TaskFailure,
   TaskFeatures,
   TaskOverride,
   Triage,
@@ -35,6 +36,7 @@ interface TaskRow {
   features_json: string;
   depends_on_json: string;
   override_json: string | null;
+  failures_json: string;
 }
 
 const TaskSpec = z.object({
@@ -46,11 +48,12 @@ const TaskSpec = z.object({
 });
 const BasedOn = z.array(z.object({ kind: z.enum(["prd", "tech_design", "brief"]), version: z.number().int() }));
 const Seqs = z.array(z.number().int());
+const Failures = z.array(TaskFailure);
 
 /**
  * Task breakdown and routing. The planner proposes tasks and describes them; tiers, agents, models
- * and costs are computed by rules each time the plan is read, so changes to the agent catalog and
- * the user's overrides apply at once.
+ * and costs are computed by rules each time the plan is read, so changes to the agent catalog, the
+ * user's overrides and recorded failures apply at once.
  */
 export class RoutingService {
   private readonly locks = new KeyedLock<number>();
@@ -83,6 +86,7 @@ export class RoutingService {
           dependsOn: Seqs.parse(JSON.parse(row.depends_on_json)),
           features: TaskFeatures.parse(JSON.parse(row.features_json)),
           override: row.override_json ? TaskOverride.parse(JSON.parse(row.override_json)) : null,
+          failures: Failures.parse(JSON.parse(row.failures_json)),
         },
         agents,
         this.language(),
@@ -169,6 +173,42 @@ export class RoutingService {
         .run(empty ? null : JSON.stringify(override), nowIso(), taskId);
       return this.get(projectId) as RoutingPlan;
     });
+  }
+
+  /** Record one failed run on the tier the task is routed to now; enough of them lift it a tier. */
+  recordFailure(projectId: number, taskId: number): Promise<RoutingPlan> {
+    return this.locks.run(projectId, async () => {
+      const failures = this.failures(projectId, taskId);
+      const task = this.get(projectId)?.tasks.find((item) => item.id === taskId);
+      if (!task) throw new AppError("not_found", `Task ${taskId} does not exist.`);
+      failures.push({ tier: task.tier, at: nowIso() });
+      this.saveFailures(taskId, failures);
+      return this.get(projectId) as RoutingPlan;
+    });
+  }
+
+  /** Forget a task's failed runs, which also undoes any lift they caused. */
+  clearFailures(projectId: number, taskId: number): Promise<RoutingPlan> {
+    return this.locks.run(projectId, async () => {
+      this.failures(projectId, taskId);
+      this.saveFailures(taskId, []);
+      return this.get(projectId) as RoutingPlan;
+    });
+  }
+
+  private failures(projectId: number, taskId: number): TaskFailure[] {
+    this.project(projectId);
+    const row = this.db
+      .prepare("SELECT failures_json FROM tasks WHERE id = ? AND project_id = ?")
+      .get(taskId, projectId) as { failures_json: string } | undefined;
+    if (!row) throw new AppError("not_found", `Task ${taskId} does not exist.`);
+    return Failures.parse(JSON.parse(row.failures_json));
+  }
+
+  private saveFailures(taskId: number, failures: TaskFailure[]): void {
+    this.db
+      .prepare("UPDATE tasks SET failures_json = ?, updated_at = ? WHERE id = ?")
+      .run(JSON.stringify(failures), nowIso(), taskId);
   }
 
   private project(projectId: number): ProjectRow {

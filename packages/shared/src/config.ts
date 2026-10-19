@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { LlmProfileInput } from "./llm";
 import { SearchServiceInput } from "./research";
-import { AgentId, TierModel } from "./routing";
+import { AgentId, Capability, TierModel } from "./routing";
 import { Preferences } from "./settings";
 
 export const CONFIG_FORMAT = "km0-config";
@@ -24,6 +24,8 @@ export const ConfigBundle = z.object({
       id: AgentId,
       enabled: z.boolean(),
       models: z.object({ T1: TierModel.nullable(), T2: TierModel.nullable(), T3: TierModel.nullable() }),
+      /** Missing from files exported before capabilities existed; the install's own are kept then. */
+      capabilities: z.array(Capability).optional(),
     }),
   ),
   searchServices: z.array(SearchServiceInput),

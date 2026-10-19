@@ -1,4 +1,12 @@
-import { AGENT_NAMES, type AgentConfig, type AgentId, TIERS, type Tier } from "@km0/shared";
+import {
+  AGENT_NAMES,
+  type AgentConfig,
+  type AgentId,
+  CAPABILITIES,
+  type Capability,
+  TIERS,
+  type Tier,
+} from "@km0/shared";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,7 +19,7 @@ export function agentName(id: AgentId, t: (key: string) => string): string {
   return id === "generic" ? t("settings.agents.generic") : AGENT_NAMES[id];
 }
 
-/** Which agents get work, in what order, and the model and price each uses per tier. */
+/** Which agents get work, in what order, what each is good at, and the model and price per tier. */
 export function AgentsTab() {
   const { t } = useTranslation();
   const agents = useIpcQuery("settings.agents.list");
@@ -69,8 +77,13 @@ function AgentCard({
   const update = useIpcMutation("settings.agents.update", ["settings.agents.list"]);
   const [enabled, setEnabled] = useState(agent.enabled);
   const [draft, setDraft] = useState<Draft>(() => toDraft(agent));
+  const [capabilities, setCapabilities] = useState<Capability[]>(agent.capabilities);
   const name = agentName(agent.id, t);
-  const dirty = enabled !== agent.enabled || JSON.stringify(draft) !== JSON.stringify(toDraft(agent));
+  const sameCapabilities =
+    capabilities.length === agent.capabilities.length &&
+    capabilities.every((item) => agent.capabilities.includes(item));
+  const dirty =
+    enabled !== agent.enabled || !sameCapabilities || JSON.stringify(draft) !== JSON.stringify(toDraft(agent));
   const invalid = TIERS.some(
     (tier) => parsePrice(draft[tier].priceIn) === "invalid" || parsePrice(draft[tier].priceOut) === "invalid",
   );
@@ -91,12 +104,15 @@ function AgentCard({
       }),
     ) as AgentConfig["models"];
     update.mutate(
-      { id: agent.id, enabled, models },
+      { id: agent.id, enabled, models, capabilities },
       {
         // Show the values as stored, so "3.0" becomes "3" and the form is clean again.
         onSuccess: (list) => {
           const saved = list.find((item) => item.id === agent.id);
-          if (saved) setDraft(toDraft(saved));
+          if (saved) {
+            setDraft(toDraft(saved));
+            setCapabilities(saved.capabilities);
+          }
         },
       },
     );
@@ -104,6 +120,12 @@ function AgentCard({
 
   const set = (tier: Tier, field: keyof Draft[Tier], value: string) =>
     setDraft((current) => ({ ...current, [tier]: { ...current[tier], [field]: value } }));
+  const toggle = (capability: Capability, on: boolean) =>
+    setCapabilities((current) =>
+      on
+        ? CAPABILITIES.filter((item) => item === capability || current.includes(item))
+        : current.filter((item) => item !== capability),
+    );
 
   return (
     <section aria-label={name} className="rounded-lg border border-border bg-panel p-4">
@@ -133,6 +155,24 @@ function AgentCard({
           </Button>
         </div>
       </div>
+      <fieldset className="mt-3">
+        <legend className="sr-only">{`${name} ${t("settings.agents.capabilities")}`}</legend>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <span aria-hidden="true" className="text-muted">
+            {t("settings.agents.capabilities")}
+          </span>
+          {CAPABILITIES.map((capability) => (
+            <label key={capability} className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={capabilities.includes(capability)}
+                onChange={(event) => toggle(capability, event.target.checked)}
+              />
+              {t(`settings.agents.capability.${capability}`)}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <div className="mt-3 grid grid-cols-[2.5rem_1fr_7rem_7rem] items-center gap-2 text-xs">
         <span />
         <span className="text-muted">{t("settings.agents.model")}</span>

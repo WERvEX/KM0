@@ -1,9 +1,11 @@
 import type {
   AgentConfig,
   AgentId,
+  Capability,
   CostRange,
   RoutedTask,
   RoutingPlan,
+  TaskFailure,
   TaskFeatures,
   TaskOverride,
   Tier,
@@ -11,7 +13,7 @@ import type {
 } from "@km0/shared";
 import { TIERS } from "@km0/shared";
 import type { Language } from "../discussion/prompts";
-import { decideTier } from "./scoring";
+import { decideTier, escalateTier } from "./scoring";
 
 /**
  * Tokens one agent run is expected to use, by scope. Coding agents re-read files and tool output
@@ -42,38 +44,104 @@ export function estimateCost(model: TierModel | null, tokens: { input: CostRange
   return { low: at("low"), high: at("high") };
 }
 
+/** Paths that are mostly user interface, or mostly server, data or tooling code. */
+const FRONTEND_PATH =
+  /\.(tsx|jsx|vue|svelte|css|scss|sass|less|html)$|(^|\/)(components|pages|views|ui|renderer|frontend|styles)(\/|$)/i;
+const BACKEND_PATH =
+  /\.(py|go|rs|java|kt|rb|php|cs|sql)$|(^|\/)(server|api|backend|services|db|migrations|cli|main)(\/|$)/i;
+
+/**
+ * What the task needs its agent to be good at: its kind says so for fixes, tests, docs and
+ * config; for code, the files decide between frontend and backend. Null when the files do not
+ * lean either way, so the preference order alone decides.
+ */
+export function taskCapability(features: TaskFeatures, files: string[]): Capability | null {
+  switch (features.kind) {
+    case "fix":
+      return "debugging";
+    case "test":
+      return "testing";
+    case "docs":
+      return "docs";
+    case "config":
+      return "devops";
+    default: {
+      const ui = files.filter((file) => FRONTEND_PATH.test(file)).length;
+      const server = files.filter((file) => BACKEND_PATH.test(file)).length;
+      if (ui > server) return "frontend";
+      if (server > ui) return "backend";
+      return null;
+    }
+  }
+}
+
 const AGENT_TEXT = {
   "zh-CN": {
+    capability: {
+      frontend: "前端",
+      backend: "后端",
+      debugging: "调试",
+      testing: "测试",
+      docs: "文档",
+      devops: "部署与配置",
+    },
     forced: "手动指定",
     first: (tier: Tier) => `已启用的 Agent 中排在最前、且配置了 ${tier} 模型`,
+    matched: (skill: string, tier: Tier) => `擅长${skill}、且配置了 ${tier} 模型的 Agent 中排在最前`,
+    unmatched: (skill: string, tier: Tier) =>
+      `没有擅长${skill}的 Agent 配置了 ${tier} 模型，改用排在最前、且配置了 ${tier} 模型的 Agent`,
     noModel: (tier: Tier) => `没有 Agent 配置 ${tier} 模型，暂用排在最前的 Agent`,
     none: "没有启用的 Agent，使用通用提示词",
   },
   en: {
+    capability: {
+      frontend: "frontend",
+      backend: "backend",
+      debugging: "debugging",
+      testing: "testing",
+      docs: "docs",
+      devops: "devops",
+    },
     forced: "chosen by hand",
     first: (tier: Tier) => `first enabled agent with a ${tier} model`,
+    matched: (skill: string, tier: Tier) => `first agent good at ${skill} with a ${tier} model`,
+    unmatched: (skill: string, tier: Tier) =>
+      `no agent good at ${skill} has a ${tier} model; using the first enabled agent with one`,
     noModel: (tier: Tier) => `no agent has a ${tier} model; using the first enabled agent`,
     none: "no agent is enabled; using the generic prompt",
   },
 } as const;
 
-/** The preferred enabled agent that has a model for the tier. */
+/**
+ * The agent for a task: among enabled agents that have a model for the tier, the first by
+ * preference that is good at what the task needs, else the first by preference. A model for the
+ * tier matters more than the capability, since without one there is no price and no command.
+ */
 export function chooseAgent(
   agents: AgentConfig[],
   tier: Tier,
   language: Language,
-  forced?: AgentId,
+  options: { forced?: AgentId; capability?: Capability | null } = {},
 ): { agent: AgentId; model: TierModel | null; reason: string } {
   const text = AGENT_TEXT[language];
+  const { forced, capability } = options;
   if (forced) {
     const config = agents.find((agent) => agent.id === forced);
     return { agent: forced, model: config?.models[tier] ?? null, reason: text.forced };
   }
   const enabled = agents.filter((agent) => agent.enabled).sort((a, b) => a.preference - b.preference);
-  const withModel = enabled.find((agent) => agent.models[tier]);
-  if (withModel) return { agent: withModel.id, model: withModel.models[tier], reason: text.first(tier) };
-  const first = enabled[0];
-  if (first) return { agent: first.id, model: null, reason: text.noModel(tier) };
+  const withModel = enabled.filter((agent) => agent.models[tier]);
+  if (capability) {
+    const skill = text.capability[capability];
+    const good = withModel.find((agent) => agent.capabilities.includes(capability));
+    if (good) return { agent: good.id, model: good.models[tier], reason: text.matched(skill, tier) };
+    const fallback = withModel[0];
+    if (fallback) return { agent: fallback.id, model: fallback.models[tier], reason: text.unmatched(skill, tier) };
+  }
+  const first = withModel[0];
+  if (first) return { agent: first.id, model: first.models[tier], reason: text.first(tier) };
+  const any = enabled[0];
+  if (any) return { agent: any.id, model: null, reason: text.noModel(tier) };
   return { agent: "generic", model: null, reason: text.none };
 }
 
@@ -95,26 +163,36 @@ export interface TaskBasics {
   sections: RoutedTask["sections"];
   features: TaskFeatures;
   override: TaskOverride | null;
+  failures: TaskFailure[];
 }
 
-/** Tier, agent, model and cost for a task: rules first, then whatever the user overrode. */
+/**
+ * Tier, agent, model and cost for a task: rules first, then whatever the user overrode, then a
+ * lift for failed runs. Once failures lift the task, a model typed by hand no longer applies.
+ */
 export function routeTask(task: TaskBasics, agents: AgentConfig[], language: Language): RoutedTask {
   const decision = decideTier(task.features, language);
   const override = task.override;
-  const tier = override?.tier ?? decision.tier;
-  const chosen = chooseAgent(agents, tier, language, override?.agent);
+  const escalation = escalateTier(override?.tier ?? decision.tier, task.failures, language);
+  const tier = escalation.tier;
+  const capability = taskCapability(task.features, task.files);
+  const chosen = chooseAgent(agents, tier, language, { forced: override?.agent, capability });
   const config = agents.find((agent) => agent.id === chosen.agent);
-  const model = override?.model ? priceOf(config, override.model) : chosen.model;
+  const typed = escalation.escalatedFrom ? undefined : override?.model;
+  const model = typed ? priceOf(config, typed) : chosen.model;
   const tokens = estimateTokens(task.features);
   return {
     ...task,
     score: decision.score,
     ruleTier: decision.tier,
     tier,
-    reasons: decision.reasons,
+    reasons: [...decision.reasons, ...escalation.reasons],
+    escalatedFrom: escalation.escalatedFrom,
+    needsHuman: escalation.needsHuman,
+    capability,
     agent: chosen.agent,
     agentReason: chosen.reason,
-    model: override?.model ?? chosen.model?.modelId ?? null,
+    model: typed ?? chosen.model?.modelId ?? null,
     tokens,
     cost: estimateCost(model, tokens),
     costAllT3: estimateCost(config?.models.T3 ?? null, tokens),

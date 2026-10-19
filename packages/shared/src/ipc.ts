@@ -23,7 +23,7 @@ import { HandoffPackage } from "./handoff";
 import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
 import { RepoScan, ScanRepoInput } from "./repo";
 import { SearchService, SearchServiceInput, SearchTestResult } from "./research";
-import { AgentConfig, MoveAgentInput, OverrideTaskInput, RoutingPlan, UpdateAgentInput } from "./routing";
+import { AgentConfig, MoveAgentInput, OverrideTaskInput, RoutingPlan, TaskRef, UpdateAgentInput } from "./routing";
 import { AppInfo, Preferences } from "./settings";
 
 interface ChannelSpec<I extends z.ZodType, O extends z.ZodType> {
@@ -91,6 +91,9 @@ export const ipcContract = {
   "routing.get": channel(z.object({ projectId: z.number().int().positive() }), RoutingPlan.nullable()),
   "routing.plan": channel(z.object({ projectId: z.number().int().positive() }), RoutingPlan),
   "task.override": channel(OverrideTaskInput, RoutingPlan),
+  /** Record one run of the task that did not pass its tests or acceptance criteria. */
+  "task.fail": channel(TaskRef, RoutingPlan),
+  "task.clearFailures": channel(TaskRef, RoutingPlan),
 
   "handoff.build": channel(z.object({ projectId: z.number().int().positive() }), HandoffPackage),
 } as const;

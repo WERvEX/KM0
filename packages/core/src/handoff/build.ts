@@ -3,6 +3,7 @@ import {
   type Decision,
   DOCUMENT_TEMPLATES,
   type DocumentKind,
+  ESCALATE_AFTER,
   type HandoffAgent,
   type HandoffFile,
   type HandoffPackage,
@@ -75,8 +76,10 @@ const TEXT = {
     escalate: "失败升级",
     escalateBody: (tier: string, next: string | null) =>
       next
-        ? `如果多次尝试后仍不能满足验收标准，就停下来说明卡在哪里。这个任务会整体升到 ${next} 重做（当前 ${tier}），不要在中途换模型。`
+        ? `如果多次尝试后仍不能满足验收标准，就停下来说明卡在哪里，不要在中途换模型。这一档（${tier}）记满 ${ESCALATE_AFTER} 次失败后，KM0 会把整个任务升到 ${next} 重做。`
         : "如果多次尝试后仍不能满足验收标准，就停下来说明卡在哪里，交给人来决定。",
+    escalated: (from: string, tier: string) =>
+      `这个任务在 ${from} 上没有通过，已整体升到 ${tier} 重做。代码库里可能留有上次尝试的改动：先检查它们，再决定沿用还是撤掉。`,
     overview: "项目概览",
     form: "交付形态与规模",
     stack: "技术选型",
@@ -132,8 +135,10 @@ const TEXT = {
     escalate: "If it fails",
     escalateBody: (tier: string, next: string | null) =>
       next
-        ? `If repeated attempts cannot meet the acceptance criteria, stop and explain where you are stuck. The whole task will be redone on ${next} (now ${tier}); do not switch models halfway.`
+        ? `If repeated attempts cannot meet the acceptance criteria, stop and explain where you are stuck; do not switch models halfway. After ${ESCALATE_AFTER} failures on this tier (${tier}), KM0 moves the whole task to ${next} to be redone.`
         : "If repeated attempts cannot meet the acceptance criteria, stop and explain where you are stuck so a person can decide.",
+    escalated: (from: string, tier: string) =>
+      `This task did not pass on ${from} and is being redone on ${tier}. The codebase may still hold changes from the earlier attempt: check them first, then keep or revert them.`,
     overview: "Project overview",
     form: "Delivery form and scale",
     stack: "Technology",
@@ -221,6 +226,7 @@ export function taskPrompt(task: RoutedTask, input: HandoffInput): string {
   const sections = [
     `# ${text.task} ${pad(task.seq)}${text.colon}${task.title}`,
     `> ${text.generated(input.title, task.tier, task.model ?? text.noModel)}`,
+    task.escalatedFrom ? `> ${text.escalated(task.escalatedFrom, task.tier)}` : "",
     `## ${text.goal}\n\n${task.goal}`,
     `## ${text.acceptance}\n\n${list(task.acceptance)}`,
     task.files.length > 0

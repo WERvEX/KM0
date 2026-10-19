@@ -1,10 +1,17 @@
-import { type AgentConfig, AgentId, AppError, TIERS, type Tier, type TierModel } from "@km0/shared";
+import { type AgentConfig, AgentId, AppError, Capability, TIERS, type Tier, type TierModel } from "@km0/shared";
 import { type Database, transaction } from "../db/sql";
 
 interface AgentRow {
   id: AgentId;
   enabled: number;
   preference: number;
+  capabilities_json: string;
+}
+
+/** Stored capabilities, dropping any this version does not know. */
+function parseCapabilities(json: string): Capability[] {
+  const parsed: unknown = JSON.parse(json);
+  return Array.isArray(parsed) ? parsed.filter((item): item is Capability => Capability.safeParse(item).success) : [];
 }
 
 interface CatalogRow {
@@ -20,7 +27,9 @@ export class AgentStore {
   constructor(private readonly db: Database) {}
 
   list(): AgentConfig[] {
-    const rows = this.db.prepare("SELECT id, enabled, preference FROM agents").all() as unknown as AgentRow[];
+    const rows = this.db
+      .prepare("SELECT id, enabled, preference, capabilities_json FROM agents")
+      .all() as unknown as AgentRow[];
     const catalog = this.db.prepare("SELECT * FROM model_catalog").all() as unknown as CatalogRow[];
     return rows
       .filter((row) => AgentId.safeParse(row.id).success)
@@ -34,14 +43,26 @@ export class AgentStore {
             priceOutPerMTok: entry.price_out_per_mtok,
           };
         }
-        return { id: row.id, enabled: row.enabled === 1, preference: row.preference, models };
+        return {
+          id: row.id,
+          enabled: row.enabled === 1,
+          preference: row.preference,
+          models,
+          capabilities: parseCapabilities(row.capabilities_json),
+        };
       });
   }
 
-  update(id: AgentId, enabled: boolean, models: AgentConfig["models"]): AgentConfig[] {
+  /** Leaving out `capabilities` keeps the stored ones. */
+  update(id: AgentId, enabled: boolean, models: AgentConfig["models"], capabilities?: Capability[]): AgentConfig[] {
     this.require(id);
     transaction(this.db, () => {
       this.db.prepare("UPDATE agents SET enabled = ? WHERE id = ?").run(enabled ? 1 : 0, id);
+      if (capabilities) {
+        this.db
+          .prepare("UPDATE agents SET capabilities_json = ? WHERE id = ?")
+          .run(JSON.stringify([...new Set(capabilities)]), id);
+      }
       this.db.prepare("DELETE FROM model_catalog WHERE agent_id = ?").run(id);
       for (const tier of TIERS) {
         const model = models[tier];

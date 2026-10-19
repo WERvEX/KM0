@@ -232,4 +232,16 @@ ALTER TABLE question_rounds ADD COLUMN research_json TEXT;
 ALTER TABLE projects ADD COLUMN repo_scan_json TEXT;
 `,
   },
+  {
+    id: 6,
+    name: "agent_capabilities_and_failures",
+    // Starting strengths only; the user edits them under Settings → Agents.
+    sql: `
+ALTER TABLE tasks ADD COLUMN failures_json TEXT NOT NULL DEFAULT '[]';
+
+UPDATE agents SET capabilities_json = '["backend","debugging","testing","docs","devops"]' WHERE id = 'claude_code';
+UPDATE agents SET capabilities_json = '["backend","testing"]' WHERE id = 'codex';
+UPDATE agents SET capabilities_json = '["frontend"]' WHERE id = 'cursor';
+`,
+  },
 ];
