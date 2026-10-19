@@ -148,6 +148,8 @@ describe("hand-off package", () => {
     ]);
     const json = JSON.parse(pkg.files.find((file) => file.path === "km0/tasks.json")?.content ?? "[]");
     expect(json[1]).toMatchObject({ seq: 2, dependsOn: [1], prompt: "km0/tasks/02.md", tier: "T3" });
+    expect(json[1].features).toEqual(input().plan.tasks[1]?.features);
+    expect(json[1].score).toBe(input().plan.tasks[1]?.score);
   });
 
   it("gives a task only the decisions and sections it cites", () => {

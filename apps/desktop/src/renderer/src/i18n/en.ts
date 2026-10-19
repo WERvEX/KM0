@@ -138,6 +138,16 @@ export const en: Messages = {
       up: "Move up",
       down: "Move down",
       save: "Save",
+      rules: {
+        title: "Routing rules",
+        body: "A task's tier comes from the score of its features. After calibrating against real runs with KM0 Runner, import the routing-rules.json it writes to replace the default feature points and tier limits.",
+        default: "Using the default rules",
+        custom: "Using imported rules",
+        limits: "T1 up to {{t1}} points, T2 up to {{t2}}, T3 above",
+        import: "Import calibration",
+        reset: "Restore defaults",
+        invalid: "The file is not a valid set of routing rules.",
+      },
     },
     search: {
       intro:

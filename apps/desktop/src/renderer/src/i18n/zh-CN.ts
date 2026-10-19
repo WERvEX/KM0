@@ -133,6 +133,16 @@ export const zhCN = {
       up: "上移",
       down: "下移",
       save: "保存",
+      rules: {
+        title: "路由规则",
+        body: "档位由任务特征的分数决定。用 KM0 Runner 在真实执行结果上校准后，可以导入它生成的 routing-rules.json，替换默认的特征分值和档位上限。",
+        default: "使用默认规则",
+        custom: "使用导入的规则",
+        limits: "T1 ≤ {{t1}} 分，T2 ≤ {{t2}} 分，更高为 T3",
+        import: "导入校准结果",
+        reset: "恢复默认",
+        invalid: "文件不是有效的路由规则。",
+      },
     },
     search: {
       intro:
