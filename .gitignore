@@ -28,3 +28,4 @@ Desktop.ini
 *.db
 *.db-shm
 *.db-wal
+apps/desktop/live-run-output/
