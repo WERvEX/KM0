@@ -55,7 +55,7 @@ pnpm e2e          # Playwright 端到端测试，包括桌面版和网页版（�
 pnpm package      # 生成当前平台的安装包到 apps/desktop/release
 ```
 
-GitHub Actions 会在每次推送时运行检查，分别在 Windows、macOS、Linux 上构建安装包（作为构建产物上传，暂未签名），并部署网页调试版。推送 `v*` 标签（例如 `v0.1.0`）时，还会把安装包发布成 GitHub Release，说明文字取自 `docs/releases/<标签>.md`。
+GitHub Actions 会在每次推送时运行检查，分别在 Windows、macOS、Linux 上构建安装包（作为构建产物上传，暂未签名），并部署网页调试版。推送 `v*` 标签（例如 `v0.1.0`），或在 Actions 页面手动运行 CI 并填写版本号时，还会把安装包发布成 GitHub Release，说明文字取自 `docs/releases/<标签>.md`。
 
 ## 目录结构
 

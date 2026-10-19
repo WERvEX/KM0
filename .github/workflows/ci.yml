@@ -3,6 +3,12 @@ name: CI
 on:
   push:
   pull_request:
+  # Run by hand with a version such as v0.1.0 to tag the chosen commit and publish a release.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Version tag to publish, such as v0.1.0
+        required: true
 
 permissions:
   contents: read
@@ -95,8 +101,8 @@ jobs:
   release:
     name: Publish release
     needs: package
-    # Pushing a tag such as v0.1.0 publishes the installers built above as a GitHub Release.
-    if: startsWith(github.ref, 'refs/tags/v')
+    # A pushed v* tag, or a manual run with a tag, publishes the installers built above as a GitHub Release.
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -109,7 +115,9 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
-          name: KM0 ${{ github.ref_name }}
-          body_path: docs/releases/${{ github.ref_name }}.md
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: KM0 ${{ inputs.tag || github.ref_name }}
+          body_path: docs/releases/${{ inputs.tag || github.ref_name }}.md
           files: dist/**/KM0-*
           fail_on_unmatched_files: true
