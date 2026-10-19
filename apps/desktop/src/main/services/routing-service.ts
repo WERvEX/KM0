@@ -1,4 +1,12 @@
-import { breakDown, type DiscussionLlm, type Language, PATH_STAGES, planTotals, routeTask } from "@km0/core";
+import {
+  breakDown,
+  DEFAULT_ROUTING_RULES,
+  type DiscussionLlm,
+  type Language,
+  PATH_STAGES,
+  planTotals,
+  routeTask,
+} from "@km0/core";
 import {
   AppError,
   type DocumentKind,
@@ -6,6 +14,7 @@ import {
   type ProjectPath,
   type ProjectStage,
   type RoutingPlan,
+  type RoutingRules,
   SectionRef,
   TaskFailure,
   TaskFeatures,
@@ -63,6 +72,7 @@ export class RoutingService {
     private readonly llmFor: (projectId: number) => DiscussionLlm,
     private readonly language: () => Language,
     private readonly agents: AgentStore,
+    private readonly rules: () => RoutingRules = () => DEFAULT_ROUTING_RULES,
   ) {}
 
   get(projectId: number): RoutingPlan | null {
@@ -72,6 +82,7 @@ export class RoutingService {
       | undefined;
     if (!plan) return null;
     const agents = this.agents.list();
+    const rules = this.rules();
     const rows = this.db
       .prepare("SELECT * FROM tasks WHERE project_id = ? ORDER BY seq")
       .all(projectId) as unknown as TaskRow[];
@@ -90,6 +101,7 @@ export class RoutingService {
         },
         agents,
         this.language(),
+        rules,
       );
     });
     const basedOn = BasedOn.parse(JSON.parse(plan.based_on_json));

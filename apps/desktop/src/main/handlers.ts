@@ -58,6 +58,8 @@ export function createHandlers({
     "settings.roles.set": (roles) => settings.setRoles(roles),
     "settings.preferences.get": () => settings.getPreferences(),
     "settings.preferences.set": (partial) => settings.setPreferences(partial),
+    "settings.routingRules.get": () => settings.getRoutingRules(),
+    "settings.routingRules.set": (rules) => settings.setRoutingRules(rules),
     "settings.agents.list": () => agents.list(),
     "settings.agents.update": ({ id, enabled, models, capabilities }) =>
       agents.update(id, enabled, models, capabilities),

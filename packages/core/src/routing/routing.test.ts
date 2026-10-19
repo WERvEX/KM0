@@ -11,7 +11,7 @@ import {
   type TaskBasics,
   taskCapability,
 } from "./route";
-import { decideTier, escalateTier } from "./scoring";
+import { DEFAULT_ROUTING_RULES, decideTier, escalateTier } from "./scoring";
 
 /** Scores 0: one file, clear, do as written, little context, covered by tests. */
 const base: TaskFeatures = {
@@ -55,6 +55,17 @@ describe("score", () => {
       "总分 2 → T1：改 2–5 个文件 +1，没有现成测试 +1",
     ]);
     expect(decideTier(base, "en").reasons).toEqual(["score 0 → T1: —"]);
+  });
+
+  it("uses imported points and limits in place of the defaults", () => {
+    const rules = {
+      featurePoints: { ...DEFAULT_ROUTING_RULES.featurePoints, hasTests: { true: 0, false: 3 } },
+      tierLimits: { T1: 1, T2: 3 },
+    };
+    expect(decideTier({ ...base, scope: "many_files" }, "zh-CN", rules)).toMatchObject({ score: 2, tier: "T2" });
+    expect(decideTier({ ...base, hasTests: false }, "zh-CN", rules)).toMatchObject({ score: 3, tier: "T2" });
+    expect(decideTier({ ...base, hasTests: false, context: "large" }, "zh-CN", rules).tier).toBe("T3");
+    expect(decideTier({ ...base, reasoning: "design" }, "zh-CN", rules).tier).toBe("T3");
   });
 });
 

@@ -5,6 +5,7 @@ import type {
   CostRange,
   RoutedTask,
   RoutingPlan,
+  RoutingRules,
   TaskFailure,
   TaskFeatures,
   TaskOverride,
@@ -13,7 +14,7 @@ import type {
 } from "@km0/shared";
 import { TIERS } from "@km0/shared";
 import type { Language } from "../discussion/prompts";
-import { decideTier, escalateTier } from "./scoring";
+import { DEFAULT_ROUTING_RULES, decideTier, escalateTier } from "./scoring";
 
 /**
  * Tokens one agent run is expected to use, by scope. Coding agents re-read files and tool output
@@ -170,8 +171,13 @@ export interface TaskBasics {
  * Tier, agent, model and cost for a task: rules first, then whatever the user overrode, then a
  * lift for failed runs. Once failures lift the task, a model typed by hand no longer applies.
  */
-export function routeTask(task: TaskBasics, agents: AgentConfig[], language: Language): RoutedTask {
-  const decision = decideTier(task.features, language);
+export function routeTask(
+  task: TaskBasics,
+  agents: AgentConfig[],
+  language: Language,
+  rules: RoutingRules = DEFAULT_ROUTING_RULES,
+): RoutedTask {
+  const decision = decideTier(task.features, language, rules);
   const override = task.override;
   const escalation = escalateTier(override?.tier ?? decision.tier, task.failures, language);
   const tier = escalation.tier;

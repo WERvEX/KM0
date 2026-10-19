@@ -1,4 +1,4 @@
-import type { LlmCallRecord, ResolvedProfile } from "@km0/core";
+import { DEFAULT_ROUTING_RULES, type LlmCallRecord, type ResolvedProfile } from "@km0/core";
 import {
   AppError,
   DEFAULT_PREFERENCES,
@@ -7,6 +7,8 @@ import {
   type LlmRole,
   Preferences,
   type RoleAssignment,
+  RoutingRules,
+  type RoutingRulesState,
   type StructuredMode,
 } from "@km0/shared";
 import { type Database, nowIso } from "../db/sql";
@@ -216,6 +218,19 @@ export class SettingsStore {
     const next = Preferences.parse({ ...this.getPreferences(), ...partial });
     this.writePreference("ui", JSON.stringify(next));
     return next;
+  }
+
+  /** Tier rules for routing: imported from a KM0 Runner calibration, or KM0's defaults. */
+  getRoutingRules(): RoutingRulesState {
+    const raw = this.readPreference("routing_rules");
+    const parsed = raw ? RoutingRules.safeParse(JSON.parse(raw)) : null;
+    return parsed?.success ? { rules: parsed.data, custom: true } : { rules: DEFAULT_ROUTING_RULES, custom: false };
+  }
+
+  /** Store imported rules; null goes back to the defaults. */
+  setRoutingRules(rules: RoutingRules | null): RoutingRulesState {
+    this.writePreference("routing_rules", rules === null ? null : JSON.stringify(RoutingRules.parse(rules)));
+    return this.getRoutingRules();
   }
 
   recordCall(record: LlmCallRecord): void {

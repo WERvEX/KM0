@@ -70,7 +70,7 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db);
   const config = new ConfigService(settings, agents, search);
-  const routing = new RoutingService(db, llmFor, language, agents);
+  const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules);
   const handoff = new HandoffService(db, routing, language);
   const dispatch = createDispatcher(
     createHandlers({

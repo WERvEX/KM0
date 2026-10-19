@@ -23,7 +23,16 @@ import { HandoffPackage } from "./handoff";
 import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
 import { RepoScan, ScanRepoInput } from "./repo";
 import { SearchService, SearchServiceInput, SearchTestResult } from "./research";
-import { AgentConfig, MoveAgentInput, OverrideTaskInput, RoutingPlan, TaskRef, UpdateAgentInput } from "./routing";
+import {
+  AgentConfig,
+  MoveAgentInput,
+  OverrideTaskInput,
+  RoutingPlan,
+  RoutingRules,
+  RoutingRulesState,
+  TaskRef,
+  UpdateAgentInput,
+} from "./routing";
 import { AppInfo, Preferences } from "./settings";
 
 interface ChannelSpec<I extends z.ZodType, O extends z.ZodType> {
@@ -56,6 +65,9 @@ export const ipcContract = {
   "settings.agents.list": channel(z.void(), z.array(AgentConfig)),
   "settings.agents.update": channel(UpdateAgentInput, z.array(AgentConfig)),
   "settings.agents.move": channel(MoveAgentInput, z.array(AgentConfig)),
+  "settings.routingRules.get": channel(z.void(), RoutingRulesState),
+  /** null goes back to KM0's default rules. */
+  "settings.routingRules.set": channel(RoutingRules.nullable(), RoutingRulesState),
   "settings.search.list": channel(z.void(), z.array(SearchService)),
   "settings.search.create": channel(SearchServiceInput, SearchService),
   "settings.search.update": channel(Id.extend({ data: SearchServiceInput }), SearchService),

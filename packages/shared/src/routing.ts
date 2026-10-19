@@ -41,6 +41,33 @@ export const TaskFeatures = z.object({
 export type TaskFeatures = z.infer<typeof TaskFeatures>;
 export type TaskRisk = TaskFeatures["risks"][number];
 
+const Points = z.number().int().min(0).max(20);
+
+/**
+ * The tunable part of the tier rules: points per feature value and the highest score for T1 and T2.
+ * The hard rules (docs, risks, fixes, design) stay fixed. KM0 Runner's `calibrate` writes this file.
+ */
+export const RoutingRules = z
+  .object({
+    featurePoints: z.object({
+      scope: z.object({ single_file: Points, few_files: Points, many_files: Points, new_subsystem: Points }),
+      ambiguity: z.object({ low: Points, medium: Points, high: Points }),
+      reasoning: z.object({ follow: Points, judgement: Points, design: Points }),
+      context: z.object({ small: Points, large: Points }),
+      hasTests: z.object({ true: Points, false: Points }),
+    }),
+    tierLimits: z.object({ T1: Points, T2: Points }),
+  })
+  .refine((rules) => rules.tierLimits.T1 <= rules.tierLimits.T2, {
+    message: "The T1 limit must not exceed the T2 limit.",
+    path: ["tierLimits"],
+  });
+export type RoutingRules = z.infer<typeof RoutingRules>;
+
+/** The rules in force, and whether they are imported ones rather than KM0's defaults. */
+export const RoutingRulesState = z.object({ rules: RoutingRules, custom: z.boolean() });
+export type RoutingRulesState = z.infer<typeof RoutingRulesState>;
+
 /** One tier price list entry: model ID and USD per million tokens. */
 export const TierModel = z.object({
   modelId: z.string().trim().min(1).max(200),

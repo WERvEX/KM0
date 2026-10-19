@@ -103,4 +103,15 @@ describe("SettingsStore", () => {
       input_tokens: 10,
     });
   });
+
+  it("stores imported routing rules and goes back to the defaults on null", () => {
+    const { settings } = store();
+    const defaults = settings.getRoutingRules();
+    expect(defaults.custom).toBe(false);
+    const rules = { ...defaults.rules, tierLimits: { T1: 1, T2: 4 } };
+    expect(settings.setRoutingRules(rules)).toEqual({ rules, custom: true });
+    expect(settings.getRoutingRules().rules.tierLimits).toEqual({ T1: 1, T2: 4 });
+    expect(() => settings.setRoutingRules({ ...rules, tierLimits: { T1: 5, T2: 2 } })).toThrow();
+    expect(settings.setRoutingRules(null)).toEqual(defaults);
+  });
 });

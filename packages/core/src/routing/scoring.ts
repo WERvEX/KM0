@@ -1,4 +1,11 @@
-import { ESCALATE_AFTER, type TaskFailure, type TaskFeatures, type TaskRisk, type Tier } from "@km0/shared";
+import {
+  ESCALATE_AFTER,
+  type RoutingRules,
+  type TaskFailure,
+  type TaskFeatures,
+  type TaskRisk,
+  type Tier,
+} from "@km0/shared";
 import type { Language } from "../discussion/prompts";
 
 /** Points per feature value; the sum decides the tier unless a hard rule applies. */
@@ -12,6 +19,9 @@ export const FEATURE_POINTS = {
 
 /** Highest score that still maps to T1 and to T2. */
 export const TIER_LIMITS = { T1: 2, T2: 5 } as const;
+
+/** The rules KM0 ships with; imported calibration results replace them. */
+export const DEFAULT_ROUTING_RULES: RoutingRules = { featurePoints: FEATURE_POINTS, tierLimits: TIER_LIMITS };
 
 /** At or above this score a task is worth splitting before it is handed off. */
 export const SPLIT_SCORE = 8;
@@ -72,24 +82,29 @@ const TEXT = {
 } as const;
 
 /**
- * Deterministic tier for a task. The score picks T1 (0–2), T2 (3–5) or T3 (6+); then hard rules
+ * Deterministic tier for a task. The score picks T1 (0–2), T2 (3–5) or T3 (6+) under the default
+ * rules, or under imported calibrated ones; then hard rules
  * apply in this order: docs or boilerplate in at most 5 files → T1; any risk → at least T2;
  * debugging and bug fixing → at least T2; design decisions → T3. Later rules win.
  */
-export function decideTier(features: TaskFeatures, language: Language): TierDecision {
+export function decideTier(
+  features: TaskFeatures,
+  language: Language,
+  rules: RoutingRules = DEFAULT_ROUTING_RULES,
+): TierDecision {
   const text = TEXT[language];
+  const points = rules.featurePoints;
+  const limits = rules.tierLimits;
+  const tested = String(features.hasTests) as "true" | "false";
   const parts: [string, number][] = [
-    [text.scope[features.scope], FEATURE_POINTS.scope[features.scope]],
-    [text.ambiguity[features.ambiguity], FEATURE_POINTS.ambiguity[features.ambiguity]],
-    [text.reasoning[features.reasoning], FEATURE_POINTS.reasoning[features.reasoning]],
-    [text.context[features.context], FEATURE_POINTS.context[features.context]],
-    [
-      text.hasTests[String(features.hasTests) as "true" | "false"],
-      FEATURE_POINTS.hasTests[String(features.hasTests) as "true" | "false"],
-    ],
+    [text.scope[features.scope], points.scope[features.scope]],
+    [text.ambiguity[features.ambiguity], points.ambiguity[features.ambiguity]],
+    [text.reasoning[features.reasoning], points.reasoning[features.reasoning]],
+    [text.context[features.context], points.context[features.context]],
+    [text.hasTests[tested], points.hasTests[tested]],
   ];
-  const score = parts.reduce((sum, [, points]) => sum + points, 0);
-  let tier: Tier = score <= TIER_LIMITS.T1 ? "T1" : score <= TIER_LIMITS.T2 ? "T2" : "T3";
+  const score = parts.reduce((sum, [, value]) => sum + value, 0);
+  let tier: Tier = score <= limits.T1 ? "T1" : score <= limits.T2 ? "T2" : "T3";
   const [colon, comma] = language === "en" ? [": ", ", "] : ["：", "，"];
   const counted = parts.filter(([, points]) => points > 0).map(([label, points]) => `${label} +${points}`);
   const reasons = [`${text.score(score, tier)}${colon}${counted.join(comma) || "—"}`];

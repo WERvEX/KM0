@@ -325,6 +325,9 @@ export function buildHandoff(input: HandoffInput): HandoffPackage {
     files: task.files,
     dependsOn: task.dependsOn,
     tier: task.tier,
+    // Triage features and rule score: KM0 Runner records them so routing rules can be calibrated.
+    features: task.features,
+    score: task.score,
     agent: task.agent,
     model: task.model,
     prompt: taskPath(task.seq),
