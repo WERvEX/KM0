@@ -264,6 +264,34 @@ describe("resolveAnswers", () => {
     },
   );
 
+  it("keeps the description of a single chosen option, where plans spell out their parts", () => {
+    const [milestones] = normalizeQuestions(
+      [
+        {
+          key: "milestones",
+          prompt: "按什么顺序交付？",
+          type: "single",
+          options: [
+            { label: "按功能逐个交付", description: "推荐：阶段 1 登录；阶段 2 需求；阶段 3 迭代", recommended: true },
+            { label: "先后端再前端", description: "分工清晰，但后期才能看到页面", recommended: false },
+          ],
+          allow_custom: true,
+        },
+      ],
+      { allowed: new Set(["milestones"]), roundNo: 2, language: "zh-CN", currentValues: new Map() },
+    );
+    if (!milestones) throw new Error("no question");
+    const pick = (text?: string) =>
+      resolveAnswers([milestones], [{ questionId: milestones.id, optionIds: ["o1"], ...(text ? { text } : {}) }])
+        .decided[0];
+    expect(pick()).toMatchObject({
+      value: { text: "按功能逐个交付" },
+      rationale: "推荐：阶段 1 登录；阶段 2 需求；阶段 3 迭代",
+    });
+    // With the user's own words added, the option's description no longer describes the answer.
+    expect(pick("再加一个导出阶段")?.rationale).toBeNull();
+  });
+
   it("records the source, the alternatives and multi-select items", () => {
     const { decided, delegated } = resolveAnswers(questions, [
       { questionId: "r1q1", optionIds: ["o1"] },
