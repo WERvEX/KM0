@@ -9,13 +9,13 @@ const SECTION_GUIDES: Record<string, string> = {
   "prd.users_scenarios":
     "Target users and their roles, including whether and how they sign in and what each role may do; then the core scenarios as numbered user stories.",
   "prd.functional":
-    "One ### subsection per MVP feature: a one-line description and 2-4 acceptance criteria in EARS form. End with a short list of features planned for later.",
+    "One ### subsection per MVP feature: a one-line description and 2-4 acceptance criteria in EARS form. Where the core rules decision applies, state those rules concretely (the formula, the list of statuses and who may move between them). End with a short list of features planned for later.",
   "prd.non_functional":
     "Performance, availability, security, privacy, compatibility and accessibility requirements that follow from the scale and compliance decisions. Only concrete, checkable items.",
   "prd.non_goals": "What is explicitly out of scope for this release.",
   "prd.success": "Measurable success criteria, each with a target value or an observable signal.",
   "prd.open_questions":
-    "Decisions still open or pending, assumptions made on the user's behalf that deserve a check, and anything the ledger leaves unsettled. Write only 'None.' (or '无。') if there is nothing.",
+    "Decisions still open or pending, assumptions made on the user's behalf that deserve a check, and anything the ledger leaves unsettled, as a bulleted list with one question per item and your assumption in it. Write only 'None.' (or '无。') if there is nothing.",
 
   "tech_design.stack":
     "A table with columns layer | choice | why | rejected alternatives, for frontend, backend, storage, deployment, authentication and integrations (skip layers that do not apply).",
@@ -32,7 +32,10 @@ const SECTION_GUIDES: Record<string, string> = {
   "tech_design.testing":
     "What is tested at which level (unit, integration, end-to-end), with which tools, and what gates a release.",
   "tech_design.milestones": "Ordered milestones; for each, the deliverable and how to tell it is done.",
-  "tech_design.risks": "Main technical risks as a table: risk | impact | mitigation.",
+  "tech_design.risks":
+    "Main technical risks as a table: risk | impact | mitigation. Unsettled points go under open questions, not here.",
+  "tech_design.open_questions":
+    "Assumptions this design makes that the ledger does not settle, and choices left to implementation that deserve a check, as a bulleted list with one question per item and your assumption in it. Do not repeat items the product requirements already list. Write only 'None.' (or '无。') if there is nothing.",
 
   "brief.goal": "What this piece of work achieves and why, in 2-4 sentences.",
   "brief.scope": "In scope and out of scope, as two short lists.",
@@ -42,7 +45,7 @@ const SECTION_GUIDES: Record<string, string> = {
     "Compatibility, performance, security or time constraints. Write only 'None.' (or '无。') if none apply.",
   "brief.acceptance": "3-6 acceptance criteria in EARS form.",
   "brief.open_questions":
-    "Anything the decisions leave unsettled and assumptions worth a check. Write only 'None.' (or '无。') if there is nothing.",
+    "Anything the decisions leave unsettled and assumptions worth a check, as a bulleted list with one question per item. Write only 'None.' (or '无。') if there is nothing.",
 };
 
 export function sectionGuide(kind: DocumentKind, id: string): string {
@@ -129,6 +132,7 @@ export function revisionSystem(input: RevisionPromptInput): string {
   return [
     ...writingRules(input),
     "You are revising an existing document. Rewrite only the sections you are asked for, keep them consistent with the rest of the document, and output only those sections, each starting with its marker line.",
+    "When the instruction answers open questions, the answers outrank earlier assumptions: write each answer into every section it affects, drop the answered items from the open questions, and keep the unanswered ones.",
   ].join("\n");
 }
 

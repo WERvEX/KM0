@@ -9,6 +9,8 @@ import {
   type DocumentVersionInfo,
   type DocumentView,
   type EmitEvent,
+  OPEN_QUESTIONS_SECTION,
+  openQuestionItems,
   PATH_DOCUMENTS,
   type ProjectPath,
   type ProjectStage,
@@ -74,6 +76,10 @@ export function latestDocument(
   return row ? { version: row.version, markdown: row.content, sections: parseSections(row) } : null;
 }
 
+function openQuestionsOf(sections: StoredSection[]): string[] {
+  return openQuestionItems(sections.find((section) => section.id === OPEN_QUESTIONS_SECTION)?.body ?? "");
+}
+
 /** Version and staleness of each document the path produces, for the project page. */
 export function documentSummaries(
   db: Database,
@@ -84,9 +90,16 @@ export function documentSummaries(
   const current = currentValues(decisions);
   return PATH_DOCUMENTS[path].map((kind) => {
     const row = latestRow(db, projectId, kind);
-    if (!row) return { kind, version: null, staleSections: 0, updatedAt: null };
-    const stale = parseSections(row).filter((section) => staleKeys(section.basis, current).length > 0);
-    return { kind, version: row.version, staleSections: stale.length, updatedAt: row.created_at };
+    if (!row) return { kind, version: null, staleSections: 0, openQuestions: 0, updatedAt: null };
+    const sections = parseSections(row);
+    const stale = sections.filter((section) => staleKeys(section.basis, current).length > 0);
+    return {
+      kind,
+      version: row.version,
+      staleSections: stale.length,
+      openQuestions: openQuestionsOf(sections).length,
+      updatedAt: row.created_at,
+    };
   });
 }
 
@@ -336,11 +349,13 @@ export class DocumentService {
       note: item.note,
       createdAt: item.created_at,
     });
+    const sections = parseSections(row);
     return {
       ...info(row),
       kind,
       latest: versions[0]?.version === row.version,
-      sections: parseSections(row).map((section) => ({
+      openQuestions: openQuestionsOf(sections),
+      sections: sections.map((section) => ({
         id: section.id,
         title: section.title,
         body: section.body,

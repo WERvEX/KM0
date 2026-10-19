@@ -1,7 +1,7 @@
 import type { Decision } from "@km0/shared";
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
-import { dependentsOf, requiredKeys } from "./catalog";
+import { dependentsOf, requiredKeys, stageKeys } from "./catalog";
 import {
   choosePath,
   type DiscussionLlm,
@@ -13,6 +13,7 @@ import {
   resolveAnswers,
   triageTask,
 } from "./engine";
+import { fillSystem, type RoundPromptInput, roundSystem } from "./prompts";
 
 /** Returns scripted outputs in order and records each call. */
 function scriptedLlm(outputs: unknown[]) {
@@ -331,5 +332,30 @@ describe("catalog", () => {
     expect(dependents).toEqual(expect.arrayContaining(["user_scale", "auth", "storage", "architecture", "milestones"]));
     expect(dependents).not.toContain("scale");
     expect(dependentsOf("risks")).toEqual([]);
+  });
+});
+
+describe("prompts", () => {
+  const input: Omit<RoundPromptInput, "stage"> = {
+    language: "zh-CN",
+    path: "full",
+    description: "做一个需求管理平台",
+    triage: null,
+    decisions: [],
+    targetKeys: [],
+    maxQuestions: 3,
+    mode: "required",
+  };
+
+  it("keeps inferred and delegated values within the decisions already made", () => {
+    expect(roundSystem({ ...input, stage: "implementation" })).toContain("never add a feature");
+    expect(fillSystem("zh-CN")).toContain("never add a feature");
+  });
+
+  it("asks for the product's core rules in the requirements stage", () => {
+    expect(stageKeys("requirements").map((def) => def.key)).toContain("core_rules");
+    expect(dependentsOf("mvp_features")).toContain("core_rules");
+    expect(roundSystem({ ...input, stage: "requirements" })).toContain("`core_rules`");
+    expect(roundSystem({ ...input, stage: "tech" })).not.toContain("`core_rules`");
   });
 });

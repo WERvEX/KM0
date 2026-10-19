@@ -117,7 +117,8 @@ export function decideTier(features: TaskFeatures, language: Language): TierDeci
     score,
     tier,
     reasons,
-    splitSuggested: features.scope === "new_subsystem" || score >= SPLIT_SCORE,
+    // Scaffolding a new app is one step however many files it creates; there is nothing to split.
+    splitSuggested: (features.scope === "new_subsystem" && features.kind !== "boilerplate") || score >= SPLIT_SCORE,
   };
 }
 

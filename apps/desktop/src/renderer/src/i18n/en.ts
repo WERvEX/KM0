@@ -326,6 +326,15 @@ export const en: Messages = {
     backToLatest: "Back to the latest version",
     staleBanner: "{{count}} sections rest on decisions that changed: {{sections}}",
     updateStale: "Update them to the new decisions",
+    openQuestions: {
+      banner: "This document has {{count}} open questions, handled for now by the assumptions it states:",
+      answer: "Answer them",
+      title: "Answer open questions",
+      body: "Answer as many as you like. AI writes the answers into the sections they affect; unanswered questions stay listed.",
+      placeholder: "For example: score priority as value×2 + urgency − cost; statuses are To review, In progress, Done",
+      submit: "Update the document",
+      note: "Answers to open questions: {{answers}}",
+    },
     error: "The document action did not finish: {{message}}",
     section: {
       edit: "Edit",
@@ -360,6 +369,8 @@ export const en: Messages = {
       action: "Break down and route",
     },
     needDocuments: "Write all documents first, then break the work down.",
+    openQuestions:
+      "The documents still list {{count}} open questions; the tasks will follow the assumptions written there. You can answer them on the document tabs first.",
     planning: "Breaking the work down…",
     replan: "Break down again",
     replanTitle: "Break the work down again",

@@ -11,7 +11,7 @@ import type {
   Tier,
   TierModel,
 } from "@km0/shared";
-import { TIERS } from "@km0/shared";
+import { AGENT_NAMES, TIERS } from "@km0/shared";
 import type { Language } from "../discussion/prompts";
 import { decideTier, escalateTier } from "./scoring";
 
@@ -90,6 +90,8 @@ const AGENT_TEXT = {
     matched: (skill: string, tier: Tier) => `擅长${skill}、且配置了 ${tier} 模型的 Agent 中排在最前`,
     unmatched: (skill: string, tier: Tier) =>
       `没有擅长${skill}的 Agent 配置了 ${tier} 模型，改用排在最前、且配置了 ${tier} 模型的 Agent`,
+    idle: (names: string, skill: string, tier: Tier) =>
+      `${names} 擅长${skill}，但没有配置 ${tier} 模型，暂用排在最前、且配置了 ${tier} 模型的 Agent；在“设置 → Agent”里补上模型后，这类任务会交给它`,
     noModel: (tier: Tier) => `没有 Agent 配置 ${tier} 模型，暂用排在最前的 Agent`,
     none: "没有启用的 Agent，使用通用提示词",
   },
@@ -107,6 +109,8 @@ const AGENT_TEXT = {
     matched: (skill: string, tier: Tier) => `first agent good at ${skill} with a ${tier} model`,
     unmatched: (skill: string, tier: Tier) =>
       `no agent good at ${skill} has a ${tier} model; using the first enabled agent with one`,
+    idle: (names: string, skill: string, tier: Tier) =>
+      `${names} is good at ${skill} but has no ${tier} model, so the first enabled agent with one is used; add a model under Settings → Agents to send these tasks there`,
     noModel: (tier: Tier) => `no agent has a ${tier} model; using the first enabled agent`,
     none: "no agent is enabled; using the generic prompt",
   },
@@ -136,7 +140,17 @@ export function chooseAgent(
     const good = withModel.find((agent) => agent.capabilities.includes(capability));
     if (good) return { agent: good.id, model: good.models[tier], reason: text.matched(skill, tier) };
     const fallback = withModel[0];
-    if (fallback) return { agent: fallback.id, model: fallback.models[tier], reason: text.unmatched(skill, tier) };
+    if (fallback) {
+      // Name the agents that would take the task once they have a model, so the fix is obvious.
+      const idle = enabled
+        .filter((agent) => agent.capabilities.includes(capability))
+        .map((agent) => AGENT_NAMES[agent.id]);
+      const reason =
+        idle.length > 0
+          ? text.idle(idle.join(language === "zh-CN" ? "、" : ", "), skill, tier)
+          : text.unmatched(skill, tier);
+      return { agent: fallback.id, model: fallback.models[tier], reason };
+    }
   }
   const first = withModel[0];
   if (first) return { agent: first.id, model: first.models[tier], reason: text.first(tier) };

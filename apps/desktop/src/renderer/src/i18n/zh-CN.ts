@@ -320,6 +320,15 @@ export const zhCN = {
     backToLatest: "回到最新版本",
     staleBanner: "{{count}} 个小节依据的决策已改动：{{sections}}",
     updateStale: "按新决策更新这些小节",
+    openQuestions: {
+      banner: "这份文档还有 {{count}} 条待定问题，目前按文档里的假设处理：",
+      answer: "回答这些问题",
+      title: "回答待定问题",
+      body: "可以只回答其中几条。AI 会把答复写进相关小节，没回答的问题留在“待定问题”里。",
+      placeholder: "例如：优先级按 价值×2 + 紧急度 − 成本 打分；状态为 待评审、开发中、已完成",
+      submit: "更新文档",
+      note: "回答待定问题：{{answers}}",
+    },
     error: "文档操作没有完成：{{message}}",
     section: {
       edit: "编辑",
@@ -353,6 +362,7 @@ export const zhCN = {
       action: "拆解任务并路由",
     },
     needDocuments: "先生成全部文档，再拆解任务。",
+    openQuestions: "文档里还有 {{count}} 条待定问题，拆出的任务会沿用文档里的假设。可以先在文档页回答它们。",
     planning: "正在拆解任务…",
     replan: "重新拆解",
     replanTitle: "重新拆解任务",

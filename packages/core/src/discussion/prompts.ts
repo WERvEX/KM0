@@ -56,6 +56,10 @@ export interface RoundPromptInput {
   research?: Research | null;
 }
 
+/** Inferred and delegated decisions must not quietly widen what the user chose. */
+const CONSISTENCY_RULE =
+  "Every value you infer or decide must fit the decisions already made. The chosen MVP features are the whole first release: never add a feature, role, integration or component the decisions leave out (for example, a module may not include a feature the user did not pick); mention such ideas only as later work.";
+
 export function roundSystem(input: RoundPromptInput): string {
   const rules = [
     "You are KM0's requirements interviewer. You help the user settle decisions before any code is written.",
@@ -69,8 +73,14 @@ export function roundSystem(input: RoundPromptInput): string {
     "Mark as `recommended` what you would actually choose for this task (exactly one for single questions; the sensible defaults for multi questions), and start that option's `description` with the reason. Every other description states its trade-off in one sentence.",
     "Option labels are short (at most 16 Chinese characters or 6 English words).",
     "Never ask about keys that are already decided unless they are flagged for review.",
+    CONSISTENCY_RULE,
     "Write prompts as direct questions to the user.",
   ];
+  if (input.stage === "requirements") {
+    rules.push(
+      "`core_rules` is usually the one optional key worth asking: when the product scores, ranks, prices or approves things, or moves them through statuses, ask how that should work with concrete options (a named scoring scheme, an actual list of statuses) rather than leaving it to later assumptions.",
+    );
+  }
   if (input.stage === "scale") {
     rules.push(
       `For the key \`scale\`, the options must be exactly: ${SCALE_OPTIONS.map((option) => option[input.language]).join(" / ")}.`,
@@ -128,6 +138,7 @@ export function fillSystem(language: Language): string {
     "You are KM0. The user asked you to make some decisions for them.",
     "Decide every listed key with a concrete value that fits the task and the decisions already made: name real technologies, features or steps, never a vague placeholder.",
     "Prefer the simplest choice that satisfies the requirements. Give a one-sentence rationale for each.",
+    CONSISTENCY_RULE,
     languageRule(language),
   ].join("\n");
 }
