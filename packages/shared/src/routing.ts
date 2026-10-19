@@ -100,8 +100,17 @@ export type TaskOverride = z.infer<typeof TaskOverride>;
 /** Failed runs on one tier that move a task to the next tier. */
 export const ESCALATE_AFTER = 2;
 
-/** One run that did not pass, recorded by the user, on the tier the task ran on. */
-export const TaskFailure = z.object({ tier: Tier, at: z.string() });
+/**
+ * One run that did not pass, on the tier the task ran on. `user`: recorded by hand; enough of them lift the
+ * task a tier. `runner`: KM0 Runner already climbed to that tier and KM0's acceptance rejected the work, so the
+ * next hand-off starts one tier above it at once.
+ */
+export const TaskFailure = z.object({
+  tier: Tier,
+  at: z.string(),
+  source: z.enum(["user", "runner"]).default("user"),
+  reason: z.string().optional(),
+});
 export type TaskFailure = z.infer<typeof TaskFailure>;
 
 export const SectionRef = z.object({ kind: DocumentKind, sectionId: z.string() });
@@ -119,6 +128,8 @@ export const RoutedTask = z.object({
   dependsOn: z.array(z.number().int()),
   decisionKeys: z.array(z.string()),
   sections: z.array(SectionRef),
+  /** Checks the task from the repository root; the planner's, else the repository's. Null when unknown. */
+  testCommand: z.string().nullable(),
   features: TaskFeatures,
   score: z.number().int(),
   /** Tier from the rules, before any override. */

@@ -33,6 +33,7 @@ export const BreakdownOutput = z.object({
         depends_on: z.array(z.number().int()).default([]),
         decision_keys: z.array(z.string()).default([]),
         sections: z.array(z.string()).default([]),
+        test_command: z.string().trim().min(1).nullable().default(null),
         features: Features,
       }),
     )
@@ -61,6 +62,8 @@ export interface PlannedTask {
   dependsOn: number[];
   decisionKeys: string[];
   sections: SectionRef[];
+  /** A command that checks this task, when the planner named one. */
+  testCommand: string | null;
   features: TaskFeatures;
 }
 
@@ -73,6 +76,7 @@ export function breakdownSystem(input: BreakdownInput): string {
     "Order tasks so that prerequisites come first. `depends_on` lists the 1-based numbers of earlier tasks it needs.",
     "Keep risky work (data migrations, authentication and permissions, production configuration), bug fixes, and pure documentation or boilerplate in tasks of their own, so they can be routed differently.",
     "For each task: `title` is a short imperative; `goal` is one or two sentences; `acceptance` holds 2-4 criteria in EARS form; `files` lists paths or globs likely touched (planned paths for new code); `decision_keys` are ledger keys the task relies on; `sections` are document sections it implements, written as `<kind>.<section id>` (for example `prd.functional`).",
+    "`test_command`: a shell command, run from the repository root, that checks this task (for example the repository's test command, or a narrower one for the task's tests); null when nothing can check it automatically.",
     "features.scope: single_file = one file; few_files = 2-5 files; many_files = more than 5; new_subsystem = a new module, service or app.",
     "features.ambiguity: how much is still unclear after the decisions and documents. features.reasoning: follow = do as written; judgement = some local choices; design = needs design decisions about structure or interfaces.",
     "features.context: large when the agent must read much existing code or many documents. features.has_tests: true only if existing tests already cover the area. features.risks: only real risks. features.kind: what the task mostly produces; fix = finding and fixing a bug in existing code.",
@@ -142,6 +146,7 @@ export async function breakDown(llm: DiscussionLlm, input: BreakdownInput): Prom
           const [kind, sectionId] = ref.split(".") as [DocumentKind, string];
           return { kind, sectionId };
         }),
+      testCommand: task.test_command,
       features: {
         scope: task.features.scope,
         ambiguity: task.features.ambiguity,

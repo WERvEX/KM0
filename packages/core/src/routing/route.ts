@@ -162,6 +162,7 @@ export interface TaskBasics {
   dependsOn: number[];
   decisionKeys: string[];
   sections: RoutedTask["sections"];
+  testCommand?: string | null;
   features: TaskFeatures;
   override: TaskOverride | null;
   failures: TaskFailure[];
@@ -189,6 +190,7 @@ export function routeTask(
   const tokens = estimateTokens(task.features);
   return {
     ...task,
+    testCommand: task.testCommand ?? null,
     score: decision.score,
     ruleTier: decision.tier,
     tier,

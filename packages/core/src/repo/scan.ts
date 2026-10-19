@@ -385,6 +385,55 @@ const MANIFESTS = new Set([
 const TEST_DIRS = new Set(["test", "tests", "__tests__", "spec", "specs", "e2e"]);
 const TEST_FILE = /(\.|_)(test|spec)\.[a-z]+$|^test_.*\.py$|_test\.go$/;
 
+/** npm's placeholder when no test script was set up. */
+const NO_TEST_SCRIPT = /no test specified/;
+
+/**
+ * The command that runs a repository's tests, judged from its root files: a package.json `test` script, a
+ * Makefile `test` target, or the standard runner of a Python, Go or Rust project. Null when none is evident.
+ */
+export function detectTestCommand(rootFiles: Map<string, string | null>, managers: Set<string>): string | null {
+  const packageJson = rootFiles.get("package.json");
+  if (packageJson) {
+    try {
+      const script = (JSON.parse(packageJson) as { scripts?: Record<string, string> }).scripts?.test;
+      if (script && !NO_TEST_SCRIPT.test(script)) {
+        const runner = managers.has("pnpm")
+          ? "pnpm"
+          : managers.has("Yarn")
+            ? "yarn"
+            : managers.has("Bun")
+              ? "bun"
+              : "npm";
+        return `${runner} test`;
+      }
+    } catch {
+      // not JSON: fall through to the other markers
+    }
+  }
+  const makefile = rootFiles.get("Makefile");
+  if (makefile && /^test\s*:/m.test(makefile)) return "make test";
+  if (rootFiles.has("go.mod")) return "go test ./...";
+  if (rootFiles.has("Cargo.toml")) return "cargo test";
+  const python = ["pytest.ini", "tox.ini", "setup.cfg", "pyproject.toml", "conftest.py"];
+  if (python.some((name) => rootFiles.has(name))) {
+    const pyproject = rootFiles.get("pyproject.toml");
+    const usesPytest =
+      rootFiles.has("pytest.ini") ||
+      rootFiles.has("conftest.py") ||
+      /pytest/.test(pyproject ?? "") ||
+      /pytest/.test(rootFiles.get("setup.cfg") ?? "") ||
+      /pytest/.test(rootFiles.get("tox.ini") ?? "");
+    if (usesPytest)
+      return managers.has("uv") ? "uv run pytest" : managers.has("Poetry") ? "poetry run pytest" : "pytest";
+  }
+  return null;
+}
+
+/** Root files whose contents the test-command detection reads. */
+const TEST_MARKERS = new Set(["package.json", "Makefile", "pyproject.toml", "setup.cfg", "tox.ini"]);
+const TEST_PRESENCE = new Set(["go.mod", "Cargo.toml", "pytest.ini", "conftest.py"]);
+
 export interface ScanOptions {
   root: string;
   name: string;
@@ -405,6 +454,7 @@ export async function scanRepo(fs: RepoFs, options: ScanOptions): Promise<RepoSc
   let hasCi = false;
   let topLevel: string[] = [];
   let readme: string | null = null;
+  const rootFiles = new Map<string, string | null>();
 
   const queue: { dir: string; depth: number }[] = [{ dir: "", depth: 0 }];
   while (queue.length > 0) {
@@ -443,6 +493,8 @@ export async function scanRepo(fs: RepoFs, options: ScanOptions): Promise<RepoSc
       // Manifests and markers count near the root only; deep ones are usually fixtures or examples.
       if (depth > 2) continue;
       if (depth === 0 && PACKAGE_MANAGERS[entry.name]) managers.add(PACKAGE_MANAGERS[entry.name] as string);
+      if (depth === 0 && TEST_MARKERS.has(entry.name)) rootFiles.set(entry.name, await fs.read(path, MANIFEST_BYTES));
+      if (depth === 0 && TEST_PRESENCE.has(entry.name)) rootFiles.set(entry.name, null);
       const marker = MARKER_FILES[entry.name];
       if (marker) stack.push({ layer: marker[0], name: marker[1], file: path });
       if (MANIFESTS.has(entry.name)) {
@@ -473,6 +525,7 @@ export async function scanRepo(fs: RepoFs, options: ScanOptions): Promise<RepoSc
     stack: dedupe(stack),
     packageManagers: [...managers],
     hasTests,
+    testCommand: detectTestCommand(rootFiles, managers),
     hasCi,
     topLevel,
     readme,
@@ -514,6 +567,7 @@ export function repoSummary(scan: RepoScan): string {
       .map((layer) => `Detected ${layer}: ${layers[layer].join(", ")}.`),
     scan.packageManagers.length > 0 ? `Package managers: ${scan.packageManagers.join(", ")}.` : "",
     `Tests: ${scan.hasTests ? "yes" : "none found"}. CI: ${scan.hasCi ? "yes" : "none found"}.`,
+    scan.testCommand ? `Test command: \`${scan.testCommand}\`.` : "",
     scan.topLevel.length > 0 ? `Top level: ${scan.topLevel.join(" ")}` : "",
     scan.readme ? `README excerpt:\n${scan.readme.slice(0, 800)}` : "",
   ];
