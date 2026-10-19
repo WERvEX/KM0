@@ -149,6 +149,15 @@ describe("KM0 Runner runs", () => {
     const prompt = handoff.build(project.id, "runner").tasks.find((item) => item.seq === 2)?.prompt ?? "";
     expect(prompt).toContain("没有通过验收");
     expect(prompt).not.toContain("## 失败升级");
+    expect(
+      JSON.parse(
+        handoff.build(project.id, "runner").files.find((file) => file.path === "km0/tasks.json")?.content ?? "[]",
+      ),
+    ).toMatchObject([
+      { seq: 1, retry: false },
+      { seq: 2, retry: true },
+      { seq: 3, retry: false },
+    ]);
 
     // Judging again leaves verdicts alone; a spot check overrules one and undoes its lift.
     await runner.judge(project.id, imported.id);
@@ -156,6 +165,11 @@ describe("KM0 Runner runs", () => {
     expect(overruled.results[1]).toMatchObject({ accepted: true, verdict: { accepted: false, user_override: true } });
     expect(routing.get(project.id)?.tasks.find((item) => item.seq === 2)?.failures).toEqual([]);
     expect(run.files["acceptance.jsonl"]).toContain('"user_override":true');
+    // Rejecting what KM0 accepted says so in the next prompt.
+    await runner.override(project.id, judged.results[0]?.id ?? 0, false);
+    expect(routing.get(project.id)?.tasks.find((item) => item.seq === 1)?.failures[0]?.reason).toMatch(
+      /^用户抽查后判为不通过/,
+    );
   });
 
   it("keeps verdicts when the folder is gone and writes them once it is chosen again", async () => {

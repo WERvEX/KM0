@@ -345,6 +345,8 @@ export function buildHandoff(input: HandoffInput): HandoffPackage {
     features: task.features,
     score: task.score,
     testCommand: task.testCommand ?? input.testCommand ?? null,
+    // A task handed off again after a failure or a rejection: KM0 Runner starts it on `tier`, never lower.
+    retry: task.failures.length > 0,
     agent: task.agent,
     model: task.model,
     prompt: taskPath(task.seq),

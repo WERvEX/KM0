@@ -8,6 +8,10 @@ import type { RunAccess, RunFs } from "./run-access";
 const MAX_REPORT_BYTES = 4_000_000;
 const MAX_DIFF_BYTES = 2_000_000;
 const ACCEPTANCE_FILE = "acceptance.jsonl";
+const OVERRULED: Record<Language, (reason: string) => string> = {
+  "zh-CN": (reason) => `用户抽查后判为不通过（KM0 原先的意见：${reason}）`,
+  en: (reason) => `Rejected by the user on a spot check (KM0 had accepted it: ${reason})`,
+};
 
 interface RunRow {
   id: number;
@@ -153,11 +157,13 @@ export class RunnerService {
       this.saveVerdict(row.id, verdict);
       const report = RunnerReport.parse(JSON.parse(row.report_json));
       const final = verdict.user_override ?? verdict.accepted;
+      // KM0's reason argues for acceptance when the user rejects what it accepted, so the next prompt says who decided.
+      const reason = verdict.accepted && !final ? OVERRULED[this.language()](verdict.reason) : verdict.reason;
       await this.routing.setRunnerRejection(
         projectId,
         row.seq,
         verdict.judged_at,
-        final ? null : { tier: finishedTier(report), reason: verdict.reason },
+        final ? null : { tier: finishedTier(report), reason },
       );
       const run = this.run(projectId, row.run_ref);
       await this.tryWriteBack(run);
