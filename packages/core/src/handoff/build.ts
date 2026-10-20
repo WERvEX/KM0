@@ -68,6 +68,8 @@ const TEXT = {
     rules: "约束",
     ruleScope: "只做本任务范围内的改动，不要顺手重构无关代码。",
     ruleUnsure: "不确定的地方先在代码库和文档里查证；仍不确定就停下来说明，不要猜。",
+    ruleDocsWin:
+      "文档是在决策之后写成的，并核对过决策之间的矛盾：决策和文档不一致时以文档为准，并在完成说明里指出不一致之处。",
     ruleTests: "运行现有测试，确认没有回归；新增的行为补上测试。",
     ruleNoTests: "这一块还没有测试：为验收标准补上能自动运行的测试。",
     risk: {
@@ -130,6 +132,8 @@ const TEXT = {
     rules: "Constraints",
     ruleScope: "Change only what this task needs; do not refactor unrelated code.",
     ruleUnsure: "Check the codebase and documents when unsure; if still unsure, stop and say so instead of guessing.",
+    ruleDocsWin:
+      "The documents were written after the decisions and reconcile them: where a decision and a document disagree, follow the document and point out the mismatch in your summary.",
     ruleTests: "Run the existing tests to make sure nothing regressed; add tests for new behaviour.",
     ruleNoTests: "This area has no tests yet: add automated tests for the acceptance criteria.",
     risk: {
@@ -234,9 +238,10 @@ export function taskPrompt(task: RoutedTask, input: HandoffInput): string {
   const rules = [
     text.ruleScope,
     text.ruleUnsure,
+    decisions.length > 0 && input.documents.length > 0 ? text.ruleDocsWin : "",
     task.features.hasTests ? text.ruleTests : text.ruleNoTests,
     ...[...new Set(task.features.risks)].map((risk) => text.risk[risk]),
-  ];
+  ].filter(Boolean);
   const sections = [
     `# ${text.task} ${pad(task.seq)}${text.colon}${task.title}`,
     `> ${text.generated(input.title, task.tier, task.model ?? text.noModel)}`,

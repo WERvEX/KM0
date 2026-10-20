@@ -17,7 +17,8 @@
     "test": "vitest run",
     "web:dev": "vite --config vite.web.config.ts",
     "web:build": "vite build --config vite.web.config.ts",
-    "web:preview": "vite preview --config vite.web.config.ts"
+    "web:preview": "vite preview --config vite.web.config.ts",
+    "live-run": "vitest run --config vitest.live.config.ts"
   },
   "devDependencies": {
     "@hookform/resolvers": "5.9.2",

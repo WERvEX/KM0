@@ -69,6 +69,20 @@ test("documents are written after the discussion and can be edited, revised and 
   await page.getByRole("dialog").getByRole("button", { name: "继续" }).click();
   await expect(page.getByText(/个小节依据的决策已改动/)).toHaveCount(0);
   await expect(versions.locator("option")).toHaveCount(4);
+
+  // Open questions are listed above the document and answered in one revision.
+  const open = page.getByRole("region", { name: "6. 待定问题" });
+  await open.getByRole("button", { name: "编辑" }).click();
+  await open.getByRole("textbox").fill("- 评论要审核吗？假设不审核。\n- 游客能评论吗？假设不能。");
+  await open.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByText("这份文档还有 2 条待定问题，目前按文档里的假设处理：")).toBeVisible();
+  await page.getByRole("button", { name: "回答这些问题" }).click();
+  await page.getByRole("dialog", { name: "回答待定问题" }).getByRole("textbox").fill("评论先审核后显示");
+  await page.getByRole("dialog").getByRole("button", { name: "更新文档" }).click();
+  await expect(page.getByRole("dialog", { name: "将覆盖手动修改" })).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "继续" }).click();
+  await expect(page.getByText(/条待定问题，目前按文档里的假设处理/)).toHaveCount(0);
+  await expect(versions.locator("option")).toHaveCount(6);
   await page.screenshot({ path: "test-results/screenshots/web-documents.png", fullPage: true });
 });
 

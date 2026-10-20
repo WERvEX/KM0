@@ -49,10 +49,12 @@ interface Props {
   projectId: number;
   /** Documents are still missing, so the work cannot be broken down yet. */
   blockedReason: string | null;
+  /** Open questions the documents still list; the tasks follow their assumptions. */
+  openQuestions?: number;
 }
 
 /** Tasks with their tier, agent, model and estimated cost; every choice can be overridden. */
-export function RoutingPanel({ projectId, blockedReason }: Props) {
+export function RoutingPanel({ projectId, blockedReason, openQuestions = 0 }: Props) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const plan = useQuery({ queryKey: routingKey(projectId), queryFn: () => call("routing.get", { projectId }) });
@@ -88,6 +90,12 @@ export function RoutingPanel({ projectId, blockedReason }: Props) {
         <div className="rounded-lg border border-border bg-panel p-5">
           <h2 className="font-medium">{t("routing.empty.title")}</h2>
           <p className="mt-1 text-sm text-muted">{blockedReason ?? t("routing.empty.body")}</p>
+          {blockedReason === null && openQuestions > 0 ? (
+            <p className="mt-2 flex items-center gap-2 text-sm text-warning">
+              <AlertTriangle className="size-4 shrink-0" />
+              {t("routing.openQuestions", { count: openQuestions })}
+            </p>
+          ) : null}
           <Button
             className="mt-4"
             variant="primary"

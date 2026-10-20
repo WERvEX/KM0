@@ -277,7 +277,10 @@ export function resolveAnswers(questions: Question[], answers: Answer[]): Resolv
           text: labels.join(question.type === "multi" ? "、" : "；"),
           ...(question.type === "multi" ? { items: labels } : {}),
         };
-    decided.push({ key: question.decisionKey, value, source, rationale: null, alternatives });
+    // A single choice keeps its option's description: in later stages that is where the components
+    // of an architecture or the steps of a milestone plan are spelled out.
+    const detail = !keptCurrent && !custom && chosen.length === 1 ? (chosen[0]?.description?.trim() ?? "") : "";
+    decided.push({ key: question.decisionKey, value, source, rationale: detail || null, alternatives });
   }
   return { decided, delegated };
 }

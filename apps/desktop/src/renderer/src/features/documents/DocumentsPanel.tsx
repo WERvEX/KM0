@@ -5,12 +5,12 @@ import {
   type DocumentView,
   splitSections,
 } from "@km0/shared";
-import { AlertTriangle, Copy, Download, FileText, ListChecks, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, CircleHelp, Copy, Download, FileText, ListChecks, Loader2, RefreshCw } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/field";
+import { Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { RoutingPanel } from "../routing/RoutingPanel";
 import { Markdown } from "./Markdown";
@@ -35,6 +35,7 @@ export function DocumentsPanel({ projectId, summaries, actions, streams }: Panel
   const docTitle = useDocTitle();
   const [active, setActive] = useState<DocumentKind | "routing">(summaries[0]?.kind ?? "prd");
   const documentsMissing = summaries.some((summary) => summary.version === null);
+  const openQuestions = summaries.reduce((sum, summary) => sum + summary.openQuestions, 0);
   const missing = summaries.filter((summary) => summary.version === null && !actions.pending[summary.kind]);
 
   return (
@@ -101,7 +102,11 @@ export function DocumentsPanel({ projectId, summaries, actions, streams }: Panel
         ) : null,
       )}
       {active === "routing" ? (
-        <RoutingPanel projectId={projectId} blockedReason={documentsMissing ? t("routing.needDocuments") : null} />
+        <RoutingPanel
+          projectId={projectId}
+          blockedReason={documentsMissing ? t("routing.needDocuments") : null}
+          openQuestions={openQuestions}
+        />
       ) : null}
     </section>
   );
@@ -126,6 +131,8 @@ function DocumentPane({ projectId, kind, actions, streamText }: PaneProps) {
   const [viewVersion, setViewVersion] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [copied, setCopied] = useState(false);
+  const [answering, setAnswering] = useState(false);
+  const [answers, setAnswers] = useState("");
   const query = useDocument(projectId, kind, viewVersion);
   const pending = actions.pending[kind];
   const error = actions.errors[kind];
@@ -302,6 +309,26 @@ function DocumentPane({ projectId, kind, actions, streamText }: PaneProps) {
         </Banner>
       ) : null}
 
+      {!readOnly && doc.openQuestions.length > 0 ? (
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-sunken p-3 text-sm">
+          <span className="flex items-center gap-2 font-medium">
+            <CircleHelp className="size-4 shrink-0" />
+            {t("documents.openQuestions.banner", { count: doc.openQuestions.length })}
+          </span>
+          <ul className="list-disc space-y-1 pl-9 text-muted">
+            {doc.openQuestions.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+          <div>
+            <Button size="sm" variant="primary" disabled={Boolean(pending)} onClick={() => setAnswering(true)}>
+              {pending === "revise" ? <Loader2 className="animate-spin" /> : null}
+              {t("documents.openQuestions.answer")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {pending === "generate" || pending === "restore" ? (
         <p className="flex items-center gap-2 text-sm text-muted" aria-live="polite">
           <Loader2 className="size-4 animate-spin" />
@@ -328,6 +355,42 @@ function DocumentPane({ projectId, kind, actions, streamText }: PaneProps) {
           onRegenerate={() => revise([section.id], null)}
         />
       ))}
+
+      <Dialog
+        open={answering}
+        onOpenChange={setAnswering}
+        title={t("documents.openQuestions.title")}
+        description={t("documents.openQuestions.body")}
+        wide
+        footer={
+          <>
+            <Button onClick={() => setAnswering(false)}>{t("documents.confirm.cancel")}</Button>
+            <Button
+              variant="primary"
+              disabled={answers.trim().length === 0}
+              onClick={() => {
+                // Answers can touch any section, and the open questions themselves shrink.
+                revise(
+                  doc.sections.map((section) => section.id),
+                  t("documents.openQuestions.note", { answers: answers.trim() }),
+                );
+                setAnswering(false);
+                setAnswers("");
+              }}
+            >
+              {t("documents.openQuestions.submit")}
+            </Button>
+          </>
+        }
+      >
+        <Textarea
+          aria-label={t("documents.openQuestions.title")}
+          rows={6}
+          value={answers}
+          placeholder={t("documents.openQuestions.placeholder")}
+          onChange={(event) => setAnswers(event.target.value)}
+        />
+      </Dialog>
 
       <Dialog
         open={confirm !== null}

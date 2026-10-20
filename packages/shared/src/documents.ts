@@ -40,8 +40,22 @@ const PRD_KEYS = [
   "core_scenarios",
   "auth",
   "mvp_features",
+  "core_rules",
   "non_goals",
   "success_metrics",
+];
+const TECH_KEYS = [
+  "frontend",
+  "backend",
+  "storage",
+  "deployment",
+  "auth_impl",
+  "integrations",
+  "architecture",
+  "modules",
+  "milestones",
+  "test_strategy",
+  "risks",
 ];
 const BRIEF_KEYS = ["brief_scope", "brief_approach", "brief_constraints", "brief_acceptance"];
 
@@ -63,7 +77,12 @@ export const DOCUMENT_TEMPLATES: Record<DocumentKind, DocumentTemplate> = {
         "core_scenarios",
         "auth",
       ]),
-      section("functional", "功能需求", "Functional requirements", ["mvp_features", "core_scenarios", "auth"]),
+      section("functional", "功能需求", "Functional requirements", [
+        "mvp_features",
+        "core_rules",
+        "core_scenarios",
+        "auth",
+      ]),
       section("non_functional", "非功能需求", "Non-functional requirements", ["scale", "user_scale", "compliance"]),
       section("non_goals", "非目标", "Non-goals", ["non_goals", "mvp_features"]),
       section("success", "成功标准", "Success criteria", ["success_metrics", "core_scenarios"]),
@@ -85,13 +104,14 @@ export const DOCUMENT_TEMPLATES: Record<DocumentKind, DocumentTemplate> = {
       ]),
       section("architecture", "架构概览", "Architecture", ["architecture", "frontend", "backend", "storage"]),
       section("modules", "模块划分", "Modules", ["modules", "architecture", "mvp_features"]),
-      section("data_model", "数据模型", "Data model", ["storage", "mvp_features", "auth"]),
+      section("data_model", "数据模型", "Data model", ["storage", "mvp_features", "core_rules", "auth"]),
       section("interfaces", "接口", "Interfaces", ["architecture", "integrations", "mvp_features"]),
       section("deployment", "部署方案", "Deployment", ["deployment", "scale", "user_scale"]),
       section("security", "安全与合规", "Security and compliance", ["auth", "auth_impl", "compliance"]),
       section("testing", "测试策略", "Testing", ["test_strategy", "architecture"]),
       section("milestones", "里程碑", "Milestones", ["milestones", "mvp_features"]),
       section("risks", "风险", "Risks", ["risks", "architecture"]),
+      section("open_questions", "待确认问题", "Open questions", TECH_KEYS),
     ],
   },
   brief: {
@@ -108,6 +128,19 @@ export const DOCUMENT_TEMPLATES: Record<DocumentKind, DocumentTemplate> = {
     ],
   },
 };
+
+/** The section every document ends with: what the decisions leave unsettled. */
+export const OPEN_QUESTIONS_SECTION = "open_questions";
+
+/** The items of an open-questions section: its top-level list entries ("None." has none). */
+export function openQuestionItems(body: string): string[] {
+  const items: string[] = [];
+  for (const line of body.split("\n")) {
+    const item = /^(?:[-*+]|\d+[.)、])\s+(.+)$/.exec(line)?.[1]?.trim();
+    if (item) items.push(item);
+  }
+  return items;
+}
 
 /** Documents each path produces. The fast path goes straight from the discussion to task routing. */
 export const PATH_DOCUMENTS: Record<ProjectPath, DocumentKind[]> = {
@@ -154,6 +187,8 @@ export const DocumentView = DocumentVersionInfo.extend({
   /** False when an older version is being viewed. */
   latest: z.boolean(),
   sections: z.array(DocumentSection),
+  /** Items of the open-questions section, for the prompt to answer them. */
+  openQuestions: z.array(z.string()),
   markdown: z.string(),
   fileName: z.string(),
   /** Every version, newest first. */
@@ -166,6 +201,8 @@ export const DocumentSummary = z.object({
   kind: DocumentKind,
   version: z.number().int().nullable(),
   staleSections: z.number().int(),
+  /** Open questions the latest version still lists. */
+  openQuestions: z.number().int(),
   updatedAt: z.string().nullable(),
 });
 export type DocumentSummary = z.infer<typeof DocumentSummary>;

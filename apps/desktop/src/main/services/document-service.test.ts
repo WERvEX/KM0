@@ -48,8 +48,8 @@ describe("documents", () => {
     const { projects, documents, events } = setup();
     const project = await discussedProject(projects);
     expect(project.documents).toEqual([
-      { kind: "prd", version: null, staleSections: 0, updatedAt: null },
-      { kind: "tech_design", version: null, staleSections: 0, updatedAt: null },
+      { kind: "prd", version: null, staleSections: 0, openQuestions: 0, updatedAt: null },
+      { kind: "tech_design", version: null, staleSections: 0, openQuestions: 0, updatedAt: null },
     ]);
 
     const view = await documents.generate(project.id, "prd", false);
@@ -73,6 +73,24 @@ describe("documents", () => {
     expect(streamed.join("")).toContain("@@section:open_questions");
 
     expect((await projects.get(project.id)).documents[0]).toMatchObject({ version: 1, staleSections: 0 });
+  });
+
+  it("lists the open questions of the latest version and counts them for the project page", async () => {
+    const { projects, documents } = setup();
+    const project = await discussedProject(projects);
+    await documents.generate(project.id, "prd", false);
+    const view = await documents.saveSection(
+      project.id,
+      "prd",
+      1,
+      "open_questions",
+      "以下按假设处理：\n\n- 优先级怎么打分？假设按价值和紧急度。\n  - 补充说明不算一条\n2. 需求有哪些状态？",
+    );
+    expect(view.openQuestions).toEqual(["优先级怎么打分？假设按价值和紧急度。", "需求有哪些状态？"]);
+    expect((await projects.get(project.id)).documents[0]).toMatchObject({ version: 2, openQuestions: 2 });
+
+    const none = await documents.saveSection(project.id, "prd", 2, "open_questions", "无。");
+    expect(none.openQuestions).toEqual([]);
   });
 
   it("marks only the sections built on a changed decision as stale, and revises only those", async () => {

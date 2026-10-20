@@ -123,6 +123,15 @@ export const DECISION_KEYS: readonly DecisionKeyDef[] = [
     "MVP features",
     "Features in the first release.",
   ),
+  key(
+    "requirements",
+    "core_rules",
+    false,
+    ["mvp_features"],
+    "核心业务规则",
+    "Core rules",
+    "Product-specific rules the first release must follow: how items are scored, ranked or priced, which states they move through and who may move them, limits and quotas. 'None' when the product has no such rules.",
+  ),
   key("requirements", "non_goals", false, ["mvp_features"], "非目标", "Non-goals", "What is explicitly out of scope."),
   key(
     "requirements",

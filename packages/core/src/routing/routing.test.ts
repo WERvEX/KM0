@@ -105,6 +105,8 @@ describe("hard rules", () => {
 
   it("suggests splitting new subsystems and tasks scoring 8 or more", () => {
     expect(tierOf({ scope: "new_subsystem" }).splitSuggested).toBe(true);
+    // Scaffolding a new app creates many files in one step; there is nothing to split.
+    expect(tierOf({ scope: "new_subsystem", kind: "boilerplate" }).splitSuggested).toBe(false);
     const busy = { scope: "many_files", ambiguity: "high", reasoning: "design" } as const;
     expect(tierOf(busy)).toMatchObject({ score: 7, splitSuggested: false });
     expect(tierOf({ ...busy, context: "large" })).toMatchObject({ score: 8, splitSuggested: true });
@@ -199,6 +201,16 @@ describe("capabilities", () => {
       agent: "cursor",
       reason: "手动指定",
     });
+  });
+
+  it("names the enabled agents that are good at the work but lack a model for the tier", () => {
+    expect(chooseAgent(agents, "T2", "zh-CN", { capability: "debugging" }).reason).toBe(
+      "Claude Code 擅长调试，但没有配置 T2 模型，暂用排在最前、且配置了 T2 模型的 Agent；在“设置 → Agent”里补上模型后，这类任务会交给它",
+    );
+    // Nobody is good at docs, so there is no one to name.
+    expect(chooseAgent(agents, "T2", "en", { capability: "docs" }).reason).toBe(
+      "no agent good at docs has a T2 model; using the first enabled agent with one",
+    );
   });
 });
 
