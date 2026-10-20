@@ -9,6 +9,7 @@ import { ElectronSecretStore } from "./electron-secrets";
 import { createHandlers } from "./handlers";
 import { createDispatcher } from "./ipc/router";
 import { nodeRepoAccess } from "./node-repo-access";
+import { nodeRunAccess } from "./node-run-access";
 import { AgentStore } from "./services/agent-store";
 import { ConfigService } from "./services/config-service";
 import { DocumentService } from "./services/document-service";
@@ -16,6 +17,7 @@ import { HandoffService } from "./services/handoff-service";
 import { llmPort } from "./services/llm-port";
 import { ProjectService } from "./services/project-service";
 import { RoutingService } from "./services/routing-service";
+import { RunnerService } from "./services/runner-service";
 import { SearchStore } from "./services/search-store";
 import { SettingsStore } from "./services/settings-store";
 
@@ -109,17 +111,21 @@ void app.whenReady().then(() => {
     stdio: (command, args, env) =>
       new StdioClientTransport({ command, args, env: { ...getDefaultEnvironment(), ...env }, stderr: "ignore" }),
   });
-  const repo = nodeRepoAccess(async () => {
+  const pickFolder = async () => {
     const options = { title: "KM0", properties: ["openDirectory" as const] };
     const result = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options);
     return result.canceled ? null : (result.filePaths[0] ?? null);
-  });
+  };
+  const repo = nodeRepoAccess(pickFolder);
   const projects = new ProjectService(db, llmFor, language, { searchPort: () => search.activePort(), repo });
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db);
   const config = new ConfigService(settings, agents, search);
-  const routing = new RoutingService(db, llmFor, language, agents);
+  const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules);
   const handoff = new HandoffService(db, routing, language);
+  const runner = new RunnerService(db, nodeRunAccess(pickFolder), routing, llmFor, language, () =>
+    simulated ? "simulated" : settings.profileForRole("planner").model,
+  );
 
   const dispatch = createDispatcher(
     createHandlers({
@@ -128,6 +134,7 @@ void app.whenReady().then(() => {
       documents,
       routing,
       handoff,
+      runner,
       agents,
       search,
       config,

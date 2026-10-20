@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { AgentId, Tier } from "./routing";
 
+/** Who runs the package: coding agents driven by hand, or KM0 Runner, which escalates tiers itself. */
+export const HandoffTarget = z.enum(["agents", "runner"]);
+export type HandoffTarget = z.infer<typeof HandoffTarget>;
+
 export const HandoffFile = z.object({ path: z.string(), content: z.string() });
 export type HandoffFile = z.infer<typeof HandoffFile>;
 
@@ -32,6 +36,7 @@ export type HandoffAgent = z.infer<typeof HandoffAgent>;
 export const HandoffPackage = z.object({
   projectId: z.number().int(),
   createdAt: z.string(),
+  target: HandoffTarget.default("agents"),
   /** Folder every file lives in, so unpacking never overwrites the repository's own files. */
   root: z.string(),
   files: z.array(HandoffFile),

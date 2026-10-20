@@ -8,6 +8,7 @@ import type { HandoffService } from "./services/handoff-service";
 import type { ProjectService } from "./services/project-service";
 import { type RepoAccess, scanPath } from "./services/repo-access";
 import type { RoutingService } from "./services/routing-service";
+import type { RunnerService } from "./services/runner-service";
 import type { SearchStore } from "./services/search-store";
 import type { SettingsStore } from "./services/settings-store";
 
@@ -17,6 +18,7 @@ export interface HandlerDeps {
   documents: DocumentService;
   routing: RoutingService;
   handoff: HandoffService;
+  runner: RunnerService;
   agents: AgentStore;
   search: SearchStore;
   config: ConfigService;
@@ -31,6 +33,7 @@ export function createHandlers({
   documents,
   routing,
   handoff,
+  runner,
   agents,
   search,
   config,
@@ -58,6 +61,8 @@ export function createHandlers({
     "settings.roles.set": (roles) => settings.setRoles(roles),
     "settings.preferences.get": () => settings.getPreferences(),
     "settings.preferences.set": (partial) => settings.setPreferences(partial),
+    "settings.routingRules.get": () => settings.getRoutingRules(),
+    "settings.routingRules.set": (rules) => settings.setRoutingRules(rules),
     "settings.agents.list": () => agents.list(),
     "settings.agents.update": ({ id, enabled, models, capabilities }) =>
       agents.update(id, enabled, models, capabilities),
@@ -101,6 +106,12 @@ export function createHandlers({
     "task.fail": ({ projectId, taskId }) => routing.recordFailure(projectId, taskId),
     "task.clearFailures": ({ projectId, taskId }) => routing.clearFailures(projectId, taskId),
 
-    "handoff.build": ({ projectId }) => handoff.build(projectId),
+    "handoff.build": ({ projectId, target }) => handoff.build(projectId, target),
+
+    "runner.import": ({ projectId }) => runner.import(projectId),
+    "runner.list": ({ projectId }) => runner.list(projectId),
+    "runner.judge": ({ projectId, runRef }) => runner.judge(projectId, runRef),
+    "runner.override": ({ projectId, resultId, accepted }) => runner.override(projectId, resultId, accepted),
+    "runner.writeBack": ({ projectId, runRef }) => runner.writeBack(projectId, runRef),
   };
 }

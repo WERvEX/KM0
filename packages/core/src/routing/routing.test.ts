@@ -11,7 +11,7 @@ import {
   type TaskBasics,
   taskCapability,
 } from "./route";
-import { decideTier, escalateTier } from "./scoring";
+import { DEFAULT_ROUTING_RULES, decideTier, escalateTier } from "./scoring";
 
 /** Scores 0: one file, clear, do as written, little context, covered by tests. */
 const base: TaskFeatures = {
@@ -55,6 +55,17 @@ describe("score", () => {
       "总分 2 → T1：改 2–5 个文件 +1，没有现成测试 +1",
     ]);
     expect(decideTier(base, "en").reasons).toEqual(["score 0 → T1: —"]);
+  });
+
+  it("uses imported points and limits in place of the defaults", () => {
+    const rules = {
+      featurePoints: { ...DEFAULT_ROUTING_RULES.featurePoints, hasTests: { true: 0, false: 3 } },
+      tierLimits: { T1: 1, T2: 3 },
+    };
+    expect(decideTier({ ...base, scope: "many_files" }, "zh-CN", rules)).toMatchObject({ score: 2, tier: "T2" });
+    expect(decideTier({ ...base, hasTests: false }, "zh-CN", rules)).toMatchObject({ score: 3, tier: "T2" });
+    expect(decideTier({ ...base, hasTests: false, context: "large" }, "zh-CN", rules).tier).toBe("T3");
+    expect(decideTier({ ...base, reasoning: "design" }, "zh-CN", rules).tier).toBe("T3");
   });
 });
 
@@ -205,7 +216,25 @@ describe("capabilities", () => {
 
 describe("escalation", () => {
   const failed = (...tiers: Tier[]): TaskFailure[] =>
-    tiers.map((tier, index) => ({ tier, at: `2026-01-0${index + 1}T00:00:00.000Z` }));
+    tiers.map((tier, index) => ({ tier, at: `2026-01-0${index + 1}T00:00:00.000Z`, source: "user" }));
+
+  it("starts a task KM0 rejected one tier above where KM0 Runner finished it", () => {
+    const rejected = (tier: Tier): TaskFailure => ({
+      tier,
+      at: "2026-01-01T00:00:00.000Z",
+      source: "runner",
+      reason: "x",
+    });
+    expect(escalateTier("T1", [rejected("T2")], "zh-CN")).toEqual({
+      tier: "T3",
+      escalatedFrom: "T1",
+      needsHuman: false,
+      reasons: ["KM0 Runner 在 T2 完成的改动未通过验收 → 从 T3 重新分发"],
+    });
+    // A rejection does not count towards the two hand-run failures.
+    expect(escalateTier("T2", [rejected("T1"), ...failed("T2")], "zh-CN").tier).toBe("T2");
+    expect(escalateTier("T1", [rejected("T3")], "zh-CN")).toMatchObject({ tier: "T3", needsHuman: true });
+  });
 
   it("moves a task up one tier after two failures on its tier", () => {
     expect(escalateTier("T1", failed("T1"), "zh-CN")).toEqual({
@@ -286,8 +315,8 @@ describe("cost", () => {
 
   it("routes a lifted task on the new tier and drops a model typed for the old one", () => {
     const failures: TaskFailure[] = [
-      { tier: "T1", at: "2026-01-01T00:00:00.000Z" },
-      { tier: "T1", at: "2026-01-02T00:00:00.000Z" },
+      { tier: "T1", at: "2026-01-01T00:00:00.000Z", source: "user" },
+      { tier: "T1", at: "2026-01-02T00:00:00.000Z", source: "user" },
     ];
     const lifted = routeTask(task({ failures, override: { model: "my-model" } }), agents, "zh-CN");
     expect(lifted).toMatchObject({

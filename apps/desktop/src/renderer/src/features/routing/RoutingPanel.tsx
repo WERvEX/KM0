@@ -24,6 +24,7 @@ import { useIpcQuery } from "@/lib/queries";
 import { HandoffPanel } from "../handoff/HandoffPanel";
 import { decisionLabel } from "../project/labels";
 import { projectKey } from "../project/useProject";
+import { RunnerPanel } from "../runner/RunnerPanel";
 import { agentName } from "../settings/AgentsTab";
 
 export const routingKey = (projectId: number) => ["routing.get", projectId] as const;
@@ -145,6 +146,8 @@ export function RoutingPanel({ projectId, blockedReason, openQuestions = 0 }: Pr
       />
 
       <HandoffPanel projectId={projectId} plan={data} />
+
+      <RunnerPanel projectId={projectId} />
 
       <Dialog
         open={confirmReplan}

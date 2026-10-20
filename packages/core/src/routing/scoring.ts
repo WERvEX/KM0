@@ -1,4 +1,11 @@
-import { ESCALATE_AFTER, type TaskFailure, type TaskFeatures, type TaskRisk, type Tier } from "@km0/shared";
+import {
+  ESCALATE_AFTER,
+  type RoutingRules,
+  type TaskFailure,
+  type TaskFeatures,
+  type TaskRisk,
+  type Tier,
+} from "@km0/shared";
 import type { Language } from "../discussion/prompts";
 
 /** Points per feature value; the sum decides the tier unless a hard rule applies. */
@@ -12,6 +19,9 @@ export const FEATURE_POINTS = {
 
 /** Highest score that still maps to T1 and to T2. */
 export const TIER_LIMITS = { T1: 2, T2: 5 } as const;
+
+/** The rules KM0 ships with; imported calibration results replace them. */
+export const DEFAULT_ROUTING_RULES: RoutingRules = { featurePoints: FEATURE_POINTS, tierLimits: TIER_LIMITS };
 
 /** At or above this score a task is worth splitting before it is handed off. */
 export const SPLIT_SCORE = 8;
@@ -47,6 +57,8 @@ const TEXT = {
     design: "需要设计决策 → T3",
     lifted: (from: Tier, count: number, to: Tier) => `${from} 已失败 ${count} 次 → 升到 ${to}`,
     human: (count: number) => `T3 也已失败 ${count} 次 → 需要人来决定：拆小、补充说明或手动处理`,
+    rejected: (from: Tier, to: Tier) => `KM0 Runner 在 ${from} 完成的改动未通过验收 → 从 ${to} 重新分发`,
+    rejectedTop: "KM0 Runner 在 T3 完成的改动也未通过验收 → 需要人来决定：拆小、补充说明或手动处理",
   },
   en: {
     scope: {
@@ -68,28 +80,36 @@ const TEXT = {
     lifted: (from: Tier, count: number, to: Tier) => `failed ${count} times on ${from} → ${to}`,
     human: (count: number) =>
       `failed ${count} times on T3 too → a person has to decide: split it, clarify it or do it by hand`,
+    rejected: (from: Tier, to: Tier) => `KM0 Runner's change on ${from} failed acceptance → redistribute from ${to}`,
+    rejectedTop:
+      "KM0 Runner's change on T3 failed acceptance too → a person has to decide: split it, clarify it or do it by hand",
   },
 } as const;
 
 /**
- * Deterministic tier for a task. The score picks T1 (0–2), T2 (3–5) or T3 (6+); then hard rules
+ * Deterministic tier for a task. The score picks T1 (0–2), T2 (3–5) or T3 (6+) under the default
+ * rules, or under imported calibrated ones; then hard rules
  * apply in this order: docs or boilerplate in at most 5 files → T1; any risk → at least T2;
  * debugging and bug fixing → at least T2; design decisions → T3. Later rules win.
  */
-export function decideTier(features: TaskFeatures, language: Language): TierDecision {
+export function decideTier(
+  features: TaskFeatures,
+  language: Language,
+  rules: RoutingRules = DEFAULT_ROUTING_RULES,
+): TierDecision {
   const text = TEXT[language];
+  const points = rules.featurePoints;
+  const limits = rules.tierLimits;
+  const tested = String(features.hasTests) as "true" | "false";
   const parts: [string, number][] = [
-    [text.scope[features.scope], FEATURE_POINTS.scope[features.scope]],
-    [text.ambiguity[features.ambiguity], FEATURE_POINTS.ambiguity[features.ambiguity]],
-    [text.reasoning[features.reasoning], FEATURE_POINTS.reasoning[features.reasoning]],
-    [text.context[features.context], FEATURE_POINTS.context[features.context]],
-    [
-      text.hasTests[String(features.hasTests) as "true" | "false"],
-      FEATURE_POINTS.hasTests[String(features.hasTests) as "true" | "false"],
-    ],
+    [text.scope[features.scope], points.scope[features.scope]],
+    [text.ambiguity[features.ambiguity], points.ambiguity[features.ambiguity]],
+    [text.reasoning[features.reasoning], points.reasoning[features.reasoning]],
+    [text.context[features.context], points.context[features.context]],
+    [text.hasTests[tested], points.hasTests[tested]],
   ];
-  const score = parts.reduce((sum, [, points]) => sum + points, 0);
-  let tier: Tier = score <= TIER_LIMITS.T1 ? "T1" : score <= TIER_LIMITS.T2 ? "T2" : "T3";
+  const score = parts.reduce((sum, [, value]) => sum + value, 0);
+  let tier: Tier = score <= limits.T1 ? "T1" : score <= limits.T2 ? "T2" : "T3";
   const [colon, comma] = language === "en" ? [": ", ", "] : ["：", "，"];
   const counted = parts.filter(([, points]) => points > 0).map(([label, points]) => `${label} +${points}`);
   const reasons = [`${text.score(score, tier)}${colon}${counted.join(comma) || "—"}`];
@@ -138,17 +158,28 @@ export interface Escalation {
  */
 export function escalateTier(start: Tier, failures: TaskFailure[], language: Language): Escalation {
   const text = TEXT[language];
-  const count = (tier: Tier) => failures.filter((failure) => failure.tier === tier).length;
+  const count = (tier: Tier) =>
+    failures.filter((failure) => failure.tier === tier && failure.source !== "runner").length;
   const reasons: string[] = [];
   const above = (tier: Tier): Tier | undefined => TIER_ORDER[TIER_ORDER.indexOf(tier) + 1];
   let tier = start;
+  // KM0 Runner already climbed to the failed tier, so a rejection there starts the next hand-off above it.
+  for (const failure of failures) {
+    if (failure.source !== "runner") continue;
+    const lifted = above(failure.tier) ?? failure.tier;
+    if (TIER_ORDER.indexOf(lifted) > TIER_ORDER.indexOf(tier)) {
+      reasons.push(text.rejected(failure.tier, lifted));
+      tier = lifted;
+    }
+  }
   let next = above(tier);
   while (next && count(tier) >= ESCALATE_AFTER) {
     reasons.push(text.lifted(tier, count(tier), next));
     tier = next;
     next = above(tier);
   }
-  const needsHuman = tier === "T3" && count("T3") >= ESCALATE_AFTER;
-  if (needsHuman) reasons.push(text.human(count("T3")));
+  const rejectedOnTop = failures.some((failure) => failure.source === "runner" && failure.tier === "T3");
+  const needsHuman = tier === "T3" && (count("T3") >= ESCALATE_AFTER || rejectedOnTop);
+  if (needsHuman) reasons.push(rejectedOnTop ? text.rejectedTop : text.human(count("T3")));
   return { tier, escalatedFrom: tier === start ? null : start, needsHuman, reasons };
 }

@@ -4,11 +4,12 @@ import {
   type AgentId,
   CAPABILITIES,
   type Capability,
+  RoutingRules,
   TIERS,
   type Tier,
 } from "@km0/shared";
-import { ArrowDown, ArrowUp } from "lucide-react";
-import { useState } from "react";
+import { ArrowDown, ArrowUp, RotateCcw, Upload } from "lucide-react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
@@ -38,7 +39,76 @@ export function AgentsTab() {
           onMove={(direction) => move.mutate({ id: agent.id, direction })}
         />
       ))}
+      <RoutingRulesSection />
     </div>
+  );
+}
+
+/** Tier limits in use, and importing the rules a KM0 Runner calibration wrote. */
+function RoutingRulesSection() {
+  const { t } = useTranslation();
+  const state = useIpcQuery("settings.routingRules.get");
+  const set = useIpcMutation("settings.routingRules.set", ["settings.routingRules.get", "routing.get"]);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [invalid, setInvalid] = useState(false);
+  if (!state.data) return null;
+  const { rules, custom } = state.data;
+
+  const importRules = async (file: File) => {
+    setInvalid(false);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch {
+      parsed = null;
+    }
+    const result = RoutingRules.safeParse(parsed);
+    if (fileInput.current) fileInput.current.value = "";
+    if (!result.success) {
+      setInvalid(true);
+      return;
+    }
+    set.mutate(result.data);
+  };
+
+  return (
+    <section
+      aria-label={t("settings.agents.rules.title")}
+      className="flex flex-col gap-3 rounded-lg border border-border bg-panel p-4"
+    >
+      <h2 className="text-sm font-semibold">{t("settings.agents.rules.title")}</h2>
+      <p className="text-sm text-muted">{t("settings.agents.rules.body")}</p>
+      <p className="text-sm">
+        {t(custom ? "settings.agents.rules.custom" : "settings.agents.rules.default")}
+        {" · "}
+        {t("settings.agents.rules.limits", { t1: rules.tierLimits.T1, t2: rules.tierLimits.T2 })}
+      </p>
+      <div className="flex gap-2">
+        <Button size="sm" onClick={() => fileInput.current?.click()} disabled={set.isPending}>
+          <Upload />
+          {t("settings.agents.rules.import")}
+        </Button>
+        {custom ? (
+          <Button size="sm" onClick={() => set.mutate(null)} disabled={set.isPending}>
+            <RotateCcw />
+            {t("settings.agents.rules.reset")}
+          </Button>
+        ) : null}
+        <input
+          ref={fileInput}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          aria-label={t("settings.agents.rules.import")}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void importRules(file);
+          }}
+        />
+      </div>
+      {invalid ? <p className="text-sm text-danger">{t("settings.agents.rules.invalid")}</p> : null}
+      {set.error ? <p className="text-sm text-danger">{errorMessage(set.error)}</p> : null}
+    </section>
   );
 }
 

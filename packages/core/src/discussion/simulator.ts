@@ -129,6 +129,12 @@ function simulate(purpose: string, prompt: string): unknown {
     };
   }
   if (purpose === "breakdown") return simulateBreakdown(prompt);
+  if (purpose === "acceptance") {
+    // Accept a change whose tests passed; reject an empty one or one whose tests failed.
+    if (prompt.includes("(no changes)")) return { accepted: false, reason: "（模拟）没有任何改动。" };
+    if (/^Test run:\nFailed/m.test(prompt)) return { accepted: false, reason: "（模拟）测试没有通过。" };
+    return { accepted: true, reason: "（模拟）改动满足验收标准。" };
+  }
   throw new Error(`The simulated model has no answer for ${purpose}`);
 }
 

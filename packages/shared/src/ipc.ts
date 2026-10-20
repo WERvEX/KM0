@@ -19,11 +19,21 @@ import {
 } from "./documents";
 import { ProjectPath, ProjectSummary } from "./domain";
 import type { AppErrorShape } from "./errors";
-import { HandoffPackage } from "./handoff";
+import { HandoffPackage, HandoffTarget } from "./handoff";
 import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
 import { RepoScan, ScanRepoInput } from "./repo";
 import { SearchService, SearchServiceInput, SearchTestResult } from "./research";
-import { AgentConfig, MoveAgentInput, OverrideTaskInput, RoutingPlan, TaskRef, UpdateAgentInput } from "./routing";
+import {
+  AgentConfig,
+  MoveAgentInput,
+  OverrideTaskInput,
+  RoutingPlan,
+  RoutingRules,
+  RoutingRulesState,
+  TaskRef,
+  UpdateAgentInput,
+} from "./routing";
+import { RunnerOverrideInput, RunnerRun, RunnerRunRef } from "./runner";
 import { AppInfo, Preferences } from "./settings";
 
 interface ChannelSpec<I extends z.ZodType, O extends z.ZodType> {
@@ -56,6 +66,9 @@ export const ipcContract = {
   "settings.agents.list": channel(z.void(), z.array(AgentConfig)),
   "settings.agents.update": channel(UpdateAgentInput, z.array(AgentConfig)),
   "settings.agents.move": channel(MoveAgentInput, z.array(AgentConfig)),
+  "settings.routingRules.get": channel(z.void(), RoutingRulesState),
+  /** null goes back to KM0's default rules. */
+  "settings.routingRules.set": channel(RoutingRules.nullable(), RoutingRulesState),
   "settings.search.list": channel(z.void(), z.array(SearchService)),
   "settings.search.create": channel(SearchServiceInput, SearchService),
   "settings.search.update": channel(Id.extend({ data: SearchServiceInput }), SearchService),
@@ -95,7 +108,19 @@ export const ipcContract = {
   "task.fail": channel(TaskRef, RoutingPlan),
   "task.clearFailures": channel(TaskRef, RoutingPlan),
 
-  "handoff.build": channel(z.object({ projectId: z.number().int().positive() }), HandoffPackage),
+  "handoff.build": channel(
+    z.object({ projectId: z.number().int().positive(), target: HandoffTarget.default("agents") }),
+    HandoffPackage,
+  ),
+
+  /** Pick a KM0 Runner run directory and read its reports into the project. */
+  "runner.import": channel(z.object({ projectId: z.number().int().positive() }), RunnerRun.nullable()),
+  "runner.list": channel(z.object({ projectId: z.number().int().positive() }), z.array(RunnerRun)),
+  /** Judge every task of a run that has no verdict yet against its acceptance criteria. */
+  "runner.judge": channel(RunnerRunRef, RunnerRun),
+  "runner.override": channel(RunnerOverrideInput, RunnerRun),
+  /** Write acceptance.jsonl to the run directory again, after choosing the folder anew. */
+  "runner.writeBack": channel(RunnerRunRef, RunnerRun),
 } as const;
 
 export type IpcContract = typeof ipcContract;

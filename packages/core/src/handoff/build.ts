@@ -7,6 +7,7 @@ import {
   type HandoffAgent,
   type HandoffFile,
   type HandoffPackage,
+  type HandoffTarget,
   type HandoffTask,
   type ProjectPath,
   type RoutedTask,
@@ -39,6 +40,10 @@ export interface HandoffInput {
   decisions: Decision[];
   documents: HandoffDocument[];
   plan: RoutingPlan;
+  /** Coding agents driven by hand (default), or KM0 Runner, which escalates tiers by itself. */
+  target?: HandoffTarget;
+  /** The repository's test command, for tasks the planner gave none. */
+  testCommand?: string | null;
 }
 
 const TEXT = {
@@ -75,6 +80,9 @@ const TEXT = {
     done: "完成后",
     doneCheck: "逐条对照验收标准自查，在回复里写出每条是否满足、怎么验证的。",
     doneSummary: "简要列出改动的文件。",
+    doneTests: (command: string) => `运行 \`${command}\` 并确保通过。`,
+    rejected: (from: string, tier: string, reason: string) =>
+      `这个任务上次在 ${from} 完成的改动没有通过验收，现在从 ${tier} 重做。验收意见：${reason}`,
     escalate: "失败升级",
     escalateBody: (tier: string, next: string | null) =>
       next
@@ -136,6 +144,9 @@ const TEXT = {
     done: "When done",
     doneCheck: "Check each acceptance criterion and report whether it is met and how you verified it.",
     doneSummary: "List the files you changed.",
+    doneTests: (command: string) => `Run \`${command}\` and make it pass.`,
+    rejected: (from: string, tier: string, reason: string) =>
+      `The change made on ${from} last time did not pass acceptance; the task is being redone from ${tier}. Review: ${reason}`,
     escalate: "If it fails",
     escalateBody: (tier: string, next: string | null) =>
       next
@@ -213,6 +224,9 @@ function excerpts(task: RoutedTask, input: HandoffInput): string[] {
 
 export function taskPrompt(task: RoutedTask, input: HandoffInput): string {
   const text = TEXT[input.language];
+  const runner = input.target === "runner";
+  const testCommand = task.testCommand ?? input.testCommand ?? null;
+  const rejection = [...task.failures].reverse().find((failure) => failure.source === "runner" && failure.reason);
   const byseq = new Map(input.plan.tasks.map((item) => [item.seq, item]));
   const list = (items: string[]) => (items.length > 0 ? items.map((item) => `- ${item}`).join("\n") : text.none);
   const decisions = decisionsFor(task, input.decisions).map((decision) => {
@@ -231,7 +245,8 @@ export function taskPrompt(task: RoutedTask, input: HandoffInput): string {
   const sections = [
     `# ${text.task} ${pad(task.seq)}${text.colon}${task.title}`,
     `> ${text.generated(input.title, task.tier, task.model ?? text.noModel)}`,
-    task.escalatedFrom ? `> ${text.escalated(task.escalatedFrom, task.tier)}` : "",
+    rejection ? `> ${text.rejected(rejection.tier, task.tier, rejection.reason ?? "")}` : "",
+    task.escalatedFrom && !rejection ? `> ${text.escalated(task.escalatedFrom, task.tier)}` : "",
     `## ${text.goal}\n\n${task.goal}`,
     `## ${text.acceptance}\n\n${list(task.acceptance)}`,
     task.files.length > 0
@@ -247,8 +262,9 @@ export function taskPrompt(task: RoutedTask, input: HandoffInput): string {
       ? `## ${text.excerpts}\n\n${quoted.join("\n\n")}\n\n${input.documents.map((doc) => text.fullDoc(documentPath(doc.kind))).join(" · ")}`
       : "",
     `## ${text.rules}\n\n${list(rules)}`,
-    `## ${text.done}\n\n${list([text.doneCheck, text.doneSummary])}`,
-    `## ${text.escalate}\n\n${text.escalateBody(task.tier, NEXT_TIER[task.tier] ?? null)}`,
+    `## ${text.done}\n\n${list([...(testCommand ? [text.doneTests(testCommand)] : []), text.doneCheck, text.doneSummary])}`,
+    // KM0 Runner escalates by itself, so its tasks leave out the advice not to switch models.
+    runner ? "" : `## ${text.escalate}\n\n${text.escalateBody(task.tier, NEXT_TIER[task.tier] ?? null)}`,
   ];
   return `${sections.filter(Boolean).join("\n\n")}\n`;
 }
@@ -330,6 +346,12 @@ export function buildHandoff(input: HandoffInput): HandoffPackage {
     files: task.files,
     dependsOn: task.dependsOn,
     tier: task.tier,
+    // Triage features and rule score: KM0 Runner records them so routing rules can be calibrated.
+    features: task.features,
+    score: task.score,
+    testCommand: task.testCommand ?? input.testCommand ?? null,
+    // A task handed off again after a failure or a rejection: KM0 Runner starts it on `tier`, never lower.
+    retry: task.failures.length > 0,
     agent: task.agent,
     model: task.model,
     prompt: taskPath(task.seq),
@@ -369,8 +391,20 @@ export function buildHandoff(input: HandoffInput): HandoffPackage {
     { path: `${HANDOFF_ROOT}/README.md`, content: `${readme}\n` },
     ...input.documents.map((doc) => ({ path: documentPath(doc.kind), content: doc.markdown })),
     { path: `${HANDOFF_ROOT}/tasks.json`, content: `${JSON.stringify(tasksJson, null, 2)}\n` },
+    {
+      path: `${HANDOFF_ROOT}/manifest.json`,
+      content: `${JSON.stringify({ projectId: input.projectId, title: input.title, createdAt: input.createdAt, target: input.target ?? "agents" }, null, 2)}\n`,
+    },
     ...tasks.map((task) => ({ path: task.promptPath, content: task.prompt })),
     ...instructionFiles,
   ];
-  return { projectId: input.projectId, createdAt: input.createdAt, root: HANDOFF_ROOT, files, tasks, agents };
+  return {
+    projectId: input.projectId,
+    createdAt: input.createdAt,
+    target: input.target ?? "agents",
+    root: HANDOFF_ROOT,
+    files,
+    tasks,
+    agents,
+  };
 }

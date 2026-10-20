@@ -133,6 +133,7 @@ describe("hand-off package", () => {
       "km0/README.md",
       "km0/docs/TECH_DESIGN.md",
       "km0/tasks.json",
+      "km0/manifest.json",
       "km0/tasks/01.md",
       "km0/tasks/02.md",
       "km0/agents/CLAUDE.md",
@@ -148,6 +149,8 @@ describe("hand-off package", () => {
     ]);
     const json = JSON.parse(pkg.files.find((file) => file.path === "km0/tasks.json")?.content ?? "[]");
     expect(json[1]).toMatchObject({ seq: 2, dependsOn: [1], prompt: "km0/tasks/02.md", tier: "T3" });
+    expect(json[1].features).toEqual(input().plan.tasks[1]?.features);
+    expect(json[1].score).toBe(input().plan.tasks[1]?.score);
   });
 
   it("gives a task only the decisions and sections it cites", () => {
@@ -176,7 +179,7 @@ describe("hand-off package", () => {
     expect(buildHandoff(data).tasks[0]?.prompt).toContain(
       "这一档（T1）记满 2 次失败后，KM0 会把整个任务升到 T2 重做。",
     );
-    const failed = { tier: "T1" as const, at: "2026-01-01T00:00:00.000Z" };
+    const failed = { tier: "T1" as const, at: "2026-01-01T00:00:00.000Z", source: "user" as const };
     const lifted = routeTask(
       basics(1, { title: first?.title ?? "", files: first?.files ?? [], failures: [failed, failed] }),
       agents,

@@ -1,4 +1,4 @@
-import type { HandoffPackage, RoutingPlan } from "@km0/shared";
+import type { HandoffPackage, HandoffTarget, RoutingPlan } from "@km0/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { strToU8, zipSync } from "fflate";
 import { Check, Copy, FileArchive, Loader2, Package, Terminal } from "lucide-react";
@@ -51,16 +51,17 @@ export function HandoffPanel({ projectId, plan }: { projectId: number; plan: Rou
   const queryClient = useQueryClient();
   const [built, setBuilt] = useState<{ pkg: HandoffPackage; signature: string } | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [target, setTarget] = useState<HandoffTarget>("agents");
   const build = useMutation({
-    mutationFn: () => call("handoff.build", { projectId }),
+    mutationFn: () => call("handoff.build", { projectId, target }),
     onSuccess: (pkg) => {
-      setBuilt({ pkg, signature: routingSignature(plan) });
+      setBuilt({ pkg, signature: routingSignature(plan) + pkg.target });
       setPreview(pkg.tasks[0]?.promptPath ?? null);
       void queryClient.invalidateQueries({ queryKey: projectKey(projectId) });
       void queryClient.invalidateQueries({ queryKey: ["project.list"] });
     },
   });
-  const outdated = built !== null && built.signature !== routingSignature(plan);
+  const outdated = built !== null && built.signature !== routingSignature(plan) + target;
   const pkg = built?.pkg;
   const previewFile = pkg?.files.find((file) => file.path === preview);
 
@@ -76,6 +77,24 @@ export function HandoffPanel({ projectId, plan }: { projectId: number; plan: Rou
             {t("handoff.title")}
           </h2>
           <p className="mt-1 text-sm text-muted">{t("handoff.body")}</p>
+          <fieldset className="mt-3 inline-flex rounded-md border border-border p-0.5 text-sm">
+            <legend className="sr-only">{t("handoff.target")}</legend>
+            {(["agents", "runner"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={target === value}
+                className={cn(
+                  "rounded px-3 py-1",
+                  target === value ? "bg-sunken font-medium text-fg" : "text-muted hover:text-fg",
+                )}
+                onClick={() => setTarget(value)}
+              >
+                {t(`handoff.targets.${value}`)}
+              </button>
+            ))}
+          </fieldset>
+          <p className="mt-2 text-xs text-muted">{t(`handoff.targetHints.${target}`)}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -158,6 +177,17 @@ export function HandoffPanel({ projectId, plan }: { projectId: number; plan: Rou
           </div>
 
           <div className="flex flex-col gap-2 text-sm">
+            {pkg.target === "runner" ? (
+              <p className="flex items-start gap-2 text-muted">
+                <Terminal className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  <span className="font-medium text-fg">KM0 Runner</span>：{t("handoff.runnerHowTo")}
+                  <code className="ml-1 rounded bg-sunken px-1 font-mono text-xs">
+                    km0-runner run km0 --repo . -c runner.yaml
+                  </code>
+                </span>
+              </p>
+            ) : null}
             {pkg.agents.map((agent) => (
               <p key={agent.id} className="flex items-start gap-2 text-muted">
                 <Terminal className="mt-0.5 size-4 shrink-0" />
