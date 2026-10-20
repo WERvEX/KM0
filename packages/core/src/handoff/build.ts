@@ -199,7 +199,8 @@ function sectionsFor(task: RoutedTask, documents: HandoffDocument[]): SectionRef
 }
 
 /** Decisions a task should see: the ones it cites, or the technology choices and delivery form. */
-function decisionsFor(task: RoutedTask, decisions: Decision[]): Decision[] {
+/** The decisions a task relies on, as its hand-off lists them under related decisions. */
+export function decisionsFor(task: Pick<RoutedTask, "decisionKeys">, decisions: Decision[]): Decision[] {
   if (task.decisionKeys.length > 0) return decisions.filter((decision) => task.decisionKeys.includes(decision.key));
   const fallback = new Set(["scale", "frontend", "backend", "storage", "deployment", "brief_approach", "scope"]);
   return decisions.filter((decision) => fallback.has(decision.key));

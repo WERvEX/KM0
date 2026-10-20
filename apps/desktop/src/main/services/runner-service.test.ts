@@ -61,7 +61,15 @@ const DIFF = "diff --git a/calc.py b/calc.py\n--- a/calc.py\n+++ b/calc.py\n-   
 
 async function setup() {
   const db = openDatabase(":memory:");
-  const llm = createSimulatedLlm();
+  const simulated = createSimulatedLlm();
+  const judgePrompts: string[] = [];
+  const llm: typeof simulated = {
+    ...simulated,
+    structured: (role, request) => {
+      if (request.purpose === "acceptance") judgePrompts.push(request.prompt);
+      return simulated.structured(role, request);
+    },
+  };
   const language = () => "zh-CN" as const;
   const routing = new RoutingService(db, () => llm, language, new AgentStore(db));
   const projects = new ProjectService(db, () => llm, language);
@@ -104,7 +112,7 @@ async function setup() {
     language,
     () => "simulated",
   );
-  return { db, project, routing, runner, run, handoff: new HandoffService(db, routing, language) };
+  return { db, project, routing, runner, run, judgePrompts, handoff: new HandoffService(db, routing, language) };
 }
 
 describe("KM0 Runner runs", () => {
@@ -128,11 +136,13 @@ describe("KM0 Runner runs", () => {
   });
 
   it("judges each task, writes acceptance.jsonl and sends a rejected task one tier up", async () => {
-    const { project, routing, runner, run, handoff } = await setup();
+    const { project, routing, runner, run, judgePrompts, handoff } = await setup();
     const imported = await runner.import(project.id);
     if (!imported) throw new Error("not imported");
     const judged = await runner.judge(project.id, imported.id);
     expect(judged.results.map((result) => result.accepted)).toEqual([true, false, null]);
+    // The reviewer sees the decisions the hand-off listed, not only the criteria.
+    expect(judgePrompts[0]).toContain("Decisions the task relies on:\n- 实现思路: brief_approach 方案 A");
     const lines = (run.files["acceptance.jsonl"] ?? "")
       .trim()
       .split("\n")

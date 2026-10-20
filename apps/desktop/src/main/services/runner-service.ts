@@ -1,7 +1,8 @@
-import { type DiscussionLlm, judgeTask, type Language } from "@km0/core";
+import { type DiscussionLlm, decisionsFor, judgeTask, keyDef, type Language } from "@km0/core";
 import { AppError, RunnerReport, type RunnerRun, type RunnerTaskResult, RunnerVerdict, Tier } from "@km0/shared";
 import { type Database, nowIso, transaction } from "../db/sql";
 import { KeyedLock } from "./lock";
+import { readDecisions } from "./project-service";
 import type { RoutingService } from "./routing-service";
 import type { RunAccess, RunFs } from "./run-access";
 
@@ -102,6 +103,8 @@ export class RunnerService {
       const run = this.run(projectId, runRef);
       const plan = this.routing.get(projectId);
       const llm = this.llmFor(projectId);
+      const decisions = readDecisions(this.db, projectId);
+      const language = this.language();
       for (const row of this.results(run.id)) {
         if (row.verdict_json) continue;
         const report = RunnerReport.parse(JSON.parse(row.report_json));
@@ -109,10 +112,15 @@ export class RunnerService {
         if (report.failure_category === "blocked") continue;
         const task = plan?.tasks.find((item) => item.seq === row.seq);
         const output = await judgeTask(llm, {
-          language: this.language(),
+          language,
           title: task?.title ?? report.title,
           goal: task?.goal ?? report.title,
           acceptance: task?.acceptance ?? report.acceptance,
+          decisions: task
+            ? decisionsFor(task, decisions).map(
+                (decision) => `${keyDef(decision.key)?.label[language] ?? decision.key}: ${decision.value.text}`,
+              )
+            : [],
           diff: row.diff,
           testCommand: report.test_command ?? null,
           testResult: report.test_result,

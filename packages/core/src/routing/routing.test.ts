@@ -1,7 +1,7 @@
 import type { AgentConfig, TaskFailure, TaskFeatures, Tier } from "@km0/shared";
 import { describe, expect, it } from "vitest";
 import { createSimulatedLlm } from "../discussion/simulator";
-import { breakDown } from "./breakdown";
+import { breakDown, breakdownSystem } from "./breakdown";
 import {
   chooseAgent,
   estimateCost,
@@ -347,6 +347,21 @@ describe("cost", () => {
 });
 
 describe("breakdown", () => {
+  // A request with five criteria lost one when the prompt asked for 2-4 per task.
+  it("asks for every stated criterion instead of a fixed number", () => {
+    const system = breakdownSystem({
+      language: "zh-CN",
+      path: "fast",
+      title: "t",
+      description: "d",
+      triage: null,
+      decisions: [],
+      documents: [],
+    });
+    expect(system).not.toMatch(/2-4 criteria/);
+    expect(system).toContain("carry over every acceptance criterion");
+  });
+
   it("keeps only earlier tasks as prerequisites and references that exist", async () => {
     const llm = createSimulatedLlm();
     const tasks = await breakDown(llm, {

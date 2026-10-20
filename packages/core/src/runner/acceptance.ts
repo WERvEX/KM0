@@ -15,6 +15,11 @@ export interface AcceptanceInput {
   goal: string;
   /** The task's EARS criteria. */
   acceptance: string[];
+  /**
+   * The decisions the task's hand-off listed, as `label: value`. A condition stated only there still binds
+   * the change, so the reviewer checks them too.
+   */
+  decisions: string[];
   /** The task's change as a unified diff; null when the Runner changed nothing. */
   diff: string | null;
   testCommand: string | null;
@@ -30,7 +35,7 @@ export const MAX_DIFF_CHARS = 60_000;
 export function acceptanceSystem(input: AcceptanceInput): string {
   return [
     "You are KM0's reviewer. A coding agent worked on one task in its own branch; decide whether the change meets the task's acceptance criteria.",
-    "Judge only from the goal, the criteria, the diff and the test run shown. Accept when every criterion is met by the change, or is clearly not applicable to it. Reject when a criterion is not met, the change does something else, breaks existing behaviour, or is empty.",
+    "Judge only from the goal, the criteria, the decisions, the diff and the test run shown. Any condition a listed decision sets for this change (a done-when condition, a rule, an order of steps) counts as a criterion too. Accept when every criterion is met by the change, or is clearly not applicable to it. Reject when a criterion is not met, the change does something else, breaks existing behaviour, or is empty.",
     "A passing test run is evidence, not proof: tests can miss criteria. A failing test run is a strong reason to reject unless the failure is unrelated to the task.",
     "`reason`: one or two sentences. On a rejection, say what is missing or wrong so the next attempt can fix it.",
     languageRule(input.language),
@@ -48,6 +53,9 @@ export function acceptancePrompt(input: AcceptanceInput): string {
     `Task: ${input.title}`,
     `Goal:\n${input.goal}`,
     `Acceptance criteria:\n${input.acceptance.map((item) => `- ${item}`).join("\n") || "- (none listed: judge against the goal)"}`,
+    input.decisions.length > 0
+      ? `Decisions the task relies on:\n${input.decisions.map((item) => `- ${item}`).join("\n")}`
+      : "",
     input.failure ? `The agent gave up: ${input.failure}` : "",
     `Test run:\n${test}`,
     `Diff:\n\`\`\`diff\n${diff}\n\`\`\``,
