@@ -136,6 +136,9 @@ export class RunnerService {
             };
           }),
           request: request ?? null,
+          others: (plan?.tasks ?? [])
+            .filter((item) => item.seq !== row.seq && !upstreamOf(row.seq, plan?.tasks ?? []).includes(item.seq))
+            .map((item) => item.title),
           testCommand: report.test_command ?? null,
           testResult: report.test_result,
           failure: report.failure_category

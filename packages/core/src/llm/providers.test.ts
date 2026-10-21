@@ -164,6 +164,14 @@ describe("AnthropicProvider", () => {
     expect(bodies[0]).toMatchObject({ max_tokens: 800 });
   });
 
+  it("leaves room for thinking when a Claude model is reached through a relay", async () => {
+    const { fetch, bodies } = capture(message);
+    const provider = new AnthropicProvider({ apiKey: "k", baseUrl: "https://relay.example.com", fetch });
+    await provider.complete({ model: "claude-opus-5-5", messages: [{ role: "user", content: "hi" }], maxTokens: 2000 });
+    expect(bodies[0]).toMatchObject({ max_tokens: 16000 });
+    expect(bodies[0]).not.toHaveProperty("fallbacks");
+  });
+
   it("reports a policy decline as a refusal", async () => {
     const { fetch } = capture({
       ...message,

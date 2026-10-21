@@ -55,4 +55,11 @@ describe("acceptance prompt", () => {
     expect(acceptanceSystem(input)).toContain("compare the change against it literally");
     expect(acceptancePrompt(input)).not.toContain("The request as written");
   });
+
+  it("lists the request's other tasks so their work is not held against this one", () => {
+    const prompt = acceptancePrompt({ ...input, others: ["更新锦囊文档"] });
+    expect(prompt).toContain("Other tasks of this request, judged separately:\n- 更新锦囊文档");
+    expect(acceptancePrompt(input)).not.toContain("Other tasks");
+    expect(acceptanceSystem(input)).toContain("Judge the result, not where it is done");
+  });
 });
