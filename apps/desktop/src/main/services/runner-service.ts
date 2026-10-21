@@ -105,7 +105,8 @@ export class RunnerService {
       const llm = this.llmFor(projectId);
       const decisions = readDecisions(this.db, projectId);
       const language = this.language();
-      for (const row of this.results(run.id)) {
+      const rows = this.results(run.id);
+      for (const row of rows) {
         if (row.verdict_json) continue;
         const report = RunnerReport.parse(JSON.parse(row.report_json));
         // A blocked task never ran: there is nothing to judge until its upstream tasks pass.
@@ -122,6 +123,13 @@ export class RunnerService {
               )
             : [],
           diff: row.diff,
+          upstream: upstreamOf(row.seq, plan?.tasks ?? []).map((seq) => {
+            const upstream = rows.find((item) => item.seq === seq);
+            return {
+              title: plan?.tasks.find((item) => item.seq === seq)?.title ?? `#${seq}`,
+              diff: upstream?.diff ?? null,
+            };
+          }),
           testCommand: report.test_command ?? null,
           testResult: report.test_result,
           failure: report.failure_category
@@ -319,6 +327,21 @@ function safeJson(text: string): unknown {
 function finishedTier(report: RunnerReport): Tier | null {
   const parsed = Tier.safeParse(report.attempts.at(-1)?.tier ?? report.solved_tier);
   return parsed.success ? parsed.data : null;
+}
+
+/** Every earlier task `seq` builds on, directly or through another, in plan order. */
+function upstreamOf(seq: number, tasks: { seq: number; dependsOn: number[] }[]): number[] {
+  const found = new Set<number>();
+  const visit = (current: number) => {
+    for (const dep of tasks.find((task) => task.seq === current)?.dependsOn ?? []) {
+      if (!found.has(dep)) {
+        found.add(dep);
+        visit(dep);
+      }
+    }
+  };
+  visit(seq);
+  return [...found].sort((a, b) => a - b);
 }
 
 function diffStat(diff: string | null): RunnerTaskResult["diffStat"] {
