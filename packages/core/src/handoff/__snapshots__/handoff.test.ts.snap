@@ -164,6 +164,14 @@ exports[`hand-off package > falls back to the stack and architecture, and adds r
 
 完整文档：\`km0/docs/TECH_DESIGN.md\`
 
+## 需求原文
+
+用户提出需求时的原话。示例、格式和措辞以这里为准；本任务的范围仍以上面的目标和验收标准为准。
+
+\`\`\`markdown
+给博客加评论功能
+\`\`\`
+
 ## 约束
 
 - 只做本任务范围内的改动，不要顺手重构无关代码。
@@ -217,6 +225,14 @@ exports[`hand-off package > gives a task only the decisions and sections it cite
 comments 表。
 
 完整文档：\`km0/docs/TECH_DESIGN.md\`
+
+## 需求原文
+
+用户提出需求时的原话。示例、格式和措辞以这里为准；本任务的范围仍以上面的目标和验收标准为准。
+
+\`\`\`markdown
+给博客加评论功能
+\`\`\`
 
 ## 约束
 

@@ -206,6 +206,18 @@ describe("extractJson", () => {
     expect(extractJson("[1,2]")).toEqual([1, 2]);
     expect(() => extractJson("nothing here")).toThrow(SyntaxError);
   });
+
+  it("reads strings whose quotation marks a relay turned into plain double quotes", () => {
+    expect(extractJson('{"accepted": true, "reason": "标题写成了"你好"，符合要求"}')).toEqual({
+      accepted: true,
+      reason: '标题写成了"你好"，符合要求',
+    });
+    expect(extractJson('Verdict:\n{"reason": "use "a" and "b"", "ok": false}')).toEqual({
+      reason: 'use "a" and "b"',
+      ok: false,
+    });
+    expect(extractJson('{"a": "already \\"escaped\\""}')).toEqual({ a: 'already "escaped"' });
+  });
 });
 
 describe("streamed text", () => {

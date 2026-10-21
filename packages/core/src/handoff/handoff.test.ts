@@ -2,7 +2,7 @@ import type { AgentConfig, AgentId, Decision, RoutingPlan } from "@km0/shared";
 import { describe, expect, it } from "vitest";
 import { planTotals, routeTask, type TaskBasics } from "../routing/route";
 import { ADAPTERS } from "./adapters";
-import { buildHandoff, EXCERPT_LIMITS, type HandoffInput } from "./build";
+import { buildHandoff, EXCERPT_LIMITS, fence, type HandoffInput, REQUEST_LIMIT } from "./build";
 
 const decision = (key: string, text: string, rationale: string | null = null): Decision => ({
   key,
@@ -160,6 +160,20 @@ describe("hand-off package", () => {
     expect(first?.prompt).not.toContain("后端：FastAPI");
     expect(first?.prompt).toContain("### 技术方案 · 数据模型");
     expect(first?.prompt).not.toContain("### 技术方案 · 架构概览");
+  });
+
+  it("quotes the request as written, examples and their code fences included", () => {
+    const description = "导出对话为 Markdown。\n\n示例：\n```\n# 劳动法咨询\n\n## 用户\n\n试用期最长多久？\n```";
+    const prompt = buildHandoff({ ...input(), description }).tasks[0]?.prompt ?? "";
+    expect(prompt).toContain("## 需求原文");
+    expect(prompt).toContain(`\`\`\`\`markdown\n${description}\n\`\`\`\``);
+    const long = buildHandoff({ ...input(), description: "长".repeat(REQUEST_LIMIT + 10) }).tasks[0]?.prompt ?? "";
+    expect(long).toContain("…（已截断）");
+  });
+
+  it("fences text with more backticks than it holds", () => {
+    expect(fence("plain")).toBe("```\nplain\n```");
+    expect(fence("a ```` b", "md")).toBe("`````md\na ```` b\n`````");
   });
 
   it("falls back to the stack and architecture, and adds risk rules and escalation for uncited tasks", () => {

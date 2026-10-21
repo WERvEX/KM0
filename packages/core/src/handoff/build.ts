@@ -24,6 +24,22 @@ export const HANDOFF_ROOT = "km0";
 /** Excerpts are cut so one task prompt stays small enough to read in full. */
 export const EXCERPT_LIMITS = { section: 4_000, total: 12_000 } as const;
 
+/** The user's request is quoted in every task, cut at this length. */
+export const REQUEST_LIMIT = 8_000;
+
+/** Wrap text in a code fence longer than any backtick run inside it, so fences in the text stay as they are. */
+export function fence(text: string, info = ""): string {
+  const longest = Math.max(0, ...[...text.matchAll(/`+/g)].map((match) => match[0].length));
+  const ticks = "`".repeat(Math.max(3, longest + 1));
+  return `${ticks}${info}\n${text}\n${ticks}`;
+}
+
+/** The request as typed, cut to REQUEST_LIMIT. */
+export function clipRequest(description: string, cutNote: string): string {
+  const text = description.trim();
+  return text.length > REQUEST_LIMIT ? `${text.slice(0, REQUEST_LIMIT).trimEnd()}\n${cutNote}` : text;
+}
+
 export interface HandoffDocument {
   kind: DocumentKind;
   markdown: string;
@@ -63,6 +79,9 @@ const TEXT = {
     none: "无",
     decisions: "相关决策",
     excerpts: "文档摘录",
+    request: "需求原文",
+    requestNote: "用户提出需求时的原话。示例、格式和措辞以这里为准；本任务的范围仍以上面的目标和验收标准为准。",
+    requestCut: "…（已截断）",
     fullDoc: (path: string) => `完整文档：\`${path}\``,
     cut: (path: string) => `…（已截断，完整内容见 \`${path}\`）`,
     rules: "约束",
@@ -127,6 +146,10 @@ const TEXT = {
     none: "None",
     decisions: "Relevant decisions",
     excerpts: "Document excerpts",
+    request: "The request as written",
+    requestNote:
+      "The user's own words. Examples, formats and wording here are exact; the scope of this task is still the goal and criteria above.",
+    requestCut: "… (cut)",
     fullDoc: (path: string) => `Full document: \`${path}\``,
     cut: (path: string) => `… (cut; see \`${path}\` for the full text)`,
     rules: "Constraints",
@@ -261,6 +284,9 @@ export function taskPrompt(task: RoutedTask, input: HandoffInput): string {
     decisions.length > 0 ? `## ${text.decisions}\n\n${list(decisions)}` : "",
     quoted.length > 0
       ? `## ${text.excerpts}\n\n${quoted.join("\n\n")}\n\n${input.documents.map((doc) => text.fullDoc(documentPath(doc.kind))).join(" · ")}`
+      : "",
+    input.description.trim()
+      ? `## ${text.request}\n\n${text.requestNote}\n\n${fence(clipRequest(input.description, text.requestCut), "markdown")}`
       : "",
     `## ${text.rules}\n\n${list(rules)}`,
     `## ${text.done}\n\n${list([...(testCommand ? [text.doneTests(testCommand)] : []), text.doneCheck, text.doneSummary])}`,

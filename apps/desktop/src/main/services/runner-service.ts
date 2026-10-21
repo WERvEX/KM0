@@ -105,6 +105,11 @@ export class RunnerService {
       const llm = this.llmFor(projectId);
       const decisions = readDecisions(this.db, projectId);
       const language = this.language();
+      const request = (
+        this.db.prepare("SELECT description FROM projects WHERE id = ?").get(projectId) as
+          | { description: string }
+          | undefined
+      )?.description;
       const rows = this.results(run.id);
       for (const row of rows) {
         if (row.verdict_json) continue;
@@ -130,6 +135,7 @@ export class RunnerService {
               diff: upstream?.diff ?? null,
             };
           }),
+          request: request ?? null,
           testCommand: report.test_command ?? null,
           testResult: report.test_result,
           failure: report.failure_category
