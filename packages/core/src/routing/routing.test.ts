@@ -362,6 +362,21 @@ describe("breakdown", () => {
     expect(system).toContain("carry over every acceptance criterion");
   });
 
+  // A criterion that the render helper must sort its input rejected a change whose endpoint was correct.
+  it("asks for criteria a caller can observe, not internal structure", () => {
+    const system = breakdownSystem({
+      language: "zh-CN",
+      path: "fast",
+      title: "t",
+      description: "d",
+      triage: null,
+      decisions: [],
+      documents: [],
+    });
+    expect(system).toContain("behaviour that can be observed from outside the code");
+    expect(system).toContain("Do not prescribe internal structure");
+  });
+
   it("keeps only earlier tasks as prerequisites and references that exist", async () => {
     const llm = createSimulatedLlm();
     const tasks = await breakDown(llm, {
