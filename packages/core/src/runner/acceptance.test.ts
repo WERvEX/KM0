@@ -47,4 +47,12 @@ describe("acceptance prompt", () => {
   it("leaves the upstream block out when there is nothing upstream", () => {
     expect(acceptancePrompt(input)).not.toContain("Upstream changes");
   });
+
+  it("shows the request as written and asks for a literal check of its formats", () => {
+    const prompt = acceptancePrompt({ ...input, request: "示例：\n```\n## 用户\n\n你好\n```" });
+    expect(prompt).toContain("The request as written");
+    expect(prompt).toContain("````markdown\n示例：");
+    expect(acceptanceSystem(input)).toContain("compare the change against it literally");
+    expect(acceptancePrompt(input)).not.toContain("The request as written");
+  });
 });
