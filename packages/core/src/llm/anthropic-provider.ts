@@ -91,7 +91,9 @@ export class AnthropicProvider implements ChatProvider {
     const maxTokens = request.maxTokens ?? DEFAULT_MAX_TOKENS;
     const params: Anthropic.Beta.MessageCreateParamsNonStreaming = {
       model: request.model,
-      max_tokens: this.claudeApi ? Math.max(maxTokens, CLAUDE_MIN_MAX_TOKENS) : maxTokens,
+      // Claude models think through relays too, and the thinking counts toward max_tokens there as well.
+      max_tokens:
+        this.claudeApi || request.model.startsWith("claude-") ? Math.max(maxTokens, CLAUDE_MIN_MAX_TOKENS) : maxTokens,
       messages: request.messages.map((message) => ({ role: message.role, content: message.content })),
     };
     if (request.system) params.system = request.system;
