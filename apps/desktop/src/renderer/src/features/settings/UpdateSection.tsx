@@ -2,7 +2,7 @@ import type { UpdateState } from "@km0/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Download, Loader2, RefreshCw, RotateCcw } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -27,6 +27,8 @@ export function UpdateSection() {
   const state = useUpdateState();
   const preferences = useIpcQuery("settings.preferences.get");
   const savePreferences = useIpcMutation("settings.preferences.set", ["settings.preferences.get"]);
+  // Held here so the box flips on click, not after the save comes back.
+  const [autoUpdate, setAutoUpdate] = useState<boolean | null>(null);
   const check = useIpcMutation("update.check");
   const download = useIpcMutation("update.download");
   const install = useIpcMutation("update.install");
@@ -112,8 +114,11 @@ export function UpdateSection() {
             <label className="flex w-fit items-center gap-2 text-sm">
               <input
                 type="checkbox"
-                checked={preferences.data.autoUpdate}
-                onChange={(event) => savePreferences.mutate({ autoUpdate: event.target.checked })}
+                checked={autoUpdate ?? preferences.data.autoUpdate}
+                onChange={(event) => {
+                  setAutoUpdate(event.target.checked);
+                  savePreferences.mutate({ autoUpdate: event.target.checked });
+                }}
               />
               {t("settings.about.update.auto")}
             </label>

@@ -219,8 +219,11 @@ void app.whenReady().then(() => {
     (state) => emit("update.state", state),
     typeof updaterPort === "string" ? updaterPort : "development",
   );
-  // A quiet check shortly after start, when the preference allows it.
-  setTimeout(() => void updates.checkOnStart(settings.getPreferences().autoUpdate), 8_000);
+  // A quiet check shortly after start, when the preference allows it; the fake release (e2e) at once.
+  setTimeout(
+    () => void updates.checkOnStart(settings.getPreferences().autoUpdate),
+    process.env.KM0_FAKE_UPDATE ? 500 : 8_000,
+  );
   // Closing the window while runs are going asks first (in the page); `app.quit` stops them and closes.
   let quitting = false;
   const quit = async () => {

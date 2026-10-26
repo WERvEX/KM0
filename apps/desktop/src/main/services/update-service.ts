@@ -42,7 +42,7 @@ export class UpdateService {
     private readonly language: () => Language,
     private readonly emit: (state: UpdateState) => void = () => undefined,
     /** Why there is no port, when there is none. */
-    private readonly unsupported: UnsupportedReason = "development",
+    unsupported: UnsupportedReason = "development",
     private readonly now: () => string = () => new Date().toISOString(),
   ) {
     this.current = {

@@ -10,6 +10,7 @@ import type { UnsupportedReason, UpdaterPort } from "./services/update-service";
  * when it cannot.
  */
 export function electronUpdater(): UpdaterPort | UnsupportedReason {
+  if (process.env.KM0_FAKE_UPDATE) return fakeUpdater(process.env.KM0_FAKE_UPDATE);
   if (!app.isPackaged) return "development";
   // On Linux only the AppImage can replace itself.
   if (process.platform === "linux" && !process.env.APPIMAGE) return "linux";
@@ -41,6 +42,29 @@ export function electronUpdater(): UpdaterPort | UnsupportedReason {
     install() {
       // Quits through the normal path, so a run still going is asked about first.
       autoUpdater.quitAndInstall(false, true);
+    },
+  };
+}
+
+/**
+ * A release that is always newer, for the e2e tests and for looking at the update screens
+ * (`KM0_FAKE_UPDATE=1.0.1`). Installing only marks `KM0_FAKE_UPDATE_INSTALLED`; nothing is replaced.
+ */
+function fakeUpdater(version: string): UpdaterPort {
+  const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  return {
+    async check() {
+      await pause(300);
+      return { version, notes: `KM0 ${version}\n\n- Fixes found after 1.0.0.` };
+    },
+    async download(onProgress) {
+      for (let percent = 0; percent <= 100; percent += 10) {
+        onProgress(percent);
+        await pause(150);
+      }
+    },
+    install() {
+      process.env.KM0_FAKE_UPDATE_INSTALLED = "1";
     },
   };
 }
