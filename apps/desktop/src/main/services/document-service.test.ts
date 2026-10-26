@@ -18,7 +18,9 @@ function setup() {
     db,
     () => llm,
     () => "zh-CN",
-    (_event, payload) => events.push(payload),
+    (event, payload) => {
+      if (event === "document.progress") events.push(payload as DocumentProgress);
+    },
   );
   return { projects, documents, events };
 }

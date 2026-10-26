@@ -5,6 +5,7 @@ import { createHandlers } from "../handlers";
 import { AgentStore } from "../services/agent-store";
 import { ConfigService } from "../services/config-service";
 import { DocumentService } from "../services/document-service";
+import { noFilePort } from "../services/file-port";
 import { HandoffService } from "../services/handoff-service";
 import { ProjectService } from "../services/project-service";
 import { RoutingService } from "../services/routing-service";
@@ -64,6 +65,8 @@ function setup(provider = new FakeProvider([])) {
           throw new Error("no repositories in this test");
         },
       },
+      files: noFilePort,
+      folders: null,
       gateway,
       appInfo: () => ({
         name: "KM0",

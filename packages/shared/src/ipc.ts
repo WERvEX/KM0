@@ -19,6 +19,17 @@ import {
 } from "./documents";
 import { ProjectPath, ProjectSummary } from "./domain";
 import type { AppErrorShape } from "./errors";
+import {
+  AppNotice,
+  BrowseInput,
+  FolderAnswer,
+  FolderListing,
+  FolderRequest,
+  ReadFileInput,
+  ReadFileResult,
+  SaveFileInput,
+  SaveFileResult,
+} from "./files";
 import { HandoffPackage, HandoffTarget } from "./handoff";
 import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
 import { RepoScan, ScanRepoInput } from "./repo";
@@ -79,6 +90,15 @@ export const ipcContract = {
 
   /** Ask the user for a folder; null when they cancel. Desktop: a path. Web: a label for the picked folder. */
   "repo.pick": channel(z.void(), z.string().nullable()),
+
+  // Desktop only: KM0 draws its own file browser instead of opening the system's dialogs.
+  "files.browse": channel(BrowseInput, FolderListing),
+  "files.read": channel(ReadFileInput, ReadFileResult),
+  "files.save": channel(SaveFileInput, SaveFileResult),
+  /** Show a saved file in the system's file manager. */
+  "files.reveal": channel(ReadFileInput, z.void()),
+  /** The user's answer to a `folder.request` event. */
+  "folder.answer": channel(FolderAnswer, z.void()),
   "repo.scan": channel(ScanRepoInput, RepoScan),
 
   "project.list": channel(z.void(), z.array(ProjectSummary)),
@@ -133,6 +153,8 @@ export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: AppErrorS
 /** main → renderer push events. */
 export const ipcEvents = {
   "document.progress": DocumentProgress,
+  "folder.request": FolderRequest,
+  "app.notice": AppNotice,
 } as const;
 
 export type IpcEvents = typeof ipcEvents;

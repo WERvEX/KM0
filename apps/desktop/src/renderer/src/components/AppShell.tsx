@@ -4,6 +4,7 @@ import { Pencil, Plus, Settings, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/field";
 import { useIpcMutation, useIpcQuery } from "@/lib/queries";
@@ -145,32 +146,25 @@ function ProjectItem({ project }: { project: ProjectSummary }) {
           onChange={(event) => setTitle(event.target.value)}
         />
       </Dialog>
-      <Dialog
+      <ConfirmDialog
         open={editing?.mode === "delete"}
-        onOpenChange={(open) => !open && close()}
         title={t("nav.deleteTitle")}
         description={t("nav.deleteBody", { name: project.title })}
-        footer={
-          <>
-            <Button onClick={close}>{t("nav.cancel")}</Button>
-            <Button
-              variant="danger"
-              disabled={remove.isPending}
-              onClick={() =>
-                remove.mutate(
-                  { id: project.id },
-                  {
-                    onSuccess: () => {
-                      close();
-                      if (params.projectId === String(project.id)) void navigate({ to: "/" });
-                    },
-                  },
-                )
-              }
-            >
-              {t("nav.delete")}
-            </Button>
-          </>
+        confirmLabel={t("nav.delete")}
+        cancelLabel={t("nav.cancel")}
+        danger
+        pending={remove.isPending}
+        onCancel={close}
+        onConfirm={() =>
+          remove.mutate(
+            { id: project.id },
+            {
+              onSuccess: () => {
+                close();
+                if (params.projectId === String(project.id)) void navigate({ to: "/" });
+              },
+            },
+          )
         }
       />
     </li>

@@ -1,9 +1,11 @@
 import type { ProjectDetail, ProjectPath } from "@km0/shared";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, FolderGit2, Loader2, RotateCcw } from "lucide-react";
+import { BookOpenCheck, CheckCircle2, FolderGit2, Loader2, RotateCcw } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
+import { Sheet } from "@/components/ui/sheet";
 import { errorMessage } from "@/lib/ipc";
 import { DocumentsPanel } from "../documents/DocumentsPanel";
 import { useDocumentActions, useDocumentStreams } from "../documents/useDocuments";
@@ -25,6 +27,7 @@ export function ProjectPage({ projectId }: { projectId: number }) {
   const edit = useProjectAction("decision.update", projectId);
   const documents = useDocumentActions(projectId);
   const streams = useDocumentStreams(projectId);
+  const [ledgerOpen, setLedgerOpen] = useState(false);
 
   const actions = [answer, advance, more, review, setPath, retry, edit];
   const busy = actions.some((action) => action.isPending);
@@ -50,7 +53,12 @@ export function ProjectPage({ projectId }: { projectId: number }) {
   return (
     <div className="flex min-h-full">
       <div className="min-w-0 flex-1 px-8 py-8">
-        <Header detail={detail} busy={busy} onPath={(path) => setPath.mutate({ id: projectId, path })} />
+        <Header
+          detail={detail}
+          busy={busy}
+          onPath={(path) => setPath.mutate({ id: projectId, path })}
+          onLedger={() => setLedgerOpen(true)}
+        />
 
         <div className="mt-6 flex flex-col gap-4">
           {failure ? (
@@ -130,7 +138,8 @@ export function ProjectPage({ projectId }: { projectId: number }) {
         </div>
       </div>
 
-      <div className="w-80 shrink-0 border-l border-border bg-bg px-5 py-8">
+      {/* Beside the page on wide windows; a slide-over panel on narrower ones. */}
+      <div className="hidden w-80 shrink-0 border-l border-border bg-bg px-5 py-8 xl:block">
         <DecisionLedger
           stages={detail.stages}
           decisions={detail.decisions}
@@ -139,6 +148,20 @@ export function ProjectPage({ projectId }: { projectId: number }) {
           onReview={(stage) => review.mutate({ projectId, stage })}
         />
       </div>
+      <Sheet
+        open={ledgerOpen}
+        onOpenChange={setLedgerOpen}
+        title={t("project.ledger.title")}
+        closeLabel={t("project.ledger.close")}
+      >
+        <DecisionLedger
+          stages={detail.stages}
+          decisions={detail.decisions}
+          busy={busy}
+          onEdit={(key, text) => edit.mutate({ projectId, key, value: { text } })}
+          onReview={(stage) => review.mutate({ projectId, stage })}
+        />
+      </Sheet>
     </div>
   );
 }
@@ -147,10 +170,12 @@ function Header({
   detail,
   busy,
   onPath,
+  onLedger,
 }: {
   detail: ProjectDetail;
   busy: boolean;
   onPath: (path: ProjectPath) => void;
+  onLedger: () => void;
 }) {
   const { t } = useTranslation();
   const triage = detail.triage;
@@ -162,6 +187,11 @@ function Header({
           <p className="mt-1 text-sm text-muted">{detail.description}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2 text-xs text-muted">
+          <Button size="sm" variant="ghost" className="xl:hidden" onClick={onLedger}>
+            <BookOpenCheck />
+            {t("project.ledger.title")}
+            <span className="rounded-full bg-sunken px-1.5 text-xs text-muted">{detail.decisions.length}</span>
+          </Button>
           <label htmlFor="project-path">{t("project.changePath")}</label>
           <Select
             id="project-path"

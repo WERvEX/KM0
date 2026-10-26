@@ -9,10 +9,11 @@ import {
   type Tier,
 } from "@km0/shared";
 import { ArrowDown, ArrowUp, RotateCcw, Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
+import { useFiles } from "@/lib/files";
 import { errorMessage } from "@/lib/ipc";
 import { useIpcMutation, useIpcQuery } from "@/lib/queries";
 
@@ -49,21 +50,32 @@ function RoutingRulesSection() {
   const { t } = useTranslation();
   const state = useIpcQuery("settings.routingRules.get");
   const set = useIpcMutation("settings.routingRules.set", ["settings.routingRules.get", "routing.get"]);
-  const fileInput = useRef<HTMLInputElement>(null);
+  const files = useFiles();
   const [invalid, setInvalid] = useState(false);
   if (!state.data) return null;
   const { rules, custom } = state.data;
 
-  const importRules = async (file: File) => {
+  const importRules = async () => {
     setInvalid(false);
+    let file: { text: string } | null;
+    try {
+      file = await files.openFile({
+        title: t("settings.agents.rules.import"),
+        extensions: ["json"],
+        memoryKey: "rules",
+      });
+    } catch {
+      setInvalid(true);
+      return;
+    }
+    if (!file) return;
     let parsed: unknown;
     try {
-      parsed = JSON.parse(await file.text());
+      parsed = JSON.parse(file.text);
     } catch {
       parsed = null;
     }
     const result = RoutingRules.safeParse(parsed);
-    if (fileInput.current) fileInput.current.value = "";
     if (!result.success) {
       setInvalid(true);
       return;
@@ -84,7 +96,7 @@ function RoutingRulesSection() {
         {t("settings.agents.rules.limits", { t1: rules.tierLimits.T1, t2: rules.tierLimits.T2 })}
       </p>
       <div className="flex gap-2">
-        <Button size="sm" onClick={() => fileInput.current?.click()} disabled={set.isPending}>
+        <Button size="sm" onClick={() => void importRules()} disabled={set.isPending}>
           <Upload />
           {t("settings.agents.rules.import")}
         </Button>
@@ -94,17 +106,6 @@ function RoutingRulesSection() {
             {t("settings.agents.rules.reset")}
           </Button>
         ) : null}
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          aria-label={t("settings.agents.rules.import")}
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void importRules(file);
-          }}
-        />
       </div>
       {invalid ? <p className="text-sm text-danger">{t("settings.agents.rules.invalid")}</p> : null}
       {set.error ? <p className="text-sm text-danger">{errorMessage(set.error)}</p> : null}

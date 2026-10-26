@@ -1,5 +1,6 @@
 import { createHashHistory, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { CrashPage } from "@/components/CrashPage";
 import { ProjectPage } from "@/features/project/ProjectPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { WorkspacePage } from "@/features/workspace/WorkspacePage";
@@ -20,6 +21,8 @@ const projectRoute = createRoute({
 export const router = createRouter({
   routeTree: rootRoute.addChildren([workspaceRoute, settingsRoute, projectRoute]),
   history: createHashHistory(),
+  // A page that throws shows KM0's own error page inside the shell, never a blank window.
+  defaultErrorComponent: CrashPage,
 });
 
 declare module "@tanstack/react-router" {

@@ -4,6 +4,8 @@ import type { Handlers } from "./ipc/router";
 import type { AgentStore } from "./services/agent-store";
 import type { ConfigService } from "./services/config-service";
 import type { DocumentService } from "./services/document-service";
+import type { FilePort } from "./services/file-port";
+import type { FolderRequests } from "./services/folder-requests";
 import type { HandoffService } from "./services/handoff-service";
 import type { ProjectService } from "./services/project-service";
 import { type RepoAccess, scanPath } from "./services/repo-access";
@@ -23,6 +25,9 @@ export interface HandlerDeps {
   search: SearchStore;
   config: ConfigService;
   repo: RepoAccess;
+  files: FilePort;
+  /** Absent in the browser build, which uses the browser's own folder picker. */
+  folders: FolderRequests | null;
   gateway: Gateway;
   appInfo: () => AppInfo;
 }
@@ -38,6 +43,8 @@ export function createHandlers({
   search,
   config,
   repo,
+  files,
+  folders,
   gateway,
   appInfo,
 }: HandlerDeps): Handlers {
@@ -77,6 +84,12 @@ export function createHandlers({
 
     "repo.pick": () => repo.pick(),
     "repo.scan": ({ path }) => scanPath(repo, path),
+
+    "files.browse": (input) => files.browse(input),
+    "files.read": ({ path }) => files.read(path),
+    "files.save": async (input) => ({ path: await files.save(input) }),
+    "files.reveal": ({ path }) => files.reveal(path),
+    "folder.answer": (answer) => folders?.answer(answer),
 
     "project.list": () => projects.list(),
     "project.create": ({ description, repoPath }) => projects.create(description, repoPath),

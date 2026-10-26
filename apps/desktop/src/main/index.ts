@@ -1,18 +1,21 @@
-import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { join, parse } from "node:path";
 import { createGateway, createSimulatedLlm } from "@km0/core";
-import { type EmitEvent, IPC_EVENT, IPC_INVOKE } from "@km0/shared";
+import { type AppNotice, type EmitEvent, IPC_EVENT, IPC_INVOKE } from "@km0/shared";
 import { getDefaultEnvironment, StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, session, shell } from "electron";
 import log from "electron-log/main";
 import { openDatabase } from "./db/database";
 import { ElectronSecretStore } from "./electron-secrets";
 import { createHandlers } from "./handlers";
 import { createDispatcher } from "./ipc/router";
+import { nodeFiles } from "./node-files";
 import { nodeRepoAccess } from "./node-repo-access";
 import { nodeRunAccess } from "./node-run-access";
 import { AgentStore } from "./services/agent-store";
 import { ConfigService } from "./services/config-service";
 import { DocumentService } from "./services/document-service";
+import { FolderRequests } from "./services/folder-requests";
 import { HandoffService } from "./services/handoff-service";
 import { llmPort } from "./services/llm-port";
 import { ProjectService } from "./services/project-service";
@@ -34,6 +37,28 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let mainWindow: BrowserWindow | null = null;
+/** Notices raised before the window can show them, such as an error while it reloads. */
+const queuedNotices: AppNotice[] = [];
+
+/** Tell the user inside the window; the main process never opens a system dialog. */
+function notify(notice: AppNotice): void {
+  const contents = mainWindow?.webContents;
+  if (contents && !contents.isLoading() && !contents.isCrashed()) {
+    contents.send(IPC_EVENT, { event: "app.notice", payload: notice });
+  } else {
+    queuedNotices.push(notice);
+  }
+}
+
+// Without these handlers Electron shows its own error box for an uncaught main-process error.
+process.on("uncaughtException", (error) => {
+  log.error("[main] uncaught exception", error);
+  notify({ kind: "error", code: "main_error", detail: error.message });
+});
+process.on("unhandledRejection", (reason) => {
+  log.error("[main] unhandled rejection", reason);
+  notify({ kind: "error", code: "main_error", detail: reason instanceof Error ? reason.message : String(reason) });
+});
 
 function isAppUrl(url: string): boolean {
   if (DEV_SERVER_URL) return url.startsWith(DEV_SERVER_URL);
@@ -60,6 +85,17 @@ function createWindow(): BrowserWindow {
   });
 
   window.once("ready-to-show", () => window.show());
+  window.webContents.on("did-finish-load", () => {
+    for (const notice of queuedNotices.splice(0))
+      window.webContents.send(IPC_EVENT, { event: "app.notice", payload: notice });
+  });
+  // A crashed page comes back by itself and says so, instead of leaving a blank window.
+  window.webContents.on("render-process-gone", (_event, details) => {
+    log.error(`[main] renderer gone: ${details.reason}`);
+    if (details.reason === "clean-exit") return;
+    queuedNotices.push({ kind: "error", code: "renderer_restarted", detail: details.reason });
+    window.webContents.reload();
+  });
 
   // Links open in the user's browser; the app window never navigates away from the app.
   window.webContents.setWindowOpenHandler(({ url }) => {
@@ -111,20 +147,33 @@ void app.whenReady().then(() => {
     stdio: (command, args, env) =>
       new StdioClientTransport({ command, args, env: { ...getDefaultEnvironment(), ...env }, stderr: "ignore" }),
   });
-  const pickFolder = async () => {
-    const options = { title: "KM0", properties: ["openDirectory" as const] };
-    const result = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options);
-    return result.canceled ? null : (result.filePaths[0] ?? null);
-  };
-  const repo = nodeRepoAccess(pickFolder);
+  // Folders are chosen in KM0's own browser inside the window, not in a system dialog.
+  const folders = new FolderRequests(emit);
+  const files = nodeFiles((path) => shell.showItemInFolder(path));
+  // Saving goes through files.save; a download that still happens lands in Downloads without a save dialog.
+  session.defaultSession.on("will-download", (_event, item) => {
+    const { name, ext } = parse(item.getFilename());
+    let target = join(app.getPath("downloads"), `${name}${ext}`);
+    for (let n = 2; existsSync(target); n += 1) target = join(app.getPath("downloads"), `${name} (${n})${ext}`);
+    item.setSavePath(target);
+    item.once("done", (_done, state) => {
+      if (state === "completed") notify({ kind: "info", code: "download_saved", detail: target });
+    });
+  });
+  const repo = nodeRepoAccess(() => folders.ask("repo"));
   const projects = new ProjectService(db, llmFor, language, { searchPort: () => search.activePort(), repo });
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db);
   const config = new ConfigService(settings, agents, search);
   const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules);
   const handoff = new HandoffService(db, routing, language);
-  const runner = new RunnerService(db, nodeRunAccess(pickFolder), routing, llmFor, language, () =>
-    simulated ? "simulated" : settings.profileForRole("planner").model,
+  const runner = new RunnerService(
+    db,
+    nodeRunAccess(() => folders.ask("run")),
+    routing,
+    llmFor,
+    language,
+    () => (simulated ? "simulated" : settings.profileForRole("planner").model),
   );
 
   const dispatch = createDispatcher(
@@ -139,6 +188,8 @@ void app.whenReady().then(() => {
       search,
       config,
       repo,
+      files,
+      folders,
       gateway,
       appInfo: () => ({
         name: "KM0",
@@ -161,6 +212,7 @@ void app.whenReady().then(() => {
 
   mainWindow = createWindow();
   mainWindow.on("closed", () => {
+    folders.cancel();
     mainWindow = null;
   });
 

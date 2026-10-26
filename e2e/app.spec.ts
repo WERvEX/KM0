@@ -2,11 +2,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type ElectronApplication, _electron as electron, expect, type Page, test } from "@playwright/test";
+import { guardNativeDialogs } from "./guards";
 
 const appDir = join(import.meta.dirname, "../apps/desktop");
 let app: ElectronApplication;
 let page: Page;
 let dataDir: string;
+let checkDialogs: () => Promise<void>;
 
 test.beforeAll(async () => {
   dataDir = mkdtempSync(join(tmpdir(), "km0-e2e-"));
@@ -17,10 +19,15 @@ test.beforeAll(async () => {
   });
   page = await app.firstWindow();
   await page.setViewportSize({ width: 1360, height: 860 });
+  checkDialogs = await guardNativeDialogs(app, page);
 });
 
 test.afterAll(async () => {
-  await app?.close();
+  try {
+    await checkDialogs?.();
+  } finally {
+    await app?.close();
+  }
   rmSync(dataDir, { recursive: true, force: true });
 });
 

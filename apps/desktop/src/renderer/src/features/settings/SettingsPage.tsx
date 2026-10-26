@@ -1,11 +1,12 @@
 import { ConfigBundle, type ImportSummary, type Language, type Theme } from "@km0/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
+import { useFiles } from "@/lib/files";
 import { call, errorMessage } from "@/lib/ipc";
 import { useIpcMutation, useIpcQuery } from "@/lib/queries";
 import { AgentsTab } from "./AgentsTab";
@@ -95,7 +96,7 @@ function GeneralTab() {
 function ConfigSection() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const fileInput = useRef<HTMLInputElement>(null);
+  const files = useFiles();
   const [includeSecrets, setIncludeSecrets] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -105,12 +106,13 @@ function ConfigSection() {
     setMessage(null);
     try {
       const bundle = await call("settings.export", { includeSecrets });
-      const blob = new Blob([`${JSON.stringify(bundle, null, 2)}\n`], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `km0-config-${bundle.exportedAt.slice(0, 10)}.json`;
-      link.click();
-      URL.revokeObjectURL(link.href);
+      await files.saveFile({
+        title: t("settings.general.config.export"),
+        defaultName: `km0-config-${bundle.exportedAt.slice(0, 10)}.json`,
+        content: `${JSON.stringify(bundle, null, 2)}\n`,
+        mimeType: "application/json",
+        memoryKey: "config",
+      });
     } catch (error) {
       setMessage({ ok: false, text: errorMessage(error) });
     } finally {
@@ -118,13 +120,19 @@ function ConfigSection() {
     }
   };
 
-  const importConfig = async (file: File) => {
+  const importConfig = async () => {
     setBusy(true);
     setMessage(null);
     try {
+      const file = await files.openFile({
+        title: t("settings.general.config.import"),
+        extensions: ["json"],
+        memoryKey: "config",
+      });
+      if (!file) return;
       let parsed: unknown;
       try {
-        parsed = JSON.parse(await file.text());
+        parsed = JSON.parse(file.text);
       } catch {
         parsed = null;
       }
@@ -144,7 +152,6 @@ function ConfigSection() {
       setMessage({ ok: false, text: errorMessage(error) });
     } finally {
       setBusy(false);
-      if (fileInput.current) fileInput.current.value = "";
     }
   };
 
@@ -164,21 +171,10 @@ function ConfigSection() {
           <Download />
           {t("settings.general.config.export")}
         </Button>
-        <Button size="sm" onClick={() => fileInput.current?.click()} disabled={busy}>
+        <Button size="sm" onClick={() => void importConfig()} disabled={busy}>
           <Upload />
           {t("settings.general.config.import")}
         </Button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          aria-label={t("settings.general.config.import")}
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void importConfig(file);
-          }}
-        />
       </div>
       {message ? (
         <p role="status" className={`text-sm ${message.ok ? "text-success" : "text-danger"}`}>

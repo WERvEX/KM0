@@ -48,7 +48,7 @@ export function SectionCard({ index, section, readOnly, busy, working, onSave, o
           ) : null}
         </div>
         {!readOnly && mode === "view" ? (
-          <div className="flex gap-1 opacity-60 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+          <div className="flex gap-1">
             <Button
               size="sm"
               variant="ghost"

@@ -9,6 +9,7 @@ import { createDispatcher } from "../main/ipc/router";
 import { AgentStore } from "../main/services/agent-store";
 import { ConfigService } from "../main/services/config-service";
 import { DocumentService } from "../main/services/document-service";
+import { noFilePort } from "../main/services/file-port";
 import { HandoffService } from "../main/services/handoff-service";
 import { llmPort } from "../main/services/llm-port";
 import { ProjectService } from "../main/services/project-service";
@@ -89,6 +90,8 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
       search,
       config,
       repo,
+      files: noFilePort,
+      folders: null,
       gateway,
       appInfo: () => ({
         name: "KM0",

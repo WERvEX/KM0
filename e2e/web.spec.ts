@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./guards";
 
 test.use({ locale: "zh-CN" });
 
@@ -151,7 +151,7 @@ test("tasks are routed by rules, can be overridden, and show the saving once pri
   await expect(files.getByRole("button", { name: "km0/agents/CLAUDE.md" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /任务 01：搭建项目骨架与说明文档/ })).toBeVisible();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "下载 zip" }).click();
+  await page.getByRole("button", { name: "保存 zip" }).click();
   expect((await download).suggestedFilename()).toMatch(/^km0-handoff-\d+\.zip$/);
   await page.screenshot({ path: "test-results/screenshots/web-handoff.png", fullPage: true });
 });
@@ -223,7 +223,10 @@ test("technology questions are checked with a search service, which can be expor
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "导出配置" }).click();
   const file = await (await download).path();
-  await page.getByLabel("导入配置").setInputFiles(file);
+  // The browser build uses the browser's file chooser, the one place it may.
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "导入配置" }).click();
+  await (await chooser).setFiles(file);
   await expect(page.getByText(/导入完成：.*更新 1 个搜索服务/)).toBeVisible();
 
   // A full-path project reaches the technology stage with its options checked.

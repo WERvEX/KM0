@@ -34,18 +34,23 @@ export function WorkspacePage() {
       void navigate({ to: "/projects/$projectId", params: { projectId: String(detail.id) } });
     },
   });
-  // Picking and scanning run back to back so the user sees what was recognised before starting.
+  // The scan runs right after picking so the user sees what was recognised before starting. The
+  // button stays enabled while the folder browser is open, so focus returns to it when it closes.
   const scan = useMutation({
-    mutationFn: async (): Promise<{ path: string; scan: RepoScan } | null> => {
-      const path = await call("repo.pick", undefined);
-      if (!path) return null;
-      return { path, scan: await call("repo.scan", { path }) };
-    },
-    // Cancelling the dialog or a failed scan keeps the repository linked before.
-    onSuccess: (result) => {
-      if (result) setLinked(result);
-    },
+    mutationFn: async (path: string) => ({ path, scan: await call("repo.scan", { path }) }),
+    // A failed scan keeps the repository linked before.
+    onSuccess: (result) => setLinked(result),
   });
+  const [pickError, setPickError] = useState<unknown>(null);
+  const pick = async () => {
+    setPickError(null);
+    try {
+      const path = await call("repo.pick", undefined);
+      if (path) scan.mutate(path);
+    } catch (error) {
+      setPickError(error);
+    }
+  };
   const configError = create.error instanceof IpcError && create.error.shape.kind === "config";
   const canSubmit = hasModel && description.trim().length >= 4 && !create.isPending && !scan.isPending;
 
@@ -78,8 +83,8 @@ export function WorkspacePage() {
           scan={linked?.scan ?? null}
           busy={scan.isPending}
           disabled={!hasModel || create.isPending}
-          error={scan.error ? errorMessage(scan.error) : null}
-          onPick={() => scan.mutate()}
+          error={pickError ? errorMessage(pickError) : scan.error ? errorMessage(scan.error) : null}
+          onPick={() => void pick()}
           onRemove={() => {
             setLinked(null);
             scan.reset();

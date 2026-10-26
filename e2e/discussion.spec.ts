@@ -131,13 +131,15 @@ test("a full-path task goes from one sentence to a hand-off package, then is ren
 test("a linked repository is scanned read-only and its stack fills the technology stage", async () => {
   const repo = mkdtempSync(join(tmpdir(), "km0-linked-"));
   writeFileSync(join(repo, "package.json"), JSON.stringify({ dependencies: { react: "19", express: "5", pg: "8" } }));
-  // Stand in for the native folder dialog.
-  await launched.app.evaluate(({ dialog }, path) => {
-    dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog;
-  }, repo);
-
   await page.getByRole("link", { name: /新建任务/ }).click();
   await page.getByRole("button", { name: "关联本地仓库（可选）" }).click();
+  // KM0's own folder browser, not a system dialog: type the path, go there, choose it.
+  const browser = page.getByRole("dialog", { name: "选择本地仓库" });
+  await browser.getByRole("textbox", { name: "路径" }).fill(repo);
+  await browser.getByRole("button", { name: "前往" }).click();
+  await expect(browser.getByRole("list", { name: repo })).toBeVisible();
+  await browser.getByRole("button", { name: "选择此文件夹" }).click();
+  await expect(browser).toBeHidden();
   await expect(page.getByText("识别到：React, Express, PostgreSQL")).toBeVisible();
   await page.getByRole("textbox", { name: "从一句话开始" }).fill("从零做一个团队需求管理平台");
   await page.getByRole("button", { name: "开始分诊" }).click();
