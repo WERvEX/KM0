@@ -181,7 +181,11 @@ km0/agents/km0.mdc
 | ZCode | `AGENTS.md` | 桌面端粘贴，或 `zcode --prompt "<提示>" --mode build`（不写 `--mode` 默认 yolo）；模型在设置中选 | 仓库源码 |
 | 通用 | 无 | 粘贴任务文件 | 兜底 |
 
-第二期：直接拉起本地 Agent 并回写状态、MCP 服务器、执行后对照验收标准检查、经确认后写入目标仓库。
+### KM0 Runner 与验收（0.1.0 之后）
+
+交接时可以选择交给 [KM0 Runner](https://github.com/WERvEX/KM0-runner)：它在独立的 git worktree 里逐个执行任务，卡住时自己升档，交回分支和执行报告。KM0 导入一次运行（`runs/<run_id>` 文件夹），用规划模型对照每个任务的 EARS 验收标准判定，评审同时看到原始需求、任务引用的决策和上游任务的改动；判定可以手动改。未通过的任务从高一档重新分发。判定写回 `acceptance.jsonl`，Runner 用它校准路由规则，校准结果在“设置 → Agent”里导入。
+
+在 KM0 里直接启动执行、自定义模型和 Agent、按榜单先验分发等正式版的内容见 [ROADMAP-1.0.md](ROADMAP-1.0.md)。
 
 ## 系统架构与技术栈
 
@@ -282,6 +286,8 @@ IPC 通道定义在 `packages/shared/src/ipc.ts`，主进程按 zod schema 校�
 | P4 交接 | 核实各 Agent 接口；7 个适配器；上下文裁剪；zip 导出 | 适配器快照测试 |
 | P5 界面 | 完整工作区、问题卡、决策账本、文档页、路由表、交接面板、设置页 | 端到端走完一条完整通道并截图；**完成后暂停，请用户确认界面** |
 | P6 收尾 | 技术选型查证（Bocha / MCP）、仓库扫描、配置导入导出、README | 全量测试通过；三平台安装包 |
+
+P0–P6 已完成，0.1.0 已发布；之后接入了 KM0 Runner 与验收（见“Agent 交接”一节）。正式版的阶段 R0–R6 见 [ROADMAP-1.0.md](ROADMAP-1.0.md)。
 
 ## 风险
 
