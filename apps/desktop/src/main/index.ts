@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import { join, parse } from "node:path";
 import { createGateway, createSimulatedLlm } from "@km0/core";
-import { type AppNotice, type EmitEvent, IPC_EVENT, IPC_INVOKE } from "@km0/shared";
+import bundledRegistry from "@km0/registry/model-registry.json";
+import { type AppNotice, type EmitEvent, IPC_EVENT, IPC_INVOKE, ModelRegistry } from "@km0/shared";
 import { getDefaultEnvironment, StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { app, BrowserWindow, ipcMain, session, shell } from "electron";
 import log from "electron-log/main";
@@ -19,6 +20,7 @@ import { FolderRequests } from "./services/folder-requests";
 import { HandoffService } from "./services/handoff-service";
 import { llmPort } from "./services/llm-port";
 import { ProjectService } from "./services/project-service";
+import { RegistryService } from "./services/registry-service";
 import { RoutingService } from "./services/routing-service";
 import { RunnerService } from "./services/runner-service";
 import { SearchStore } from "./services/search-store";
@@ -37,6 +39,13 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let mainWindow: BrowserWindow | null = null;
+
+/** A text file over HTTPS, for the model registry update; gives up after 30 seconds. */
+async function downloadText(url: string): Promise<string> {
+  const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.text();
+}
 /** Notices raised before the window can show them, such as an error while it reloads. */
 const queuedNotices: AppNotice[] = [];
 
@@ -165,6 +174,7 @@ void app.whenReady().then(() => {
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db);
   const config = new ConfigService(settings, agents, search);
+  const registry = new RegistryService(db, ModelRegistry.parse(bundledRegistry), downloadText);
   const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules);
   const handoff = new HandoffService(db, routing, language);
   const runner = new RunnerService(
@@ -187,6 +197,7 @@ void app.whenReady().then(() => {
       agents,
       search,
       config,
+      registry,
       repo,
       files,
       folders,

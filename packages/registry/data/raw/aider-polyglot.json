@@ -1,0 +1,419 @@
+{
+ "fetchedAt": "2026-10-26T06:09:12.259Z",
+ "rows": [
+  {
+   "model": "Gemini 2.0 Pro exp-02-05",
+   "passRate": 35.6,
+   "date": "2025-02-25",
+   "editFormat": "whole"
+  },
+  {
+   "model": "gpt-4o-mini-2024-07-18",
+   "passRate": 3.6,
+   "date": "2024-12-21",
+   "editFormat": "whole"
+  },
+  {
+   "model": "claude-3-5-sonnet-20241022",
+   "passRate": 51.6,
+   "date": "2025-01-17",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gpt-4o-2024-11-20",
+   "passRate": 18.2,
+   "date": "2024-12-30",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gpt-4o-2024-08-06",
+   "passRate": 23.1,
+   "date": "2024-12-30",
+   "editFormat": "diff"
+  },
+  {
+   "model": "o1-2024-12-17 (high)",
+   "passRate": 61.7,
+   "date": "2024-12-21",
+   "editFormat": "diff"
+  },
+  {
+   "model": "DeepSeek Chat V2.5",
+   "passRate": 17.8,
+   "date": "2024-12-21",
+   "editFormat": "diff"
+  },
+  {
+   "model": "claude-3-5-haiku-20241022",
+   "passRate": 28,
+   "date": "2024-12-21",
+   "editFormat": "diff"
+  },
+  {
+   "model": "Qwen2.5-Coder-32B-Instruct",
+   "passRate": 8,
+   "date": "2024-12-22",
+   "editFormat": "diff"
+  },
+  {
+   "model": "o1-mini-2024-09-12",
+   "passRate": 32.9,
+   "date": "2024-12-22",
+   "editFormat": "whole"
+  },
+  {
+   "model": "gemini-exp-1206",
+   "passRate": 38.2,
+   "date": "2024-12-22",
+   "editFormat": "whole"
+  },
+  {
+   "model": "gemini-2.0-flash-exp",
+   "passRate": 22.2,
+   "date": "2024-12-22",
+   "editFormat": "whole"
+  },
+  {
+   "model": "yi-lightning",
+   "passRate": 12.9,
+   "date": "2024-12-23",
+   "editFormat": "whole"
+  },
+  {
+   "model": "DeepSeek Chat V3 (prev)",
+   "passRate": 48.4,
+   "date": "2024-12-25",
+   "editFormat": "diff"
+  },
+  {
+   "model": "Qwen2.5-Coder-32B-Instruct",
+   "passRate": 16.4,
+   "date": "2024-12-26",
+   "editFormat": "whole"
+  },
+  {
+   "model": "Codestral 25.01",
+   "passRate": 11.1,
+   "date": "2025-01-13",
+   "editFormat": "whole"
+  },
+  {
+   "model": "DeepSeek R1",
+   "passRate": 56.9,
+   "date": "2025-01-20",
+   "editFormat": "diff"
+  },
+  {
+   "model": "DeepSeek R1 + claude-3-5-sonnet-20241022",
+   "passRate": 64,
+   "date": "2025-01-23",
+   "editFormat": "architect"
+  },
+  {
+   "model": "qwen-max-2025-01-25",
+   "passRate": 21.8,
+   "date": "2025-01-28",
+   "editFormat": "diff"
+  },
+  {
+   "model": "o3-mini (medium)",
+   "passRate": 53.8,
+   "date": "2025-01-31",
+   "editFormat": "diff"
+  },
+  {
+   "model": "o3-mini (high)",
+   "passRate": 60.4,
+   "date": "2025-01-31",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gemini-2.0-flash-thinking-exp-01-21",
+   "passRate": 18.2,
+   "date": "2025-01-21",
+   "editFormat": "diff"
+  },
+  {
+   "model": "chatgpt-4o-latest (2025-02-15)",
+   "passRate": 27.1,
+   "date": "2025-02-15",
+   "editFormat": "diff"
+  },
+  {
+   "model": "claude-3-7-sonnet-20250219 (no thinking)",
+   "passRate": 60.4,
+   "date": "2025-02-24",
+   "editFormat": "diff"
+  },
+  {
+   "model": "claude-3-7-sonnet-20250219 (32k thinking tokens)",
+   "passRate": 64.9,
+   "date": "2025-02-24",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gpt-4.5-preview",
+   "passRate": 44.9,
+   "date": "2025-02-27",
+   "editFormat": "diff"
+  },
+  {
+   "model": "QwQ-32B",
+   "passRate": 20.9,
+   "date": "2025-03-06",
+   "editFormat": "diff"
+  },
+  {
+   "model": "QwQ-32B + Qwen 2.5 Coder Instruct",
+   "passRate": 26.2,
+   "date": "2025-03-07",
+   "editFormat": "architect"
+  },
+  {
+   "model": "command-a-03-2025-quality",
+   "passRate": 12,
+   "date": "2025-03-14",
+   "editFormat": "whole"
+  },
+  {
+   "model": "gemma-3-27b-it",
+   "passRate": 4.9,
+   "date": "2025-03-15",
+   "editFormat": "whole"
+  },
+  {
+   "model": "DeepSeek V3 (0324)",
+   "passRate": 55.1,
+   "date": "2025-03-24",
+   "editFormat": "diff"
+  },
+  {
+   "model": "Gemini 2.5 Pro Preview 03-25",
+   "passRate": 72.9,
+   "date": "2025-04-12",
+   "editFormat": "diff-fenced"
+  },
+  {
+   "model": "chatgpt-4o-latest (2025-03-29)",
+   "passRate": 45.3,
+   "date": "2025-03-29",
+   "editFormat": "diff"
+  },
+  {
+   "model": "Quasar Alpha",
+   "passRate": 54.7,
+   "date": "2025-04-04",
+   "editFormat": "diff"
+  },
+  {
+   "model": "Llama 4 Maverick",
+   "passRate": 15.6,
+   "date": "2025-04-06",
+   "editFormat": "whole"
+  },
+  {
+   "model": "Grok 3 Beta",
+   "passRate": 53.3,
+   "date": "2025-04-10",
+   "editFormat": "diff"
+  },
+  {
+   "model": "Grok 3 Mini Beta (low)",
+   "passRate": 34.7,
+   "date": "2025-04-10",
+   "editFormat": "whole"
+  },
+  {
+   "model": "Grok 3 Mini Beta (high)",
+   "passRate": 49.3,
+   "date": "2025-04-10",
+   "editFormat": "whole"
+  },
+  {
+   "model": "Optimus Alpha",
+   "passRate": 52.9,
+   "date": "2025-04-10",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gpt-4.1",
+   "passRate": 52.4,
+   "date": "2025-04-14",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gpt-4.1-mini",
+   "passRate": 32.4,
+   "date": "2025-04-14",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gpt-4.1-nano",
+   "passRate": 8.9,
+   "date": "2025-04-14",
+   "editFormat": "whole"
+  },
+  {
+   "model": "o4-mini (high)",
+   "passRate": 72,
+   "date": "2025-04-16",
+   "editFormat": "diff"
+  },
+  {
+   "model": "openhands-lm-32b-v0.1",
+   "passRate": 10.2,
+   "date": "2025-04-19",
+   "editFormat": "whole"
+  },
+  {
+   "model": "gemini-2.5-flash-preview-04-17 (default)",
+   "passRate": 47.1,
+   "date": "2025-04-20",
+   "editFormat": "diff"
+  },
+  {
+   "model": "Gemini 2.5 Pro Preview 05-06",
+   "passRate": 76.9,
+   "date": "2025-05-07",
+   "editFormat": "diff-fenced"
+  },
+  {
+   "model": "Qwen3 32B",
+   "passRate": 40,
+   "date": "2025-05-08",
+   "editFormat": "diff"
+  },
+  {
+   "model": "Qwen3 235B A22B diff, no think, Alibaba API",
+   "passRate": 59.6,
+   "date": "2025-05-09",
+   "editFormat": "diff"
+  },
+  {
+   "model": "claude-sonnet-4-20250514 (no thinking)",
+   "passRate": 56.4,
+   "date": "2025-05-24",
+   "editFormat": "diff"
+  },
+  {
+   "model": "claude-sonnet-4-20250514 (32k thinking)",
+   "passRate": 61.3,
+   "date": "2025-05-24",
+   "editFormat": "diff"
+  },
+  {
+   "model": "claude-opus-4-20250514 (no think)",
+   "passRate": 70.7,
+   "date": "2025-05-25",
+   "editFormat": "diff"
+  },
+  {
+   "model": "claude-opus-4-20250514 (32k thinking)",
+   "passRate": 72,
+   "date": "2025-05-25",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gemini-2.5-flash-preview-05-20 (no think)",
+   "passRate": 44,
+   "date": "2025-05-26",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gemini-2.5-flash-preview-05-20 (24k think)",
+   "passRate": 55.1,
+   "date": "2025-05-25",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gemini-2.5-pro-preview-06-05 (default think)",
+   "passRate": 79.1,
+   "date": "2025-06-06",
+   "editFormat": "diff-fenced"
+  },
+  {
+   "model": "gemini-2.5-pro-preview-06-05 (32k think)",
+   "passRate": 83.1,
+   "date": "2025-06-06",
+   "editFormat": "diff-fenced"
+  },
+  {
+   "model": "DeepSeek R1 (0528)",
+   "passRate": 71.4,
+   "date": "2025-06-06",
+   "editFormat": "diff"
+  },
+  {
+   "model": "o3 (high)",
+   "passRate": 81.3,
+   "date": "2025-06-25",
+   "editFormat": "diff"
+  },
+  {
+   "model": "o3",
+   "passRate": 76.9,
+   "date": "2025-06-25",
+   "editFormat": "diff"
+  },
+  {
+   "model": "o3 (high) + gpt-4.1",
+   "passRate": 78.2,
+   "date": "2025-06-27",
+   "editFormat": "architect"
+  },
+  {
+   "model": "o3-pro (high)",
+   "passRate": 84.9,
+   "date": "2025-06-28",
+   "editFormat": "diff"
+  },
+  {
+   "model": "grok-4 (high)",
+   "passRate": 79.6,
+   "date": "2025-07-11",
+   "editFormat": "diff"
+  },
+  {
+   "model": "Kimi K2",
+   "passRate": 59.1,
+   "date": "2025-07-17",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gpt-oss-120b (high)",
+   "passRate": 41.8,
+   "date": "2025-08-06",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gpt-5 (high)",
+   "passRate": 88,
+   "date": "2025-08-23",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gpt-5 (medium)",
+   "passRate": 86.7,
+   "date": "2025-08-25",
+   "editFormat": "diff"
+  },
+  {
+   "model": "gpt-5 (low)",
+   "passRate": 81.3,
+   "date": "2025-08-25",
+   "editFormat": "diff"
+  },
+  {
+   "model": "DeepSeek-V3.2-Exp (Reasoner)",
+   "passRate": 74.2,
+   "date": "2025-10-03",
+   "editFormat": "diff"
+  },
+  {
+   "model": "DeepSeek-V3.2-Exp (Chat)",
+   "passRate": 70.2,
+   "date": "2025-10-03",
+   "editFormat": "diff"
+  }
+ ]
+}

@@ -54,6 +54,7 @@ pnpm lint         # Biome 检查
 pnpm build        # 构建到 apps/desktop/out
 pnpm e2e          # Playwright 端到端测试，包括桌面版和网页版（需先 pnpm build；Linux 无显示环境时用 xvfb-run -a pnpm e2e）
 pnpm package      # 生成当前平台的安装包到 apps/desktop/release
+pnpm registry:fetch && pnpm registry:build   # 重新抓取榜单并生成模型注册表
 ```
 
 GitHub Actions 会在每次推送时运行检查，分别在 Windows、macOS、Linux 上构建安装包（作为构建产物上传，暂未签名），并部署网页调试版。推送 `v*` 标签（例如 `v0.1.0`），或在 Actions 页面手动运行 CI 并填写版本号时，还会把安装包发布成 GitHub Release，说明文字取自 `docs/releases/<标签>.md`。
@@ -63,6 +64,7 @@ GitHub Actions 会在每次推送时运行检查，分别在 Windows、macOS、L
 ```
 packages/core     领域逻辑与模型网关（纯 TypeScript，不依赖 Electron）
 packages/shared   zod schema、IPC 契约、共享类型
+packages/registry 模型注册表：从公开榜单拟合每个模型的能力先验（见 packages/registry/README.md）
 apps/desktop      Electron 应用：主进程、预加载脚本、React 界面，以及网页调试版入口
 e2e/              Playwright 端到端测试
 docs/DESIGN.md    设计文档

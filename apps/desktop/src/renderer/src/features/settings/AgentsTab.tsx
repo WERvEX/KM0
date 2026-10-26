@@ -4,17 +4,20 @@ import {
   type AgentId,
   CAPABILITIES,
   type Capability,
+  type RegistryInfo,
   RoutingRules,
   TIERS,
   type Tier,
 } from "@km0/shared";
-import { ArrowDown, ArrowUp, RotateCcw, Upload } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowDown, ArrowUp, Loader2, RefreshCw, RotateCcw, Upload } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
+import { useToast } from "@/components/ui/toast";
 import { useFiles } from "@/lib/files";
-import { errorMessage } from "@/lib/ipc";
+import { call, errorMessage } from "@/lib/ipc";
 import { useIpcMutation, useIpcQuery } from "@/lib/queries";
 
 export function agentName(id: AgentId, t: (key: string) => string): string {
@@ -41,7 +44,97 @@ export function AgentsTab() {
         />
       ))}
       <RoutingRulesSection />
+      <RegistrySection />
     </div>
+  );
+}
+
+/** The leaderboard data behind the ability priors: how current it is, where it comes from, and updating it. */
+function RegistrySection() {
+  const { t, i18n } = useTranslation();
+  const toast = useToast();
+  const files = useFiles();
+  const queryClient = useQueryClient();
+  const info = useIpcQuery("registry.info");
+  const refresh = (next: RegistryInfo) => queryClient.setQueryData(["registry.info"], next);
+  const update = useMutation({
+    mutationFn: () => call("registry.update", undefined),
+    onSuccess: ({ status, info: next }) => {
+      refresh(next);
+      toast({
+        kind: status === "updated" ? "success" : "info",
+        message: t(`settings.agents.registry.${status}`, { date: next.dataDate }),
+      });
+    },
+    onError: (error) => toast({ kind: "error", message: errorMessage(error) }),
+  });
+  const importFile = useMutation({
+    mutationFn: async () => {
+      const file = await files.openFile({
+        title: t("settings.agents.registry.import"),
+        extensions: ["json"],
+        memoryKey: "registry",
+      });
+      return file ? call("registry.import", { text: file.text }) : null;
+    },
+    onSuccess: (next) => {
+      if (!next) return;
+      refresh(next);
+      toast({ kind: "success", message: t("settings.agents.registry.imported", { date: next.dataDate }) });
+    },
+    onError: (error) => toast({ kind: "error", message: errorMessage(error) }),
+  });
+  const reset = useMutation({ mutationFn: () => call("registry.reset", undefined), onSuccess: refresh });
+  if (!info.data) return null;
+  const data = info.data;
+  const at = data.importedAt ? new Date(data.importedAt).toLocaleDateString(i18n.language) : "";
+  const busy = update.isPending || importFile.isPending || reset.isPending;
+
+  return (
+    <section
+      aria-label={t("settings.agents.registry.title")}
+      className="flex flex-col gap-3 rounded-lg border border-border bg-panel p-4"
+    >
+      <h2 className="text-sm font-semibold">{t("settings.agents.registry.title")}</h2>
+      <p className="text-sm text-muted">{t("settings.agents.registry.body")}</p>
+      <p className="text-sm">
+        {t("settings.agents.registry.dataDate", { date: data.dataDate })}
+        {" · "}
+        {t(`settings.agents.registry.origin.${data.origin}`, { at })}
+      </p>
+      <p className="text-sm text-muted">{t("settings.agents.registry.models", data.models)}</p>
+      <div>
+        <h3 className="text-xs font-medium text-muted">{t("settings.agents.registry.sources")}</h3>
+        <ul className="mt-1 flex flex-col gap-0.5 text-sm">
+          {data.sources.map((source) => (
+            <li key={source.url} className="flex flex-wrap gap-x-2">
+              <a href={source.url} target="_blank" rel="noreferrer" className="text-accent hover:underline">
+                {source.name}
+              </a>
+              {source.newestEntry ? (
+                <span className="text-muted">{t("settings.agents.registry.newest", { date: source.newestEntry })}</span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" onClick={() => update.mutate()} disabled={busy}>
+          {update.isPending ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+          {t("settings.agents.registry.update")}
+        </Button>
+        <Button size="sm" onClick={() => importFile.mutate()} disabled={busy}>
+          <Upload />
+          {t("settings.agents.registry.import")}
+        </Button>
+        {data.origin !== "bundled" ? (
+          <Button size="sm" onClick={() => reset.mutate()} disabled={busy}>
+            <RotateCcw />
+            {t("settings.agents.registry.reset")}
+          </Button>
+        ) : null}
+      </div>
+    </section>
   );
 }
 

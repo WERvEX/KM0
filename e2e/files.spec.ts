@@ -58,3 +58,22 @@ test("settings are exported and imported through KM0's own file browser", async 
   await expect(openDialog).toBeHidden();
   await expect(page.getByText(/导入完成/)).toBeVisible();
 });
+
+test("the model registry can be imported from a file through the file browser", async () => {
+  const registryFile = join(import.meta.dirname, "../packages/registry/generated/model-registry.json");
+  await page.getByRole("link", { name: "设置" }).click();
+  await page.getByRole("tab", { name: "Agent" }).click();
+  const section = page.getByRole("region", { name: "模型能力数据" });
+  await expect(section.getByText(/榜单数据截至 \d{4}-\d{2}-\d{2} · 随 KM0 发布/)).toBeVisible();
+  await expect(section.getByRole("link", { name: /Terminal-Bench/ })).toBeVisible();
+
+  await section.getByRole("button", { name: "从文件导入" }).click();
+  const dialog = page.getByRole("dialog", { name: "从文件导入" });
+  await goTo(dialog, join(registryFile, ".."));
+  await dialog.getByRole("button", { name: "model-registry.json" }).click();
+  await dialog.getByRole("button", { name: "打开" }).click();
+  await expect(page.getByRole("status").filter({ hasText: /已导入截至 .* 的榜单数据/ })).toBeVisible();
+  await expect(section.getByText(/从文件导入/).first()).toBeVisible();
+  await section.getByRole("button", { name: "恢复内置数据" }).click();
+  await expect(section.getByText(/随 KM0 发布/)).toBeVisible();
+});

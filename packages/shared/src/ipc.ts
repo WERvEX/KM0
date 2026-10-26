@@ -32,6 +32,7 @@ import {
 } from "./files";
 import { HandoffPackage, HandoffTarget } from "./handoff";
 import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
+import { MAX_REGISTRY_BYTES, RegistryInfo, RegistryUpdateResult } from "./registry";
 import { RepoScan, ScanRepoInput } from "./repo";
 import { SearchService, SearchServiceInput, SearchTestResult } from "./research";
 import {
@@ -86,6 +87,13 @@ export const ipcContract = {
   "settings.search.delete": channel(Id, z.void()),
   "settings.search.test": channel(Id.extend({ query: z.string().trim().min(1).max(200) }), SearchTestResult),
   "settings.export": channel(ExportConfigInput, ConfigBundle),
+  /** The model registry in use: leaderboard data and ability priors. */
+  "registry.info": channel(z.void(), RegistryInfo),
+  /** Download the newest registry; it is used only when its data is newer than the one in use. */
+  "registry.update": channel(z.void(), RegistryUpdateResult),
+  "registry.import": channel(z.object({ text: z.string().max(MAX_REGISTRY_BYTES) }), RegistryInfo),
+  /** Go back to the registry shipped with this version of KM0. */
+  "registry.reset": channel(z.void(), RegistryInfo),
   "settings.import": channel(ConfigBundle, ImportSummary),
 
   /** Ask the user for a folder; null when they cancel. Desktop: a path. Web: a label for the picked folder. */

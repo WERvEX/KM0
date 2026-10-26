@@ -148,6 +148,26 @@ export const en: Messages = {
         reset: "Restore defaults",
         invalid: "The file is not a valid set of routing rules.",
       },
+      registry: {
+        title: "Model ability data",
+        body: "KM0 estimates how well each model does each kind of task from public leaderboards (SWE-bench, Terminal-Bench, SWE-Bench Pro, SWE-rebench, Artificial Analysis, Design Arena and more) and uses that as the prior for routing; your own acceptance results correct it later. The data ships with KM0 and can be updated on its own.",
+        dataDate: "Leaderboard data up to {{date}}",
+        origin: {
+          bundled: "shipped with KM0",
+          downloaded: "updated {{at}}",
+          imported: "imported from a file {{at}}",
+        },
+        models:
+          "{{total}} models: {{measured}} with coding leaderboard results, {{inferred}} with general indices only, {{none}} without results (estimated from price)",
+        sources: "Sources",
+        newest: "newest {{date}}",
+        update: "Check for updates",
+        import: "Import from file",
+        reset: "Use the shipped data",
+        updated: "Updated to leaderboard data up to {{date}}.",
+        current: "The data is up to date (up to {{date}}).",
+        imported: "Imported leaderboard data up to {{date}}.",
+      },
     },
     search: {
       intro:

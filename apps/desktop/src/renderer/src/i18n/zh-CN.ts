@@ -143,6 +143,26 @@ export const zhCN = {
         reset: "恢复默认",
         invalid: "文件不是有效的路由规则。",
       },
+      registry: {
+        title: "模型能力数据",
+        body: "KM0 根据公开榜单（SWE-bench、Terminal-Bench、SWE-Bench Pro、SWE-rebench、Artificial Analysis、Design Arena 等）估计每个模型在各类任务上的能力，作为分发的先验；你自己的验收结果之后会修正它。数据随 KM0 发布，也可以单独更新。",
+        dataDate: "榜单数据截至 {{date}}",
+        origin: {
+          bundled: "随 KM0 发布",
+          downloaded: "已在 {{at}} 更新",
+          imported: "已在 {{at}} 从文件导入",
+        },
+        models:
+          "{{total}} 个模型：{{measured}} 个有编码榜单成绩，{{inferred}} 个只有综合指数，{{none}} 个没有成绩（按价位估计）",
+        sources: "数据来源",
+        newest: "最新 {{date}}",
+        update: "检查更新",
+        import: "从文件导入",
+        reset: "恢复内置数据",
+        updated: "已更新到 {{date}} 的榜单数据。",
+        current: "已经是最新的数据（截至 {{date}}）。",
+        imported: "已导入截至 {{date}} 的榜单数据。",
+      },
     },
     search: {
       intro:

@@ -8,6 +8,7 @@ import type { FilePort } from "./services/file-port";
 import type { FolderRequests } from "./services/folder-requests";
 import type { HandoffService } from "./services/handoff-service";
 import type { ProjectService } from "./services/project-service";
+import type { RegistryService } from "./services/registry-service";
 import { type RepoAccess, scanPath } from "./services/repo-access";
 import type { RoutingService } from "./services/routing-service";
 import type { RunnerService } from "./services/runner-service";
@@ -24,6 +25,7 @@ export interface HandlerDeps {
   agents: AgentStore;
   search: SearchStore;
   config: ConfigService;
+  registry: RegistryService;
   repo: RepoAccess;
   files: FilePort;
   /** Absent in the browser build, which uses the browser's own folder picker. */
@@ -42,6 +44,7 @@ export function createHandlers({
   agents,
   search,
   config,
+  registry,
   repo,
   files,
   folders,
@@ -81,6 +84,10 @@ export function createHandlers({
     "settings.search.test": ({ id, query }) => search.test(id, query),
     "settings.export": ({ includeSecrets }) => config.export(includeSecrets),
     "settings.import": (bundle) => config.import(bundle),
+    "registry.info": () => registry.info(),
+    "registry.update": () => registry.update(),
+    "registry.import": ({ text }) => registry.import(text),
+    "registry.reset": () => registry.reset(),
 
     "repo.pick": () => repo.pick(),
     "repo.scan": ({ path }) => scanPath(repo, path),

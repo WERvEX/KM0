@@ -181,6 +181,10 @@ km0/agents/km0.mdc
 | ZCode | `AGENTS.md` | 桌面端粘贴，或 `zcode --prompt "<提示>" --mode build`（不写 `--mode` 默认 yolo）；模型在设置中选 | 仓库源码 |
 | 通用 | 无 | 粘贴任务文件 | 兜底 |
 
+### 模型注册表（正式版 R2）
+
+`packages/registry` 每周从公开榜单（OpenRouter 及其附带的 Artificial Analysis、Design Arena 数据，Terminal-Bench，SWE-Bench Pro，SWE-rebench，SWE-bench，Aider）重新抓取成绩，对齐模型和 Agent 的名字，拟合每个模型在各类任务上的能力先验和每个 Agent 对本家模型、其他模型的修正，生成 `generated/model-registry.json`。注册表打进安装包和网页调试版，设置 → Agent → 模型能力数据里可以检查更新、从文件导入或恢复内置数据；下载或导入的版本存在 `model_registry` 表里，只有比内置的新时才使用。分发如何使用这些先验见 [ROADMAP-1.0.md](ROADMAP-1.0.md) 第 2、3 节。
+
 ### KM0 Runner 与验收（0.1.0 之后）
 
 交接时可以选择交给 [KM0 Runner](https://github.com/WERvEX/KM0-runner)：它在独立的 git worktree 里逐个执行任务，卡住时自己升档，交回分支和执行报告。KM0 导入一次运行（`runs/<run_id>` 文件夹），用规划模型对照每个任务的 EARS 验收标准判定，评审同时看到原始需求、任务引用的决策和上游任务的改动；判定可以手动改。未通过的任务从高一档重新分发。判定写回 `acceptance.jsonl`，Runner 用它校准路由规则，校准结果在“设置 → Agent”里导入。
@@ -228,6 +232,7 @@ KM0 是桌面应用：Electron + TypeScript 全栈，不起本地 Web 服务，�
 km0/
 ├─ packages/core     领域逻辑与模型网关（纯 TS）
 ├─ packages/shared   zod schema、IPC 契约、共享类型
+├─ packages/registry 模型注册表：抓取榜单、对齐名字、拟合能力先验（见其 README）
 ├─ apps/desktop
 │  ├─ src/main       主进程：数据库、设置、IPC 处理
 │  ├─ src/preload    只暴露契约里定义的 API

@@ -1,4 +1,6 @@
 import { createGateway, createSimulatedLlm, FakeProvider, ProviderError, toolReply } from "@km0/core";
+import bundledRegistry from "@km0/registry/model-registry.json";
+import { ModelRegistry } from "@km0/shared";
 import { describe, expect, it } from "vitest";
 import { openDatabase } from "../db/database";
 import { createHandlers } from "../handlers";
@@ -8,6 +10,7 @@ import { DocumentService } from "../services/document-service";
 import { noFilePort } from "../services/file-port";
 import { HandoffService } from "../services/handoff-service";
 import { ProjectService } from "../services/project-service";
+import { RegistryService } from "../services/registry-service";
 import { RoutingService } from "../services/routing-service";
 import { RunnerService } from "../services/runner-service";
 import { SearchStore } from "../services/search-store";
@@ -59,6 +62,7 @@ function setup(provider = new FakeProvider([])) {
       agents,
       search,
       config: new ConfigService(settings, agents, search),
+      registry: new RegistryService(db, ModelRegistry.parse(bundledRegistry), async () => ""),
       repo: {
         pick: async () => null,
         open: async () => {

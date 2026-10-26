@@ -1,0 +1,2365 @@
+{
+ "fetchedAt": "2026-10-26T06:09:09.859Z",
+ "items": [
+  {
+   "model": "gpt-4.1-2025-04-14",
+   "developer": "openai",
+   "kind": "model:text",
+   "release": "2025-04-14",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 30.125944584382875,
+     "sem": 0.23359240542810358
+    },
+    "python": {
+     "rate": 30.125944584382875,
+     "sem": 0.23359240542810358
+    }
+   }
+  },
+  {
+   "model": "DeepSeek-V3-0324",
+   "developer": "deepseek",
+   "kind": "model:text",
+   "release": "2025-03-24",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 24.634760705289672,
+     "sem": 0.5125186385233197
+    },
+    "python": {
+     "rate": 24.634760705289672,
+     "sem": 0.5125186385233197
+    }
+   }
+  },
+  {
+   "model": "DeepSeek-V3",
+   "developer": "deepseek",
+   "kind": "model:text",
+   "release": "2024-12-26",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 23.274559193954662,
+     "sem": 0.6833581846977598
+    },
+    "python": {
+     "rate": 23.274559193954662,
+     "sem": 0.6833581846977598
+    }
+   }
+  },
+  {
+   "model": "Qwen3-235B-A22B no-thinking",
+   "developer": "alibaba",
+   "kind": "model:text",
+   "release": "2025-04-28",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 17.531486146095716,
+     "sem": 0.5885804254684093
+    },
+    "python": {
+     "rate": 17.531486146095716,
+     "sem": 0.5885804254684093
+    }
+   }
+  },
+  {
+   "model": "Qwen3-235B-A22B thinking",
+   "developer": "alibaba",
+   "kind": "model:text",
+   "release": "2025-04-28",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 14.617968094038622,
+     "sem": 0.5707635398608677
+    },
+    "python": {
+     "rate": 14.617968094038622,
+     "sem": 0.5707635398608677
+    }
+   }
+  },
+  {
+   "model": "Qwen3-32B no-thinking",
+   "developer": "alibaba",
+   "kind": "model:text",
+   "release": "2025-04-28",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 14.15617128463476,
+     "sem": 0.518671543626549
+    },
+    "python": {
+     "rate": 14.15617128463476,
+     "sem": 0.518671543626549
+    }
+   }
+  },
+  {
+   "model": "Qwen3-32B thinking",
+   "developer": "alibaba",
+   "kind": "model:text",
+   "release": "2025-04-28",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 13.249370277078084,
+     "sem": 0.17083954617444017
+    },
+    "python": {
+     "rate": 13.249370277078084,
+     "sem": 0.17083954617444017
+    }
+   }
+  },
+  {
+   "model": "Llama-4-Maverick-17B-128E-Instruct",
+   "developer": "meta",
+   "kind": "model:text",
+   "release": "2025-04-05",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-09-01",
+   "rates": {
+    "all": {
+     "rate": 10.963351097677378,
+     "sem": 0.7264775520895957
+    },
+    "python": {
+     "rate": 10.963351097677378,
+     "sem": 0.7264775520895957
+    }
+   }
+  },
+  {
+   "model": "Qwen2.5-72B-Instruct",
+   "developer": "alibaba",
+   "kind": "model:text",
+   "release": "2024-09-16",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-09-01",
+   "rates": {
+    "all": {
+     "rate": 10.111358574610245,
+     "sem": 0.4542556359548138
+    },
+    "python": {
+     "rate": 10.111358574610245,
+     "sem": 0.4542556359548138
+    }
+   }
+  },
+  {
+   "model": "Llama-3.3-70B-Instruct",
+   "developer": "meta",
+   "kind": "model:text",
+   "release": "2024-12-06",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-09-01",
+   "rates": {
+    "all": {
+     "rate": 11.53674832962138,
+     "sem": 0.2578137394830785
+    },
+    "python": {
+     "rate": 11.53674832962138,
+     "sem": 0.2578137394830785
+    }
+   }
+  },
+  {
+   "model": "Llama-4-Scout-17B-16E-Instruct",
+   "developer": "meta",
+   "kind": "model:text",
+   "release": "2025-04-05",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 6.649874055415617,
+     "sem": 0.17083954617443997
+    },
+    "python": {
+     "rate": 6.649874055415617,
+     "sem": 0.17083954617443997
+    }
+   }
+  },
+  {
+   "model": "gemma-3-27b-it",
+   "developer": "google",
+   "kind": "model:text",
+   "release": "2025-03-10",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-09-01",
+   "rates": {
+    "all": {
+     "rate": 5.389755011135857,
+     "sem": 0.4420809185140136
+    },
+    "python": {
+     "rate": 5.389755011135857,
+     "sem": 0.4420809185140136
+    }
+   }
+  },
+  {
+   "model": "Qwen2.5-Coder-32B-Instruct",
+   "developer": "alibaba",
+   "kind": "model:text",
+   "release": "2024-11-10",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 3.073047858942066,
+     "sem": 0.48713046866029514
+    },
+    "python": {
+     "rate": 3.073047858942066,
+     "sem": 0.48713046866029514
+    }
+   }
+  },
+  {
+   "model": "gpt-4.1-mini-2025-04-14",
+   "developer": "openai",
+   "kind": "model:text",
+   "release": "2025-04-14",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 25.4911838790932,
+     "sem": 0.4999857239616928
+    },
+    "python": {
+     "rate": 25.4911838790932,
+     "sem": 0.4999857239616928
+    }
+   }
+  },
+  {
+   "model": "gpt-4.1-nano-2025-04-14",
+   "developer": "openai",
+   "kind": "model:text",
+   "release": "2025-04-14",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 0.2518891687657431,
+     "sem": 0
+    },
+    "python": {
+     "rate": 0.2518891687657431,
+     "sem": 0
+    }
+   }
+  },
+  {
+   "model": "gemini-2.0-flash",
+   "developer": "google",
+   "kind": "model:text",
+   "release": "2025-02-05",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 9.068010075566752,
+     "sem": 0.45757939860415475
+    },
+    "python": {
+     "rate": 9.068010075566752,
+     "sem": 0.45757939860415475
+    }
+   }
+  },
+  {
+   "model": "gemini-2.5-flash-preview-05-20 no-thinking",
+   "developer": "google",
+   "kind": "model:text",
+   "release": "2025-05-20",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-06-30",
+   "rates": {}
+  },
+  {
+   "model": "Devstral-Small-2505",
+   "developer": "mistral",
+   "kind": "model:text",
+   "release": "2025-05-21",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 14.55919395465995,
+     "sem": 0.2015113350125945
+    },
+    "python": {
+     "rate": 14.55919395465995,
+     "sem": 0.2015113350125945
+    }
+   }
+  },
+  {
+   "model": "DeepSeek-V3-0324",
+   "developer": "deepseek",
+   "kind": "model:tools",
+   "release": "2025-03-24",
+   "windowFrom": "2025-01-01",
+   "windowTo": "2025-11-01",
+   "rates": {
+    "all": {
+     "rate": 24.82729049499422,
+     "sem": 0.4540666920875106
+    },
+    "python": {
+     "rate": 24.82729049499422,
+     "sem": 0.4540666920875106
+    }
+   }
+  },
+  {
+   "model": "Claude Sonnet 3.5",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2024-10-22",
+   "windowFrom": "2025-05-01",
+   "windowTo": "2025-09-01",
+   "rates": {
+    "all": {
+     "rate": 30.282953761214632,
+     "sem": 0.4117907322904589
+    },
+    "python": {
+     "rate": 30.282953761214632,
+     "sem": 0.4117907322904589
+    }
+   }
+  },
+  {
+   "model": "Claude Sonnet 4",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2025-05-22",
+   "windowFrom": "2025-05-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 44.58115401143768,
+     "sem": 0.6125892787421405
+    },
+    "python": {
+     "rate": 44.58115401143768,
+     "sem": 0.6125892787421405
+    }
+   }
+  },
+  {
+   "model": "gemini-2.5-flash-preview-05-20 no-thinking",
+   "developer": "google",
+   "kind": "model:tools",
+   "release": "2025-05-20",
+   "windowFrom": "2025-05-01",
+   "windowTo": "2025-06-30",
+   "rates": {}
+  },
+  {
+   "model": "gpt-4.1-2025-04-14",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-04-14",
+   "windowFrom": "2025-05-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 29.718949446029548,
+     "sem": 0.6770917486929262
+    },
+    "python": {
+     "rate": 29.718949446029548,
+     "sem": 0.6770917486929262
+    }
+   }
+  },
+  {
+   "model": "o3-2025-04-16",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-04-16",
+   "windowFrom": "2025-05-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 38.05825242718447,
+     "sem": 0.4293365424408275
+    },
+    "python": {
+     "rate": 38.05825242718447,
+     "sem": 0.4293365424408275
+    }
+   }
+  },
+  {
+   "model": "gemini-2.5-flash",
+   "developer": "google",
+   "kind": "model:tools",
+   "release": "2025-06-17",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2025-11-01",
+   "rates": {
+    "all": {
+     "rate": 19.912573614231075,
+     "sem": 0.41044547813716276
+    },
+    "python": {
+     "rate": 19.912573614231075,
+     "sem": 0.41044547813716276
+    }
+   }
+  },
+  {
+   "model": "gemini-2.0-flash",
+   "developer": "google",
+   "kind": "model:tools",
+   "release": "2025-02-05",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2025-09-01",
+   "rates": {
+    "all": {
+     "rate": 13.233965672990061,
+     "sem": 0.9747101811383984
+    },
+    "python": {
+     "rate": 13.233965672990061,
+     "sem": 0.9747101811383984
+    }
+   }
+  },
+  {
+   "model": "gemini-2.5-pro",
+   "developer": "google",
+   "kind": "model:tools",
+   "release": "2025-06-17",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2025-11-01",
+   "rates": {
+    "all": {
+     "rate": 23.460020642341085,
+     "sem": 0.6343049053649439
+    },
+    "python": {
+     "rate": 23.460020642341085,
+     "sem": 0.6343049053649439
+    }
+   }
+  },
+  {
+   "model": "Qwen3-Coder-480B-A35B-Instruct",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2025-07-22",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 36.28992607668324,
+     "sem": 0.6240184559572816
+    },
+    "python": {
+     "rate": 36.28992607668324,
+     "sem": 0.6240184559572816
+    }
+   }
+  },
+  {
+   "model": "Qwen3-235B-A22B-Thinking-2507",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2025-07-25",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 21.310043668122272,
+     "sem": 0.6388095562588555
+    },
+    "python": {
+     "rate": 21.310043668122272,
+     "sem": 0.6388095562588555
+    }
+   }
+  },
+  {
+   "model": "Qwen3-235B-A22B-Instruct-2507",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2025-07-25",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 26.234567901234566,
+     "sem": 0.35190599540096806
+    },
+    "python": {
+     "rate": 26.234567901234566,
+     "sem": 0.35190599540096806
+    }
+   }
+  },
+  {
+   "model": "o4-mini-2025-04-16",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-04-16",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 27.51091703056769,
+     "sem": 0.6019235262921496
+    },
+    "python": {
+     "rate": 27.51091703056769,
+     "sem": 0.6019235262921496
+    }
+   }
+  },
+  {
+   "model": "DeepSeek-R1-0528",
+   "developer": "deepseek",
+   "kind": "model:tools",
+   "release": "2025-05-28",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 22.325886706916005,
+     "sem": 1.0699905998080443
+    },
+    "python": {
+     "rate": 22.325886706916005,
+     "sem": 1.0699905998080443
+    }
+   }
+  },
+  {
+   "model": "horizon-alpha",
+   "developer": "openrouter",
+   "kind": "model:tools",
+   "release": "2025-07-30",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 17.333333333333336,
+     "sem": 1.2472191289246473
+    },
+    "python": {
+     "rate": 17.333333333333336,
+     "sem": 1.2472191289246473
+    }
+   }
+  },
+  {
+   "model": "Qwen3-Coder-30B-A3B-Instruct",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2025-07-31",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 21.56437246963563,
+     "sem": 0.4983172522821621
+    },
+    "python": {
+     "rate": 21.56437246963563,
+     "sem": 0.4983172522821621
+    }
+   }
+  },
+  {
+   "model": "horizon-beta",
+   "developer": "openrouter",
+   "kind": "model:tools",
+   "release": "2025-08-01",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2025-08-01",
+   "rates": {
+    "all": {
+     "rate": 18,
+     "sem": 0.8164965809277267
+    },
+    "python": {
+     "rate": 18,
+     "sem": 0.8164965809277267
+    }
+   }
+  },
+  {
+   "model": "gpt-5-2025-08-07-medium",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-08-07",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 44.01746724890829,
+     "sem": 0.8445012928302931
+    },
+    "python": {
+     "rate": 44.01746724890829,
+     "sem": 0.8445012928302931
+    }
+   }
+  },
+  {
+   "model": "gpt-5-2025-08-07-high",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-08-07",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 41.921397379912655,
+     "sem": 0.5523629100730794
+    },
+    "python": {
+     "rate": 41.921397379912655,
+     "sem": 0.5523629100730794
+    }
+   }
+  },
+  {
+   "model": "gpt-5-2025-08-07-minimal",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-08-07",
+   "windowFrom": "2025-07-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 29.983911744426567,
+     "sem": 0.5473964757685592
+    },
+    "python": {
+     "rate": 29.983911744426567,
+     "sem": 0.5473964757685592
+    }
+   }
+  },
+  {
+   "model": "GLM-4.5",
+   "developer": "zhipu",
+   "kind": "model:tools",
+   "release": "2025-07-28",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 39.69849246231155,
+     "sem": 0.8847646664150256
+    },
+    "python": {
+     "rate": 39.69849246231155,
+     "sem": 0.8847646664150256
+    }
+   }
+  },
+  {
+   "model": "GLM-4.5 Air",
+   "developer": "zhipu",
+   "kind": "model:tools",
+   "release": "2025-07-28",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 32.9707689500793,
+     "sem": 0.15542414370163868
+    },
+    "python": {
+     "rate": 32.9707689500793,
+     "sem": 0.15542414370163868
+    }
+   }
+  },
+  {
+   "model": "Grok Code Fast 1",
+   "developer": "xai",
+   "kind": "model:tools",
+   "release": "2025-08-26",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2026-01-01",
+   "rates": {
+    "all": {
+     "rate": 33.82599355531686,
+     "sem": 0.733757356886186
+    },
+    "python": {
+     "rate": 33.82599355531686,
+     "sem": 0.733757356886186
+    }
+   }
+  },
+  {
+   "model": "gpt-oss-120b",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-07-13",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 27.257229621699537,
+     "sem": 0.43015859883713925
+    },
+    "python": {
+     "rate": 27.257229621699537,
+     "sem": 0.43015859883713925
+    }
+   }
+  },
+  {
+   "model": "gpt-oss-20b",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-07-13",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2025-09-01",
+   "rates": {
+    "all": {
+     "rate": 8.076923076923077,
+     "sem": 1.1213369028548656
+    },
+    "python": {
+     "rate": 8.076923076923077,
+     "sem": 1.1213369028548656
+    }
+   }
+  },
+  {
+   "model": "gpt-5-mini-2025-08-07-medium",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-08-07",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 38.0689496137438,
+     "sem": 0.7317816209907343
+    },
+    "python": {
+     "rate": 38.0689496137438,
+     "sem": 0.7317816209907343
+    }
+   }
+  },
+  {
+   "model": "gpt-4.1-mini-2025-04-14",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-04-14",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 15.810364956093597,
+     "sem": 0.7394191806757708
+    },
+    "python": {
+     "rate": 15.810364956093597,
+     "sem": 0.7394191806757708
+    }
+   }
+  },
+  {
+   "model": "Kimi K2",
+   "developer": "moonshot",
+   "kind": "model:tools",
+   "release": "2025-07-11",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2025-09-01",
+   "rates": {
+    "all": {
+     "rate": 34.61538461538461,
+     "sem": 0.8600261451922262
+    },
+    "python": {
+     "rate": 34.61538461538461,
+     "sem": 0.8600261451922262
+    }
+   }
+  },
+  {
+   "model": "Qwen3-235B-A22B",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2025-04-29",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2025-09-01",
+   "rates": {
+    "all": {
+     "rate": 18.461538461538463,
+     "sem": 0.98058067569092
+    },
+    "python": {
+     "rate": 18.461538461538463,
+     "sem": 0.98058067569092
+    }
+   }
+  },
+  {
+   "model": "Qwen3-32B",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2025-04-29",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2025-09-01",
+   "rates": {
+    "all": {
+     "rate": 8.076923076923077,
+     "sem": 2.0532842792367907
+    },
+    "python": {
+     "rate": 8.076923076923077,
+     "sem": 2.0532842792367907
+    }
+   }
+  },
+  {
+   "model": "Kimi K2 Instruct 0905",
+   "developer": "moonshot",
+   "kind": "model:tools",
+   "release": "2025-09-05",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 35.396602141753334,
+     "sem": 0.6755293464631847
+    },
+    "python": {
+     "rate": 35.396602141753334,
+     "sem": 0.6755293464631847
+    }
+   }
+  },
+  {
+   "model": "Qwen3-Next-80B-A3B-Instruct",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2025-09-11",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 20.14985032596946,
+     "sem": 0.8578972441222346
+    },
+    "python": {
+     "rate": 20.14985032596946,
+     "sem": 0.8578972441222346
+    }
+   }
+  },
+  {
+   "model": "DeepSeek-V3.1",
+   "developer": "deepseek",
+   "kind": "model:tools",
+   "release": "2025-08-21",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2025-11-01",
+   "rates": {
+    "all": {
+     "rate": 28.04334843731846,
+     "sem": 0.8037911714492743
+    },
+    "python": {
+     "rate": 28.04334843731846,
+     "sem": 0.8037911714492743
+    }
+   }
+  },
+  {
+   "model": "Grok 4",
+   "developer": "xai",
+   "kind": "model:tools",
+   "release": "2025-07-09",
+   "windowFrom": "2025-08-01",
+   "windowTo": "2025-10-01",
+   "rates": {
+    "all": {
+     "rate": 38.25148514851486,
+     "sem": 1.8737570791350373
+    },
+    "python": {
+     "rate": 38.25148514851486,
+     "sem": 1.8737570791350373
+    }
+   }
+  },
+  {
+   "model": "Claude Sonnet 4.5",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2025-09-29",
+   "windowFrom": "2025-09-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 52.44147157190635,
+     "sem": 0.8287298791547733
+    },
+    "python": {
+     "rate": 52.44147157190635,
+     "sem": 0.8287298791547733
+    }
+   }
+  },
+  {
+   "model": "Claude Opus 4.1",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2025-08-05",
+   "windowFrom": "2025-09-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 43.46193271829281,
+     "sem": 1.2909680970336588
+    },
+    "python": {
+     "rate": 43.46193271829281,
+     "sem": 1.2909680970336588
+    }
+   }
+  },
+  {
+   "model": "gpt-5-codex",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-09-23",
+   "windowFrom": "2025-09-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 44.21768707482993,
+     "sem": 1.2357756547336702
+    },
+    "python": {
+     "rate": 44.21768707482993,
+     "sem": 1.2357756547336702
+    }
+   }
+  },
+  {
+   "model": "Qwen3-30B-A3B-Thinking-2507",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2025-07-25",
+   "windowFrom": "2025-09-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 10.759481874941756,
+     "sem": 0.6833391211550305
+    },
+    "python": {
+     "rate": 10.759481874941756,
+     "sem": 0.6833391211550305
+    }
+   }
+  },
+  {
+   "model": "Qwen3-30B-A3B-Instruct-2507",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2025-07-25",
+   "windowFrom": "2025-09-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 9.098849963513194,
+     "sem": 0.8189528022740049
+    },
+    "python": {
+     "rate": 9.098849963513194,
+     "sem": 0.8189528022740049
+    }
+   }
+  },
+  {
+   "model": "GLM-4.6",
+   "developer": "zhipu",
+   "kind": "model:tools",
+   "release": "2025-09-30",
+   "windowFrom": "2025-09-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 37.95182640775499,
+     "sem": 0.798744274232352
+    },
+    "python": {
+     "rate": 37.95182640775499,
+     "sem": 0.798744274232352
+    }
+   }
+  },
+  {
+   "model": "MiniMax M2",
+   "developer": "minimax",
+   "kind": "model:tools",
+   "release": "2025-10-23",
+   "windowFrom": "2025-10-01",
+   "windowTo": "2025-12-01",
+   "rates": {
+    "all": {
+     "rate": 35.91836734693878,
+     "sem": 0.8163265306122446
+    },
+    "python": {
+     "rate": 35.91836734693878,
+     "sem": 0.8163265306122446
+    }
+   }
+  },
+  {
+   "model": "Claude Opus 4.5",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2025-11-24",
+   "windowFrom": "2025-10-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 53.09278350515464,
+     "sem": 0.4312680549144704
+    },
+    "python": {
+     "rate": 53.09278350515464,
+     "sem": 0.4312680549144704
+    }
+   }
+  },
+  {
+   "model": "Gemini 3 Pro Preview",
+   "developer": "google",
+   "kind": "model:tools",
+   "release": "2025-11-19",
+   "windowFrom": "2025-10-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 50.72912771753646,
+     "sem": 1.2239108397606742
+    },
+    "python": {
+     "rate": 50.72912771753646,
+     "sem": 1.2239108397606742
+    }
+   }
+  },
+  {
+   "model": "gpt-5.1-codex-max",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-11-19",
+   "windowFrom": "2025-11-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 54.48340392002364,
+     "sem": 1.597583179363583
+    },
+    "python": {
+     "rate": 54.48340392002364,
+     "sem": 1.597583179363583
+    }
+   }
+  },
+  {
+   "model": "gpt-5.2-2025-12-11-medium",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-12-11",
+   "windowFrom": "2025-11-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 59.25251383822666,
+     "sem": 0.527707051151406
+    },
+    "python": {
+     "rate": 59.25251383822666,
+     "sem": 0.527707051151406
+    }
+   }
+  },
+  {
+   "model": "Devstral-2-123B-Instruct-2512",
+   "developer": "mistral",
+   "kind": "model:tools",
+   "release": "2025-12-25",
+   "windowFrom": "2025-11-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 42.01005025125628,
+     "sem": 0.9744080115409703
+    },
+    "python": {
+     "rate": 42.01005025125628,
+     "sem": 0.9744080115409703
+    }
+   }
+  },
+  {
+   "model": "Devstral-Small-2-24B-Instruct-2512",
+   "developer": "mistral",
+   "kind": "model:tools",
+   "release": "2025-12-25",
+   "windowFrom": "2025-11-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 36.36193594233795,
+     "sem": 1.1732147250869298
+    },
+    "python": {
+     "rate": 36.36193594233795,
+     "sem": 1.1732147250869298
+    }
+   }
+  },
+  {
+   "model": "DeepSeek-V3.2",
+   "developer": "deepseek",
+   "kind": "model:tools",
+   "release": "2025-12-01",
+   "windowFrom": "2025-11-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 48.895457083396785,
+     "sem": 0.763306626834098
+    },
+    "python": {
+     "rate": 48.895457083396785,
+     "sem": 0.763306626834098
+    }
+   }
+  },
+  {
+   "model": "Claude Code",
+   "developer": "anthropic",
+   "kind": "agent:tools",
+   "release": "2025-11-24",
+   "windowFrom": "2025-11-01",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 58.84017645062776,
+     "sem": 0.645277207579704
+    },
+    "go": {
+     "rate": 70.47619047619048,
+     "sem": 0.9523809523809533
+    },
+    "java": {
+     "rate": 49.523809523809526,
+     "sem": 1.16642368703961
+    },
+    "rust": {
+     "rate": 61.6,
+     "sem": 1.6000000000000014
+    },
+    "python": {
+     "rate": 57.7922077922078,
+     "sem": 0.6992380607184103
+    },
+    "typescript": {
+     "rate": 68.33333333333333,
+     "sem": 3.385016001931649
+    }
+   }
+  },
+  {
+   "model": "MiniMax M2.1",
+   "developer": "minimax",
+   "kind": "model:tools",
+   "release": "2025-12-22",
+   "windowFrom": "2025-11-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 37.40076824583867,
+     "sem": 1.7270860622580566
+    },
+    "python": {
+     "rate": 37.40076824583867,
+     "sem": 1.7270860622580566
+    }
+   }
+  },
+  {
+   "model": "gpt-5.1-codex",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-11-12",
+   "windowFrom": "2025-12-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 48.75,
+     "sem": 0.8960755486502733
+    },
+    "python": {
+     "rate": 48.75,
+     "sem": 0.8960755486502733
+    }
+   }
+  },
+  {
+   "model": "gpt-5.2-2025-12-11-xhigh",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-12-11",
+   "windowFrom": "2025-12-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 56.57456140350876,
+     "sem": 0.3045917639386849
+    },
+    "python": {
+     "rate": 56.57456140350876,
+     "sem": 0.3045917639386849
+    }
+   }
+  },
+  {
+   "model": "gpt-5-mini-2025-08-07-high",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-08-06",
+   "windowFrom": "2025-12-01",
+   "windowTo": "2026-02-01",
+   "rates": {
+    "all": {
+     "rate": 39.62061403508771,
+     "sem": 0.3209855169040703
+    },
+    "python": {
+     "rate": 39.62061403508771,
+     "sem": 0.3209855169040703
+    }
+   }
+  },
+  {
+   "model": "Kimi K2 Thinking",
+   "developer": "moonshot",
+   "kind": "model:tools",
+   "release": "2025-11-06",
+   "windowFrom": "2025-12-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 47.815480787411985,
+     "sem": 1.2345501100854865
+    },
+    "python": {
+     "rate": 47.815480787411985,
+     "sem": 1.2345501100854865
+    }
+   }
+  },
+  {
+   "model": "GLM-4.7",
+   "developer": "zhipu",
+   "kind": "model:tools",
+   "release": "2025-12-22",
+   "windowFrom": "2025-12-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 45.53826952660146,
+     "sem": 0.4234518845167259
+    },
+    "python": {
+     "rate": 45.53826952660146,
+     "sem": 0.4234518845167259
+    }
+   }
+  },
+  {
+   "model": "Gemini 3 Flash Preview",
+   "developer": "google",
+   "kind": "model:tools",
+   "release": "2025-12-17",
+   "windowFrom": "2025-12-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 53.00911592707258,
+     "sem": 0.4168980195749748
+    },
+    "python": {
+     "rate": 53.00911592707258,
+     "sem": 0.4168980195749748
+    }
+   }
+  },
+  {
+   "model": "gpt-oss-120b-high",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-08-05",
+   "windowFrom": "2025-12-01",
+   "windowTo": "2026-01-01",
+   "rates": {
+    "all": {
+     "rate": 36.959219858156025,
+     "sem": 3.5338440713801917
+    },
+    "python": {
+     "rate": 36.959219858156025,
+     "sem": 3.5338440713801917
+    }
+   }
+  },
+  {
+   "model": "GLM-4.7 Flash",
+   "developer": "zhipu",
+   "kind": "model:tools",
+   "release": "2026-01-19",
+   "windowFrom": "2026-01-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 30.0952380952381,
+     "sem": 1.3333333333333337
+    },
+    "python": {
+     "rate": 30.0952380952381,
+     "sem": 1.3333333333333337
+    }
+   }
+  },
+  {
+   "model": "Kimi K2.5",
+   "developer": "moonshot",
+   "kind": "model:tools",
+   "release": "2026-01-26",
+   "windowFrom": "2026-01-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 49.04395604395604,
+     "sem": 0.7979212617639928
+    },
+    "python": {
+     "rate": 49.04395604395604,
+     "sem": 0.7979212617639928
+    }
+   }
+  },
+  {
+   "model": "gpt-5.2-codex",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2025-12-18",
+   "windowFrom": "2026-01-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 51.346153846153854,
+     "sem": 1.2388556468004936
+    },
+    "python": {
+     "rate": 51.346153846153854,
+     "sem": 1.2388556468004936
+    }
+   }
+  },
+  {
+   "model": "Qwen3-Coder-Next",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2026-02-02",
+   "windowFrom": "2026-01-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 47.8003663003663,
+     "sem": 0.8884973862435783
+    },
+    "python": {
+     "rate": 47.8003663003663,
+     "sem": 0.8884973862435783
+    }
+   }
+  },
+  {
+   "model": "Claude Opus 4.6-high",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2026-02-05",
+   "windowFrom": "2026-01-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 53.30232558139535,
+     "sem": 0.5992604058941919
+    },
+    "python": {
+     "rate": 53.30232558139535,
+     "sem": 0.5992604058941919
+    }
+   }
+  },
+  {
+   "model": "GLM-5",
+   "developer": "zhipu",
+   "kind": "model:tools",
+   "release": "2026-02-11",
+   "windowFrom": "2026-01-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 53.33333333333334,
+     "sem": 0.9035079029052521
+    },
+    "python": {
+     "rate": 53.33333333333334,
+     "sem": 0.9035079029052521
+    }
+   }
+  },
+  {
+   "model": "Codex",
+   "developer": "openai",
+   "kind": "agent:tools",
+   "release": "2025-12-18",
+   "windowFrom": "2026-01-01",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 56.84409339084262,
+     "sem": 0.2782882247141198
+    },
+    "go": {
+     "rate": 67.61904761904762,
+     "sem": 1.7817416127494963
+    },
+    "java": {
+     "rate": 48.57142857142858,
+     "sem": 0.9523809523809533
+    },
+    "rust": {
+     "rate": 60.8,
+     "sem": 2.939387691339814
+    },
+    "python": {
+     "rate": 55.697924532836474,
+     "sem": 0.42366861469394884
+    },
+    "typescript": {
+     "rate": 61.66666666666667,
+     "sem": 0.8333333333333326
+    }
+   }
+  },
+  {
+   "model": "MiniMax M2.5",
+   "developer": "minimax",
+   "kind": "model:tools",
+   "release": "2026-02-12",
+   "windowFrom": "2026-01-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 47.71245421245421,
+     "sem": 1.3664783491887242
+    },
+    "python": {
+     "rate": 47.71245421245421,
+     "sem": 1.3664783491887242
+    }
+   }
+  },
+  {
+   "model": "Junie",
+   "developer": "jetbrains",
+   "kind": "agent:tools",
+   "release": "2025-12-17",
+   "windowFrom": "2026-01-01",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 60.46644643699859,
+     "sem": 0.2067403601791123
+    },
+    "go": {
+     "rate": 69.52380952380952,
+     "sem": 1.1664236870396099
+    },
+    "java": {
+     "rate": 62.857142857142854,
+     "sem": 1.7817416127494954
+    },
+    "rust": {
+     "rate": 55.2,
+     "sem": 1.496662954709576
+    },
+    "python": {
+     "rate": 58.432805964720856,
+     "sem": 0.5452791938160272
+    },
+    "typescript": {
+     "rate": 75.83333333333334,
+     "sem": 2.4295632895188746
+    }
+   }
+  },
+  {
+   "model": "Gemini 3.1 Pro Preview",
+   "developer": "google",
+   "kind": "model:tools",
+   "release": "2026-02-19",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 54.91234398672534,
+     "sem": 0.9239067816830353
+    },
+    "python": {
+     "rate": 54.91234398672534,
+     "sem": 0.9239067816830353
+    }
+   }
+  },
+  {
+   "model": "Claude Sonnet 4.6",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2026-02-17",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 54.49101796407185,
+     "sem": 0.18935794372265716
+    },
+    "python": {
+     "rate": 54.49101796407185,
+     "sem": 0.18935794372265716
+    }
+   }
+  },
+  {
+   "model": "gpt-5.3-codex",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2026-02-05",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 58.21428571428571,
+     "sem": 1.3363062095621214
+    },
+    "python": {
+     "rate": 58.21428571428571,
+     "sem": 1.3363062095621214
+    }
+   }
+  },
+  {
+   "model": "gpt-5.3-codex-xhigh",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2026-02-05",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 58.59649122807018,
+     "sem": 0.8945648269461028
+    },
+    "python": {
+     "rate": 58.59649122807018,
+     "sem": 0.8945648269461028
+    }
+   }
+  },
+  {
+   "model": "gpt-5.4-2026-03-05-medium",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2026-03-05",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 57.60479041916167,
+     "sem": 0.8122550877994328
+    },
+    "python": {
+     "rate": 57.60479041916167,
+     "sem": 0.8122550877994328
+    }
+   }
+  },
+  {
+   "model": "Qwen3.5-35B-A3B",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2026-02-15",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 29.523809523809526,
+     "sem": 1.4161163396869423
+    },
+    "go": {
+     "rate": 18.095238095238095,
+     "sem": 3.1586902765289517
+    },
+    "java": {
+     "rate": 16.190476190476186,
+     "sem": 1.1664236870396085
+    },
+    "rust": {
+     "rate": 22.4,
+     "sem": 2.039607805437114
+    },
+    "python": {
+     "rate": 42.59740259740259,
+     "sem": 2.1101398453599893
+    },
+    "typescript": {
+     "rate": 16.666666666666668,
+     "sem": 2.63523138347365
+    }
+   }
+  },
+  {
+   "model": "Qwen3.5-397B-A17B",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2026-02-15",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 59.9436090225564,
+     "sem": 1.6354943798653636
+    },
+    "python": {
+     "rate": 59.9436090225564,
+     "sem": 1.6354943798653636
+    }
+   }
+  },
+  {
+   "model": "Step-3.5-Flash",
+   "developer": "stepfun",
+   "kind": "model:tools",
+   "release": "2026-02-01",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 59.58020050125313,
+     "sem": 0.5404839044662804
+    },
+    "python": {
+     "rate": 59.58020050125313,
+     "sem": 0.5404839044662804
+    }
+   }
+  },
+  {
+   "model": "GLM-5.1",
+   "developer": "zhipu",
+   "kind": "model:tools",
+   "release": "2026-04-07",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 62.66917293233083,
+     "sem": 0.7393483709273188
+    },
+    "python": {
+     "rate": 62.66917293233083,
+     "sem": 0.7393483709273188
+    }
+   }
+  },
+  {
+   "model": "MiniMax M2.7",
+   "developer": "minimax",
+   "kind": "model:tools",
+   "release": "2026-03-18",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 51.94862155388471,
+     "sem": 0.9416440680638873
+    },
+    "python": {
+     "rate": 51.94862155388471,
+     "sem": 0.9416440680638873
+    }
+   }
+  },
+  {
+   "model": "Qwen3.5-27B",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2026-02-15",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-03-01",
+   "rates": {
+    "all": {
+     "rate": 58.94736842105264,
+     "sem": 0.7017543859649119
+    },
+    "python": {
+     "rate": 58.94736842105264,
+     "sem": 0.7017543859649119
+    }
+   }
+  },
+  {
+   "model": "Gemma 4 31B",
+   "developer": "google",
+   "kind": "model:tools",
+   "release": "2026-04-02",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 25.064569655868986,
+     "sem": 1.0410591786026733
+    },
+    "python": {
+     "rate": 25.064569655868986,
+     "sem": 1.0410591786026733
+    }
+   }
+  },
+  {
+   "model": "Cursor",
+   "developer": "anysphere",
+   "kind": "agent:tools",
+   "release": "2026-03-19",
+   "windowFrom": "2026-02-01",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 53.50286275453032,
+     "sem": 0.4154228268834059
+    },
+    "go": {
+     "rate": 65.71428571428571,
+     "sem": 1.7817416127494954
+    },
+    "java": {
+     "rate": 42.857142857142854,
+     "sem": 3.9840953644479793
+    },
+    "rust": {
+     "rate": 46.4,
+     "sem": 2.0396078054371136
+    },
+    "python": {
+     "rate": 53.33684244879691,
+     "sem": 0.5475267695835179
+    },
+    "typescript": {
+     "rate": 60.83333333333333,
+     "sem": 5.368374469468803
+    }
+   }
+  },
+  {
+   "model": "GLM-5.1",
+   "developer": "zhipu",
+   "kind": "model:tools",
+   "release": "2026-04-07",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 50.72727272727272,
+     "sem": 0.9270944570168703
+    },
+    "python": {
+     "rate": 50.72727272727272,
+     "sem": 0.9270944570168703
+    }
+   }
+  },
+  {
+   "model": "Claude Opus 4.7-high",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2026-04-16",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 53.090909090909086,
+     "sem": 1.4545454545454541
+    },
+    "python": {
+     "rate": 53.090909090909086,
+     "sem": 1.4545454545454541
+    }
+   }
+  },
+  {
+   "model": "gpt-5.5-2026-04-23-medium",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2026-04-23",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 58.909090909090914,
+     "sem": 0.7820295697311489
+    },
+    "python": {
+     "rate": 58.909090909090914,
+     "sem": 0.7820295697311489
+    }
+   }
+  },
+  {
+   "model": "gpt-5.5-2026-04-23-xhigh",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2026-04-23",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 62.72727272727272,
+     "sem": 0.9090909090909094
+    },
+    "python": {
+     "rate": 62.72727272727272,
+     "sem": 0.9090909090909094
+    }
+   }
+  },
+  {
+   "model": "Kimi K2.6",
+   "developer": "moonshot",
+   "kind": "model:tools",
+   "release": "2026-03-01",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 46.54545454545455,
+     "sem": 1.2662171161076474
+    },
+    "python": {
+     "rate": 46.54545454545455,
+     "sem": 1.2662171161076474
+    }
+   }
+  },
+  {
+   "model": "Claude Opus 4.8-xhigh",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2026-05-28",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 56.545454545454554,
+     "sem": 1.199173268933903
+    },
+    "python": {
+     "rate": 56.545454545454554,
+     "sem": 1.199173268933903
+    }
+   }
+  },
+  {
+   "model": "Gemini 3.5 Flash",
+   "developer": "google",
+   "kind": "model:tools",
+   "release": "2026-05-19",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 49.45454545454545,
+     "sem": 0.9791208740244552
+    },
+    "python": {
+     "rate": 49.45454545454545,
+     "sem": 0.9791208740244552
+    }
+   }
+  },
+  {
+   "model": "MiniMax M3",
+   "developer": "minimax",
+   "kind": "model:tools",
+   "release": "2026-05-31",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 46.425339366515836,
+     "sem": 0.9117394425162844
+    },
+    "go": {
+     "rate": 48.57142857142856,
+     "sem": 2.3328473740792184
+    },
+    "java": {
+     "rate": 43.8095238095238,
+     "sem": 2.7766437594501427
+    },
+    "rust": {
+     "rate": 46.4,
+     "sem": 4.833218389437829
+    },
+    "python": {
+     "rate": 43.69230769230769,
+     "sem": 1.2963307343348247
+    },
+    "typescript": {
+     "rate": 61.66666666666667,
+     "sem": 5.17069735249619
+    }
+   }
+  },
+  {
+   "model": "GLM-5.2 [high]",
+   "developer": "zhipu",
+   "kind": "model:tools",
+   "release": "2026-05-16",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 57.01357466063348,
+     "sem": 0.8585369213126834
+    },
+    "go": {
+     "rate": 69.52380952380952,
+     "sem": 1.1664236870396099
+    },
+    "java": {
+     "rate": 51.42857142857142,
+     "sem": 3.4992710611188262
+    },
+    "rust": {
+     "rate": 61.6,
+     "sem": 4.833218389437829
+    },
+    "python": {
+     "rate": 52,
+     "sem": 0.8970695222838917
+    },
+    "typescript": {
+     "rate": 73.33333333333333,
+     "sem": 2.1245914639969934
+    }
+   }
+  },
+  {
+   "model": "DeepSeek-V4 Pro [high]",
+   "developer": "deepseek",
+   "kind": "model:tools",
+   "release": "2026-04-24",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 41.43350069216306,
+     "sem": 0.9533075696834811
+    },
+    "go": {
+     "rate": 48.57142857142856,
+     "sem": 3.8095238095238093
+    },
+    "java": {
+     "rate": 34.285714285714285,
+     "sem": 3.8095238095238093
+    },
+    "rust": {
+     "rate": 39.2,
+     "sem": 1.496662954709577
+    },
+    "python": {
+     "rate": 41.82211538461538,
+     "sem": 1.2759963185799497
+    },
+    "typescript": {
+     "rate": 41.66666666666667,
+     "sem": 3.227486121839513
+    }
+   }
+  },
+  {
+   "model": "MiMo V2.5 Pro",
+   "developer": "xiaomi",
+   "kind": "model:tools",
+   "release": "2026-03-22",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 44.4343891402715,
+     "sem": 0.5615236943887267
+    },
+    "go": {
+     "rate": 56.19047619047619,
+     "sem": 4.616837959444124
+    },
+    "java": {
+     "rate": 42.857142857142854,
+     "sem": 3.688555567816587
+    },
+    "rust": {
+     "rate": 44.00000000000001,
+     "sem": 1.264911064067351
+    },
+    "python": {
+     "rate": 42.61538461538461,
+     "sem": 1.1040538534159479
+    },
+    "typescript": {
+     "rate": 45.83333333333333,
+     "sem": 4.166666666666667
+    }
+   }
+  },
+  {
+   "model": "Qwen3.6-27B",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2026-03-22",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 33.84615384615385,
+     "sem": 1.0258628098420488
+    },
+    "go": {
+     "rate": 38.095238095238095,
+     "sem": 4.259177099999599
+    },
+    "java": {
+     "rate": 22.857142857142858,
+     "sem": 3.8095238095238093
+    },
+    "rust": {
+     "rate": 31.2,
+     "sem": 2.33238075793812
+    },
+    "python": {
+     "rate": 35.23076923076923,
+     "sem": 0.8213137116947166
+    },
+    "typescript": {
+     "rate": 35,
+     "sem": 2.1245914639969934
+    }
+   }
+  },
+  {
+   "model": "Qwen3.6-35B-A3B",
+   "developer": "alibaba",
+   "kind": "model:tools",
+   "release": "2026-03-14",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 29.230769230769226,
+     "sem": 0.5079172923222539
+    },
+    "go": {
+     "rate": 33.33333333333333,
+     "sem": 1.5058465048420853
+    },
+    "java": {
+     "rate": 15.238095238095237,
+     "sem": 3.8095238095238093
+    },
+    "rust": {
+     "rate": 34.4,
+     "sem": 0.9797958971132708
+    },
+    "python": {
+     "rate": 30.76923076923077,
+     "sem": 0.8067760370539631
+    },
+    "typescript": {
+     "rate": 24.16666666666667,
+     "sem": 1.559023911155809
+    }
+   }
+  },
+  {
+   "model": "DeepSeek-V4 Flash [high]",
+   "developer": "deepseek",
+   "kind": "model:tools",
+   "release": "2026-04-24",
+   "windowFrom": "2026-03-01",
+   "windowTo": "2026-05-15",
+   "rates": {
+    "all": {
+     "rate": 38.36363636363637,
+     "sem": 0.9706434774573924
+    },
+    "python": {
+     "rate": 38.36363636363637,
+     "sem": 0.9706434774573924
+    }
+   }
+  },
+  {
+   "model": "GPT-5.6 Luna [medium]",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2026-06-26",
+   "windowFrom": "2026-05-15",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 43.6036036036036,
+     "sem": 1.4693249036306386
+    },
+    "go": {
+     "rate": 54.285714285714285,
+     "sem": 2.4281045302822784
+    },
+    "java": {
+     "rate": 41.9047619047619,
+     "sem": 2.3328473740792175
+    },
+    "rust": {
+     "rate": 32.800000000000004,
+     "sem": 3.2
+    },
+    "python": {
+     "rate": 37,
+     "sem": 3.391164991562634
+    },
+    "typescript": {
+     "rate": 52.5,
+     "sem": 4.289845892077916
+    }
+   }
+  },
+  {
+   "model": "GPT-5.6 Sol [medium]",
+   "developer": "openai",
+   "kind": "model:tools",
+   "release": "2026-06-26",
+   "windowFrom": "2026-05-15",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 62.34234234234235,
+     "sem": 1.833062157601424
+    },
+    "go": {
+     "rate": 70.47619047619048,
+     "sem": 2.332847374079216
+    },
+    "java": {
+     "rate": 57.14285714285714,
+     "sem": 3.0116930096841696
+    },
+    "rust": {
+     "rate": 68,
+     "sem": 2.1908902300206643
+    },
+    "python": {
+     "rate": 48,
+     "sem": 3.3911649915626327
+    },
+    "typescript": {
+     "rate": 65.83333333333333,
+     "sem": 2.429563289518875
+    }
+   }
+  },
+  {
+   "model": "Grok 4.5 [high]",
+   "developer": "xai",
+   "kind": "model:tools",
+   "release": "2026-07-08",
+   "windowFrom": "2026-05-15",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 63.78378378378379,
+     "sem": 0.5975900523162895
+    },
+    "go": {
+     "rate": 68.57142857142857,
+     "sem": 4.151332327181593
+    },
+    "java": {
+     "rate": 60,
+     "sem": 1.16642368703961
+    },
+    "rust": {
+     "rate": 64,
+     "sem": 1.2649110640673529
+    },
+    "python": {
+     "rate": 54,
+     "sem": 2.4494897427831774
+    },
+    "typescript": {
+     "rate": 70.83333333333334,
+     "sem": 3.952847075210474
+    }
+   }
+  },
+  {
+   "model": "Fable 5 [high]",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2026-06-09",
+   "windowFrom": "2026-05-15",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 64.5045045045045,
+     "sem": 1.4130078505728048
+    },
+    "go": {
+     "rate": 74.28571428571429,
+     "sem": 1.9047619047619047
+    },
+    "java": {
+     "rate": 51.42857142857142,
+     "sem": 1.7817416127494963
+    },
+    "rust": {
+     "rate": 62.40000000000001,
+     "sem": 2.712931993250107
+    },
+    "python": {
+     "rate": 55.99999999999999,
+     "sem": 3.3166247903554
+    },
+    "typescript": {
+     "rate": 76.66666666666667,
+     "sem": 2.1245914639969934
+    }
+   }
+  },
+  {
+   "model": "Opus 5 [high]",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2026-07-24",
+   "windowFrom": "2026-05-15",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 63.42342342342343,
+     "sem": 1.35435102507864
+    },
+    "go": {
+     "rate": 73.33333333333333,
+     "sem": 2.4281045302822784
+    },
+    "java": {
+     "rate": 48.57142857142856,
+     "sem": 3.8095238095238098
+    },
+    "rust": {
+     "rate": 61.60000000000001,
+     "sem": 2.399999999999999
+    },
+    "python": {
+     "rate": 53,
+     "sem": 2.5495097567963922
+    },
+    "typescript": {
+     "rate": 78.33333333333333,
+     "sem": 1.5590239111558093
+    }
+   }
+  },
+  {
+   "model": "Sonnet 5 [high]",
+   "developer": "anthropic",
+   "kind": "model:tools",
+   "release": "2026-06-30",
+   "windowFrom": "2026-05-15",
+   "windowTo": "2026-07-01",
+   "rates": {
+    "all": {
+     "rate": 56.75675675675676,
+     "sem": 0.9448728361893257
+    },
+    "go": {
+     "rate": 66.66666666666666,
+     "sem": 3.367175148507368
+    },
+    "java": {
+     "rate": 49.523809523809526,
+     "sem": 3.868589716493314
+    },
+    "rust": {
+     "rate": 57.60000000000001,
+     "sem": 2.712931993250107
+    },
+    "python": {
+     "rate": 53,
+     "sem": 3.391164991562634
+    },
+    "typescript": {
+     "rate": 56.666666666666664,
+     "sem": 2.124591463996994
+    }
+   }
+  }
+ ]
+}

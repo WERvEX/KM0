@@ -20,7 +20,9 @@
     "lint": "biome check . && pnpm ui:rules",
     "ui:rules": "node scripts/check-ui-rules.mjs --self-test && node scripts/check-ui-rules.mjs",
     "format": "biome format --write .",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "registry:fetch": "pnpm --filter @km0/registry fetch",
+    "registry:build": "pnpm --filter @km0/registry build"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

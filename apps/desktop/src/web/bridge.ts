@@ -1,5 +1,6 @@
 import { createGateway, createSimulatedLlm } from "@km0/core";
-import type { EmitEvent, Km0Bridge } from "@km0/shared";
+import bundledRegistry from "@km0/registry/model-registry.json";
+import { type EmitEvent, type Km0Bridge, ModelRegistry } from "@km0/shared";
 import initSqlJs from "sql.js";
 import sqlWasmUrl from "sql.js/dist/sql-wasm-browser.wasm?url";
 import { migrations } from "../main/db/migrations";
@@ -13,6 +14,7 @@ import { noFilePort } from "../main/services/file-port";
 import { HandoffService } from "../main/services/handoff-service";
 import { llmPort } from "../main/services/llm-port";
 import { ProjectService } from "../main/services/project-service";
+import { RegistryService } from "../main/services/registry-service";
 import { RoutingService } from "../main/services/routing-service";
 import { RunnerService } from "../main/services/runner-service";
 import { SearchStore } from "../main/services/search-store";
@@ -73,6 +75,11 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db);
   const config = new ConfigService(settings, agents, search);
+  const registry = new RegistryService(db, ModelRegistry.parse(bundledRegistry), async (url) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.text();
+  });
   const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules);
   const handoff = new HandoffService(db, routing, language);
   const runner = new RunnerService(db, webRunAccess(), routing, llmFor, language, () =>
@@ -89,6 +96,7 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
       agents,
       search,
       config,
+      registry,
       repo,
       files: noFilePort,
       folders: null,

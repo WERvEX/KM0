@@ -1,0 +1,15 @@
+{
+  "_comment": "How each leaderboard column enters the fit. transform: rate (percent), index (0-100) or elo. capability: general, frontend or devops. weight scales how much the column counts (lower for saturated, contaminated or stale boards). The anchor column fixes the ability scale.",
+  "swebench_verified": { "transform": "rate", "capability": "general", "weight": 0.7, "anchor": true },
+  "swebench_multilingual": { "transform": "rate", "capability": "general", "weight": 0.8 },
+  "swe_rebench": { "transform": "rate", "capability": "general", "weight": 1 },
+  "swe_rebench_ts": { "transform": "rate", "capability": "frontend", "weight": 0.8 },
+  "swe_pro": { "transform": "rate", "capability": "general", "weight": 0.5 },
+  "swe_pro_hard": { "transform": "rate", "capability": "general", "weight": 1 },
+  "terminal_bench": { "transform": "rate", "capability": "devops", "weight": 1 },
+  "aa_intelligence": { "transform": "index", "capability": "general", "weight": 1 },
+  "aa_coding": { "transform": "index", "capability": "general", "weight": 1 },
+  "aa_agentic": { "transform": "index", "capability": "general", "weight": 0.8 },
+  "design_arena_frontend": { "transform": "elo", "capability": "frontend", "weight": 1 },
+  "aider_polyglot": { "transform": "rate", "capability": "general", "weight": 0.5 }
+}

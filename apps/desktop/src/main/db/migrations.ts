@@ -270,4 +270,17 @@ CREATE TABLE runner_results (
 );
 `,
   },
+  {
+    id: 8,
+    name: "model_registry",
+    // A registry downloaded or imported after install; the bundled one is used when this is older.
+    sql: `
+CREATE TABLE model_registry (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  json TEXT NOT NULL,
+  origin TEXT NOT NULL,
+  imported_at TEXT NOT NULL
+);
+`,
+  },
 ];
