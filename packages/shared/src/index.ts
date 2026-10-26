@@ -3,6 +3,7 @@ export * from "./discussion";
 export * from "./documents";
 export * from "./domain";
 export * from "./errors";
+export * from "./execution";
 export * from "./files";
 export * from "./handoff";
 export * from "./ipc";

@@ -20,6 +20,15 @@ import {
 import { ProjectPath, ProjectSummary } from "./domain";
 import type { AppErrorShape } from "./errors";
 import {
+  ExecutionRef,
+  ExecutionRun,
+  ExecutorSettings,
+  ExecutorStatus,
+  Precheck,
+  QuitRequest,
+  StartExecutionInput,
+} from "./execution";
+import {
   AppNotice,
   BrowseInput,
   FolderAnswer,
@@ -70,6 +79,8 @@ const Id = z.object({ id: z.number().int().positive() });
  */
 export const ipcContract = {
   "app.info": channel(z.void(), AppInfo),
+  /** Answer to `app.quitRequest`: stop the runs still going and close the window. */
+  "app.quit": channel(z.void(), z.void()),
 
   "settings.providers.list": channel(z.void(), z.array(Provider)),
   "settings.providers.create": channel(ProviderInput, Provider),
@@ -136,6 +147,8 @@ export const ipcContract = {
   "project.rename": channel(Id.extend({ title: z.string().trim().min(1).max(120) }), ProjectSummary),
   "project.delete": channel(Id, z.void()),
   "project.setPath": channel(Id.extend({ path: ProjectPath }), ProjectDetail),
+  /** Link a local repository to an existing project, so its tasks can be run there. */
+  "project.setRepo": channel(Id.extend({ path: z.string().trim().min(1).max(1000) }), ProjectDetail),
   "project.retry": channel(Id, ProjectDetail),
 
   "round.answer": channel(AnswerRoundInput, ProjectDetail),
@@ -176,6 +189,17 @@ export const ipcContract = {
   "runner.override": channel(RunnerOverrideInput, RunnerRun),
   /** Write acceptance.jsonl to the run directory again, after choosing the folder anew. */
   "runner.writeBack": channel(RunnerRunRef, RunnerRun),
+
+  /** How hand-off packages are run from KM0, and whether KM0 Runner and pi are installed. */
+  "execution.settings.get": channel(z.void(), ExecutorSettings),
+  "execution.settings.set": channel(ExecutorSettings, ExecutorSettings),
+  "execution.status": channel(z.void(), ExecutorStatus),
+  /** What must hold before a run starts, item by item, with where to fix each. */
+  "execution.precheck": channel(z.object({ projectId: z.number().int().positive() }), Precheck),
+  /** Write the package, start the executor and follow it; progress comes as `execution.update` events. */
+  "execution.start": channel(StartExecutionInput, ExecutionRun),
+  "execution.stop": channel(ExecutionRef, ExecutionRun),
+  "execution.list": channel(z.object({ projectId: z.number().int().positive() }), z.array(ExecutionRun)),
 } as const;
 
 export type IpcContract = typeof ipcContract;
@@ -190,6 +214,8 @@ export const ipcEvents = {
   "document.progress": DocumentProgress,
   "folder.request": FolderRequest,
   "app.notice": AppNotice,
+  "execution.update": ExecutionRun,
+  "app.quitRequest": QuitRequest,
 } as const;
 
 export type IpcEvents = typeof ipcEvents;

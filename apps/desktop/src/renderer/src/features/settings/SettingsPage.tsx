@@ -1,5 +1,6 @@
 import { ConfigBundle, type ImportSummary, type Language, type Theme } from "@km0/shared";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSearch } from "@tanstack/react-router";
 import { Download, Upload } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,15 +11,18 @@ import { useFiles } from "@/lib/files";
 import { call, errorMessage } from "@/lib/ipc";
 import { useIpcMutation, useIpcQuery } from "@/lib/queries";
 import { AgentsTab } from "./AgentsTab";
+import { ExecutionTab } from "./ExecutionTab";
 import { ModelsTab } from "./ModelsTab";
 import { SearchTab } from "./SearchTab";
 
-type Tab = "models" | "agents" | "search" | "general" | "about";
+const TABS = ["models", "agents", "execution", "search", "general", "about"] as const;
+type Tab = (typeof TABS)[number];
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<Tab>("models");
-  const tabs: Tab[] = ["models", "agents", "search", "general", "about"];
+  const search = useSearch({ strict: false }) as { tab?: string };
+  const [tab, setTab] = useState<Tab>(() => TABS.find((item) => item === search.tab) ?? "models");
+  const tabs = TABS;
 
   return (
     <div className="mx-auto max-w-3xl px-8 py-10">
@@ -44,6 +48,8 @@ export function SettingsPage() {
         <ModelsTab />
       ) : tab === "agents" ? (
         <AgentsTab />
+      ) : tab === "execution" ? (
+        <ExecutionTab />
       ) : tab === "search" ? (
         <SearchTab />
       ) : tab === "general" ? (

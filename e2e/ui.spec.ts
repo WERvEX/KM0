@@ -95,7 +95,7 @@ const screens: Screen[] = [
       await settle();
     },
   },
-  ...["models", "agents", "search", "general", "about"].map(
+  ...["models", "agents", "execution", "search", "general", "about"].map(
     (name, index): Screen => ({
       name: `settings-${name}`,
       open: async () => {

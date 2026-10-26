@@ -4,6 +4,7 @@ import type { Handlers } from "./ipc/router";
 import type { AgentStore } from "./services/agent-store";
 import type { ConfigService } from "./services/config-service";
 import type { DocumentService } from "./services/document-service";
+import type { ExecutionService } from "./services/execution-service";
 import type { FilePort } from "./services/file-port";
 import type { FolderRequests } from "./services/folder-requests";
 import type { HandoffService } from "./services/handoff-service";
@@ -28,6 +29,9 @@ export interface HandlerDeps {
   config: ConfigService;
   registry: RegistryService;
   records: RunRecordStore;
+  execution: ExecutionService;
+  /** Stop the runs still going and close the app. */
+  quit: () => Promise<void>;
   repo: RepoAccess;
   files: FilePort;
   /** Absent in the browser build, which uses the browser's own folder picker. */
@@ -48,6 +52,8 @@ export function createHandlers({
   config,
   registry,
   records,
+  execution,
+  quit,
   repo,
   files,
   folders,
@@ -56,6 +62,7 @@ export function createHandlers({
 }: HandlerDeps): Handlers {
   return {
     "app.info": () => appInfo(),
+    "app.quit": () => quit(),
 
     "settings.providers.list": () => settings.listProviders(),
     "settings.providers.create": (input) => settings.createProvider(input),
@@ -118,6 +125,7 @@ export function createHandlers({
     "project.create": ({ description, repoPath }) => projects.create(description, repoPath),
     "project.get": ({ id }) => projects.get(id),
     "project.rename": ({ id, title }) => projects.rename(id, title),
+    "project.setRepo": ({ id, path }) => projects.setRepo(id, path),
     "project.delete": ({ id }) => projects.delete(id),
     "project.setPath": ({ id, path }) => projects.setPath(id, path),
     "project.retry": ({ id }) => projects.retry(id),
@@ -150,5 +158,13 @@ export function createHandlers({
     "runner.judge": ({ projectId, runRef }) => runner.judge(projectId, runRef),
     "runner.override": ({ projectId, resultId, accepted }) => runner.override(projectId, resultId, accepted),
     "runner.writeBack": ({ projectId, runRef }) => runner.writeBack(projectId, runRef),
+
+    "execution.settings.get": () => execution.getSettings(),
+    "execution.settings.set": (input) => execution.setSettings(input),
+    "execution.status": () => execution.status(),
+    "execution.precheck": ({ projectId }) => execution.precheck(projectId),
+    "execution.start": ({ projectId, seqs, reuse }) => execution.start(projectId, seqs, reuse),
+    "execution.stop": ({ projectId, runRef }) => execution.stop(projectId, runRef),
+    "execution.list": ({ projectId }) => execution.list(projectId),
   };
 }

@@ -395,6 +395,31 @@ CREATE INDEX run_records_model ON run_records (model_key);
 CREATE INDEX run_records_ref ON run_records (ref);
 `,
   },
+  {
+    id: 11,
+    name: "execution_runs",
+    // Runs KM0 started itself; their live state is read from the run directory's progress.jsonl.
+    sql: `
+CREATE TABLE runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  run_id TEXT NOT NULL,
+  executor TEXT NOT NULL CHECK (executor IN ('runner', 'custom')),
+  status TEXT NOT NULL,
+  run_dir TEXT NOT NULL,
+  seqs_json TEXT NOT NULL DEFAULT '[]',
+  reuse TEXT,
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  exit_code INTEGER,
+  error TEXT,
+  cost REAL NOT NULL DEFAULT 0,
+  log_json TEXT NOT NULL DEFAULT '[]',
+  runner_run_ref INTEGER REFERENCES runner_runs(id) ON DELETE SET NULL
+);
+CREATE INDEX runs_project ON runs (project_id);
+`,
+  },
 ];
 
 const PRESET_NAMES: Record<string, string> = {

@@ -27,6 +27,13 @@ interface FileDialogs {
   openFile(options: OpenFileOptions): Promise<{ name: string; text: string } | null>;
   /** The saved path, or null when the user cancels. The browser build downloads instead and returns the name. */
   saveFile(options: SaveFileOptions): Promise<string | null>;
+  /** A folder's or a file's path, for settings that name one; null when cancelled. Desktop only. */
+  choosePath(options: {
+    mode: "folder" | "open";
+    title: string;
+    extensions?: string[];
+    memoryKey: string;
+  }): Promise<string | null>;
 }
 
 const FilesContext = createContext<FileDialogs | null>(null);
@@ -83,6 +90,10 @@ export function FileDialogProvider({ children }: { children: ReactNode }) {
 
   const dialogs = useMemo<FileDialogs>(
     () => ({
+      choosePath({ mode, title, extensions = [], memoryKey }) {
+        if (web) return Promise.resolve(null);
+        return choosePath({ mode, title, extensions, memoryKey });
+      },
       async openFile({ title, extensions, memoryKey }) {
         if (web) return chooseFileInBrowser(extensions);
         const path = await choosePath({ mode: "open", title, extensions, memoryKey });

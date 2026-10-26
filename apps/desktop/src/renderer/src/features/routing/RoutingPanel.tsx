@@ -32,6 +32,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Select } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { call, errorMessage } from "@/lib/ipc";
+import { ExecutionPanel } from "../execution/ExecutionPanel";
 import { HandoffPanel } from "../handoff/HandoffPanel";
 import { decisionLabel } from "../project/labels";
 import { projectKey } from "../project/useProject";
@@ -161,6 +162,8 @@ export function RoutingPanel({ projectId, blockedReason, openQuestions = 0 }: Pr
       />
 
       <HandoffPanel projectId={projectId} plan={data} />
+
+      <ExecutionPanel projectId={projectId} />
 
       <RunnerPanel projectId={projectId} />
 

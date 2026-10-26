@@ -10,12 +10,14 @@ import { openDatabase } from "./db/database";
 import { ElectronSecretStore } from "./electron-secrets";
 import { createHandlers } from "./handlers";
 import { createDispatcher } from "./ipc/router";
+import { nodeExec } from "./node-exec";
 import { nodeFiles } from "./node-files";
 import { nodeRepoAccess } from "./node-repo-access";
 import { nodeRunAccess } from "./node-run-access";
 import { AgentStore } from "./services/agent-store";
 import { ConfigService } from "./services/config-service";
 import { DocumentService } from "./services/document-service";
+import { ExecutionService } from "./services/execution-service";
 import { FolderRequests } from "./services/folder-requests";
 import { HandoffService } from "./services/handoff-service";
 import { llmPort } from "./services/llm-port";
@@ -196,6 +198,24 @@ void app.whenReady().then(() => {
     language,
     () => (simulated ? "simulated" : settings.profileForRole("planner").model),
   );
+  const execution = new ExecutionService(
+    db,
+    nodeExec(),
+    settings,
+    routing,
+    handoff,
+    runner,
+    language,
+    join(dataDir, "runs"),
+    (run) => emit("execution.update", run),
+  );
+  // Closing the window while runs are going asks first (in the page); `app.quit` stops them and closes.
+  let quitting = false;
+  const quit = async () => {
+    quitting = true;
+    await execution.stopAll();
+    app.quit();
+  };
 
   const dispatch = createDispatcher(
     createHandlers({
@@ -210,6 +230,8 @@ void app.whenReady().then(() => {
       config,
       registry,
       records,
+      execution,
+      quit,
       repo,
       files,
       folders,
@@ -234,6 +256,11 @@ void app.whenReady().then(() => {
   });
 
   mainWindow = createWindow();
+  mainWindow.on("close", (event) => {
+    if (quitting || execution.runningCount() === 0) return;
+    event.preventDefault();
+    emit("app.quitRequest", { running: execution.runningCount() });
+  });
   mainWindow.on("closed", () => {
     folders.cancel();
     mainWindow = null;

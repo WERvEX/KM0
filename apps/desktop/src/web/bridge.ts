@@ -10,6 +10,7 @@ import { createDispatcher } from "../main/ipc/router";
 import { AgentStore } from "../main/services/agent-store";
 import { ConfigService } from "../main/services/config-service";
 import { DocumentService } from "../main/services/document-service";
+import { ExecutionService } from "../main/services/execution-service";
 import { noFilePort } from "../main/services/file-port";
 import { HandoffService } from "../main/services/handoff-service";
 import { llmPort } from "../main/services/llm-port";
@@ -96,6 +97,8 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   const runner = new RunnerService(db, webRunAccess(), routing, llmFor, language, () =>
     simulated ? "simulated" : settings.profileForRole("planner").model,
   );
+  // A browser cannot start local programs; the execution service says so instead of running anything.
+  const execution = new ExecutionService(db, null, settings, routing, handoff, runner, language, "runs");
   const dispatch = createDispatcher(
     createHandlers({
       settings,
@@ -109,6 +112,8 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
       config,
       registry,
       records,
+      execution,
+      quit: async () => undefined,
       repo,
       files: noFilePort,
       folders: null,

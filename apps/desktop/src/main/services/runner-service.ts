@@ -57,11 +57,14 @@ export class RunnerService {
     return rows.map((row) => this.read(row));
   }
 
-  /** Pick a run directory and read its reports; importing the same run again refreshes it and keeps its verdicts. */
-  import(projectId: number): Promise<RunnerRun | null> {
+  /**
+   * Read a run directory's reports: the one given (a run KM0 started), else one the user picks. Importing the
+   * same run again refreshes it and keeps its verdicts.
+   */
+  import(projectId: number, known?: string): Promise<RunnerRun | null> {
     return this.locks.run(projectId, async () => {
       this.project(projectId);
-      const path = await this.access.pick();
+      const path = known ?? (await this.access.pick());
       if (!path) return null;
       const fs = await this.access.open(path);
       const { runId, reports } = await readReports(fs, projectId);

@@ -7,6 +7,7 @@ import { createHandlers } from "../handlers";
 import { AgentStore } from "../services/agent-store";
 import { ConfigService } from "../services/config-service";
 import { DocumentService } from "../services/document-service";
+import { ExecutionService } from "../services/execution-service";
 import { noFilePort } from "../services/file-port";
 import { HandoffService } from "../services/handoff-service";
 import { ProjectService } from "../services/project-service";
@@ -32,6 +33,20 @@ function setup(provider = new FakeProvider([])) {
   const agents = new AgentStore(db);
   const search = new SearchStore(db, new PlainSecretStore(), {});
   const records = new RunRecordStore(db);
+  const handoff = new HandoffService(db, routing, () => "zh-CN");
+  const runner = new RunnerService(
+    db,
+    {
+      pick: async () => null,
+      open: async () => {
+        throw new Error("no run folders in this test");
+      },
+    },
+    routing,
+    () => createSimulatedLlm(),
+    () => "zh-CN",
+    () => "simulated",
+  );
   const dispatch = createDispatcher(
     createHandlers({
       settings,
@@ -48,20 +63,10 @@ function setup(provider = new FakeProvider([])) {
         () => undefined,
       ),
       routing,
-      handoff: new HandoffService(db, routing, () => "zh-CN"),
-      runner: new RunnerService(
-        db,
-        {
-          pick: async () => null,
-          open: async () => {
-            throw new Error("no run folders in this test");
-          },
-        },
-        routing,
-        () => createSimulatedLlm(),
-        () => "zh-CN",
-        () => "simulated",
-      ),
+      handoff,
+      runner,
+      execution: new ExecutionService(db, null, settings, routing, handoff, runner, () => "zh-CN", "runs"),
+      quit: async () => undefined,
       agents,
       search,
       config: new ConfigService(settings, agents, search),
