@@ -2,6 +2,7 @@ import type { ConnectionTestResult, ModelEntry, ModelInput, Provider, ProviderIn
 import { AlertTriangle, Pencil, Plug, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Badge, TierBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
@@ -15,7 +16,11 @@ type Editing =
   | { kind: "provider"; provider: Provider | null }
   | { kind: "model"; model: ModelEntry | null; providerId: number | null }
   | null;
-type Deleting = { kind: "provider"; provider: Provider } | { kind: "model"; model: ModelEntry } | null;
+type Deleting =
+  | { kind: "provider"; provider: Provider }
+  | { kind: "model"; model: ModelEntry }
+  | { kind: "records"; model: ModelEntry }
+  | null;
 
 const REFRESH = [
   "settings.providers.list",
@@ -37,6 +42,7 @@ export function ModelsTab() {
   const createModel = useIpcMutation("settings.models.create", refresh);
   const updateModel = useIpcMutation("settings.models.update", refresh);
   const deleteModel = useIpcMutation("settings.models.delete", refresh);
+  const clearRecords = useIpcMutation("settings.models.clearRecords", refresh);
   const setRoles = useIpcMutation("settings.roles.set", ["settings.roles.get"]);
 
   const [editing, setEditing] = useState<Editing>(null);
@@ -191,6 +197,7 @@ export function ModelsTab() {
                           onTest={() => void test(model)}
                           onEdit={() => setEditing({ kind: "model", model, providerId: model.providerId })}
                           onDelete={() => setDeleting({ kind: "model", model })}
+                          onClearRecords={() => setDeleting({ kind: "records", model })}
                         />
                       ))}
                   </ul>
@@ -237,13 +244,26 @@ export function ModelsTab() {
       <ConfirmDialog
         open={deleting !== null}
         title={t(
-          deleting?.kind === "provider" ? "settings.models.deleteProviderTitle" : "settings.models.deleteModelTitle",
+          deleting?.kind === "provider"
+            ? "settings.models.deleteProviderTitle"
+            : deleting?.kind === "records"
+              ? "settings.models.clearRecordsTitle"
+              : "settings.models.deleteModelTitle",
         )}
         description={t(
-          deleting?.kind === "provider" ? "settings.models.deleteProviderBody" : "settings.models.deleteModelBody",
-          { name: deleting?.kind === "provider" ? deleting.provider.name : (deleting?.model.name ?? "") },
+          deleting?.kind === "provider"
+            ? "settings.models.deleteProviderBody"
+            : deleting?.kind === "records"
+              ? "settings.models.clearRecordsBody"
+              : "settings.models.deleteModelBody",
+          {
+            name: deleting?.kind === "provider" ? deleting.provider.name : (deleting?.model.name ?? ""),
+            count: deleting?.kind === "records" ? deleting.model.ability.runs : 0,
+          },
         )}
-        confirmLabel={t("settings.models.confirmDelete")}
+        confirmLabel={t(
+          deleting?.kind === "records" ? "settings.models.clearRecords" : "settings.models.confirmDelete",
+        )}
         cancelLabel={t("settings.models.cancel")}
         danger
         onCancel={() => setDeleting(null)}
@@ -251,6 +271,7 @@ export function ModelsTab() {
           const done = { onSuccess: () => setDeleting(null) };
           if (deleting?.kind === "provider") deleteProvider.mutate({ id: deleting.provider.id }, done);
           else if (deleting?.kind === "model") deleteModel.mutate({ id: deleting.model.id }, done);
+          else if (deleting?.kind === "records") clearRecords.mutate({ id: deleting.model.id }, done);
         }}
       />
     </div>
@@ -263,12 +284,14 @@ function ModelRow({
   onTest,
   onEdit,
   onDelete,
+  onClearRecords,
 }: {
   model: ModelEntry;
   result: ConnectionTestResult | "running" | undefined;
   onTest: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onClearRecords: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const price = model.effective;
@@ -287,9 +310,11 @@ function ModelRow({
     <li aria-label={model.name} className="flex flex-col gap-1.5 px-3 py-2.5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-sm font-medium">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
             {model.name}
-            {model.name !== model.modelId ? <span className="ml-2 font-normal text-muted">{model.modelId}</span> : null}
+            {model.name !== model.modelId ? <span className="font-normal text-muted">{model.modelId}</span> : null}
+            <TierBadge tier={model.tier} />
+            {model.tierLabel ? <Badge>{t("settings.models.tierManual")}</Badge> : null}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
             {model.canonicalId ? (
@@ -311,6 +336,7 @@ function ModelRow({
             ) : null}
             <span>· {priceText}</span>
           </div>
+          <AbilityLine model={model} onClear={onClearRecords} />
         </div>
         <div className="flex shrink-0 gap-1">
           <Button size="sm" variant="ghost" onClick={onTest} disabled={result === "running" || !model.callable}>
@@ -346,5 +372,34 @@ function ModelRow({
         </p>
       ) : null}
     </li>
+  );
+}
+
+const percent = (value: number) => `${Math.round(value * 100)}%`;
+
+/** What KM0 expects of the model, where that comes from, and what this install has learnt. */
+function AbilityLine({ model, onClear }: { model: ModelEntry; onClear: () => void }) {
+  const { t } = useTranslation();
+  const { ability } = model;
+  return (
+    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+      <span>
+        {t("settings.models.ability", { value: percent(ability.typical.prior) })}
+        {" · "}
+        {t(`settings.models.coverage.${ability.coverage}`)}
+      </span>
+      {ability.runs > 0 ? (
+        <>
+          <span>
+            · {t("settings.models.records", { count: ability.runs, passed: ability.passed })}
+            {" → "}
+            <span className="font-medium text-fg">{percent(ability.typical.current)}</span>
+          </span>
+          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={onClear}>
+            {t("settings.models.clearRecords")}
+          </Button>
+        </>
+      ) : null}
+    </div>
   );
 }

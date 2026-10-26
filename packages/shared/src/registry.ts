@@ -106,6 +106,22 @@ export const DifficultyBand = z.object({
 });
 export type DifficultyBand = z.infer<typeof DifficultyBand>;
 
+/**
+ * Estimates for what the registry does not list: a model the user added that matches no entry, and an agent the
+ * user defined. Absent from registries built before KM0 1.0; the app then uses its own defaults.
+ */
+export const RegistryFallback = z.object({
+  /** General ability ≈ intercept + slope · log10(output USD per million tokens), with this spread. */
+  price: z.object({ intercept: z.number(), slope: z.number(), sd: z.number().nonnegative() }),
+  /** A model without a price either. */
+  noPrice: Estimate,
+  /** Spread added to the general ability for each other kind of work, as the registry's own models get. */
+  kindSd: z.record(AbilityKind, z.number().nonnegative()),
+  /** Offset of an agent the registry does not know: running a model of its own vendor, and any other. */
+  agent: z.object({ native: Estimate, foreign: Estimate }),
+});
+export type RegistryFallback = z.infer<typeof RegistryFallback>;
+
 export const ModelRegistry = z.object({
   schemaVersion: z.literal(REGISTRY_SCHEMA_VERSION),
   generatedAt: z.string(),
@@ -116,6 +132,7 @@ export const ModelRegistry = z.object({
   vendors: z.array(RegistryVendor),
   agents: z.array(RegistryAgent),
   models: z.array(RegistryModel),
+  fallback: RegistryFallback.optional(),
 });
 export type ModelRegistry = z.infer<typeof ModelRegistry>;
 

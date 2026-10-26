@@ -1,10 +1,17 @@
-import { AGENT_NAMES, type AgentConfig, isPresetAgent, type TierModel } from "@km0/shared";
+import { AGENT_NAMES, type AgentConfig, isPresetAgent, type Tier, type TierModel } from "@km0/shared";
 
-/** Test helpers: a tier model with a token price, and an agent config with sensible defaults. */
+/** Test helpers: a model with a token price, and an agent config with sensible defaults. */
 
-export function tierModel(modelId: string, input: number | null = null, output: number | null = null): TierModel {
+export function tierModel(
+  modelId: string,
+  input: number | null = null,
+  output: number | null = null,
+  extra: Partial<TierModel> = {},
+): TierModel {
   return {
     modelRef: 0,
+    providerId: 1,
+    providerKind: "openai",
     modelId,
     name: modelId,
     canonicalId: null,
@@ -19,6 +26,9 @@ export function tierModel(modelId: string, input: number | null = null, output: 
     },
     priceInPerMTok: input,
     priceOutPerMTok: output,
+    tier: "T2" as Tier,
+    contextWindow: null,
+    ...extra,
   };
 }
 
@@ -28,7 +38,7 @@ export function agentConfig(partial: Partial<AgentConfig> & Pick<AgentConfig, "i
     kind: "preset",
     enabled: true,
     preference: 0,
-    models: { T1: null, T2: null, T3: null },
+    models: [],
     capabilities: [],
     nativeVendors: [],
     apiKinds: [],

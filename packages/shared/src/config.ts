@@ -41,6 +41,7 @@ export const ConfigBundleV2 = z.object({
       priceInPerMTok: Price,
       priceOutPerMTok: Price,
       priceCacheReadPerMTok: Price,
+      tierLabel: z.enum(["T1", "T2", "T3"]).nullable().default(null),
     }),
   ),
   /** Model names. */
@@ -52,8 +53,8 @@ export const ConfigBundleV2 = z.object({
       name: z.string(),
       kind: z.enum(["preset", "custom"]),
       enabled: z.boolean(),
-      /** Model names per tier. */
-      models: z.object({ T1: z.string().nullable(), T2: z.string().nullable(), T3: z.string().nullable() }),
+      /** Names of the models it can run. */
+      models: z.array(z.string()),
       capabilities: z.array(Capability),
       instructionFile: z.string().nullable().default(null),
       launchTemplate: z.string().nullable().default(null),

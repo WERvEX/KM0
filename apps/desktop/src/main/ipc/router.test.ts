@@ -12,6 +12,7 @@ import { HandoffService } from "../services/handoff-service";
 import { ProjectService } from "../services/project-service";
 import { RegistryService } from "../services/registry-service";
 import { RoutingService } from "../services/routing-service";
+import { RunRecordStore } from "../services/run-records";
 import { RunnerService } from "../services/runner-service";
 import { SearchStore } from "../services/search-store";
 import { PlainSecretStore } from "../services/secrets";
@@ -30,9 +31,11 @@ function setup(provider = new FakeProvider([])) {
   );
   const agents = new AgentStore(db);
   const search = new SearchStore(db, new PlainSecretStore(), {});
+  const records = new RunRecordStore(db);
   const dispatch = createDispatcher(
     createHandlers({
       settings,
+      records,
       projects: new ProjectService(
         db,
         () => createSimulatedLlm(),

@@ -25,6 +25,7 @@ const FormSchema = z.object({
   priceIn: optionalNumber,
   priceOut: optionalNumber,
   priceCacheRead: optionalNumber,
+  tierLabel: z.enum(["", "T1", "T2", "T3"]),
 });
 type FormValues = z.infer<typeof FormSchema>;
 
@@ -56,6 +57,7 @@ export function ModelForm({ model, providers, providerId, submitting, error, onS
       priceIn: text(model?.priceInPerMTok ?? null),
       priceOut: text(model?.priceOutPerMTok ?? null),
       priceCacheRead: text(model?.priceCacheReadPerMTok ?? null),
+      tierLabel: model?.tierLabel ?? "",
     },
   });
   const { register, handleSubmit, formState } = form;
@@ -87,6 +89,7 @@ export function ModelForm({ model, providers, providerId, submitting, error, onS
       priceInPerMTok: toNumber(values.priceIn),
       priceOutPerMTok: toNumber(values.priceOut),
       priceCacheReadPerMTok: toNumber(values.priceCacheRead),
+      tierLabel: values.tierLabel || null,
     }),
   );
 
@@ -177,13 +180,18 @@ export function ModelForm({ model, providers, providerId, submitting, error, onS
       <Field label={t("settings.form.temperature")} htmlFor="temperature" error={fieldError("temperature")}>
         <Input id="temperature" inputMode="decimal" {...register("temperature")} />
       </Field>
-      <Field
-        label={t("settings.form.contextWindow")}
-        htmlFor="contextWindow"
-        error={fieldError("contextWindow")}
-        className="col-span-2"
-      >
+      <Field label={t("settings.form.contextWindow")} htmlFor="contextWindow" error={fieldError("contextWindow")}>
         <Input id="contextWindow" inputMode="numeric" {...register("contextWindow")} />
+      </Field>
+      <Field label={t("settings.form.tierLabel")} htmlFor="tierLabel" hint={t("settings.form.tierLabelHint")}>
+        <Select id="tierLabel" {...register("tierLabel")}>
+          <option value="">{t("settings.form.tierAuto")}</option>
+          {(["T1", "T2", "T3"] as const).map((tier) => (
+            <option key={tier} value={tier}>
+              {tier}
+            </option>
+          ))}
+        </Select>
       </Field>
       <p className="col-span-2 -mb-2 text-xs text-muted">{t("settings.form.priceHint")}</p>
       <div className="col-span-2 grid grid-cols-3 gap-4">

@@ -1,11 +1,4 @@
-import {
-  ESCALATE_AFTER,
-  type RoutingRules,
-  type TaskFailure,
-  type TaskFeatures,
-  type TaskRisk,
-  type Tier,
-} from "@km0/shared";
+import type { RoutingRules, TaskFeatures, TaskRisk, Tier } from "@km0/shared";
 import type { Language } from "../discussion/prompts";
 
 /** Points per feature value; the sum decides the tier unless a hard rule applies. */
@@ -55,10 +48,6 @@ const TEXT = {
     risk: (names: string) => `有风险（${names}）→ 至少 T2`,
     fix: "调试和修复 bug → 至少 T2",
     design: "需要设计决策 → T3",
-    lifted: (from: Tier, count: number, to: Tier) => `${from} 已失败 ${count} 次 → 升到 ${to}`,
-    human: (count: number) => `T3 也已失败 ${count} 次 → 需要人来决定：拆小、补充说明或手动处理`,
-    rejected: (from: Tier, to: Tier) => `KM0 Runner 在 ${from} 完成的改动未通过验收 → 从 ${to} 重新分发`,
-    rejectedTop: "KM0 Runner 在 T3 完成的改动也未通过验收 → 需要人来决定：拆小、补充说明或手动处理",
   },
   en: {
     scope: {
@@ -77,12 +66,6 @@ const TEXT = {
     risk: (names: string) => `risky (${names}) → at least T2`,
     fix: "debugging and bug fixing → at least T2",
     design: "needs design decisions → T3",
-    lifted: (from: Tier, count: number, to: Tier) => `failed ${count} times on ${from} → ${to}`,
-    human: (count: number) =>
-      `failed ${count} times on T3 too → a person has to decide: split it, clarify it or do it by hand`,
-    rejected: (from: Tier, to: Tier) => `KM0 Runner's change on ${from} failed acceptance → redistribute from ${to}`,
-    rejectedTop:
-      "KM0 Runner's change on T3 failed acceptance too → a person has to decide: split it, clarify it or do it by hand",
   },
 } as const;
 
@@ -140,46 +123,4 @@ export function decideTier(
     // Scaffolding a new app is one step however many files it creates; there is nothing to split.
     splitSuggested: (features.scope === "new_subsystem" && features.kind !== "boilerplate") || score >= SPLIT_SCORE,
   };
-}
-
-export interface Escalation {
-  tier: Tier;
-  /** The starting tier when failures lifted the task; null when they did not. */
-  escalatedFrom: Tier | null;
-  needsHuman: boolean;
-  reasons: string[];
-}
-
-/**
- * Lift a task one tier for every tier it failed on `ESCALATE_AFTER` times, starting from the tier
- * the rules or the user picked. Only failures on the tier it currently sits on count, so a task
- * forced up by hand does not inherit failures from below. The whole task moves; nothing changes
- * models halfway through a run.
- */
-export function escalateTier(start: Tier, failures: TaskFailure[], language: Language): Escalation {
-  const text = TEXT[language];
-  const count = (tier: Tier) =>
-    failures.filter((failure) => failure.tier === tier && failure.source !== "runner").length;
-  const reasons: string[] = [];
-  const above = (tier: Tier): Tier | undefined => TIER_ORDER[TIER_ORDER.indexOf(tier) + 1];
-  let tier = start;
-  // KM0 Runner already climbed to the failed tier, so a rejection there starts the next hand-off above it.
-  for (const failure of failures) {
-    if (failure.source !== "runner") continue;
-    const lifted = above(failure.tier) ?? failure.tier;
-    if (TIER_ORDER.indexOf(lifted) > TIER_ORDER.indexOf(tier)) {
-      reasons.push(text.rejected(failure.tier, lifted));
-      tier = lifted;
-    }
-  }
-  let next = above(tier);
-  while (next && count(tier) >= ESCALATE_AFTER) {
-    reasons.push(text.lifted(tier, count(tier), next));
-    tier = next;
-    next = above(tier);
-  }
-  const rejectedOnTop = failures.some((failure) => failure.source === "runner" && failure.tier === "T3");
-  const needsHuman = tier === "T3" && (count("T3") >= ESCALATE_AFTER || rejectedOnTop);
-  if (needsHuman) reasons.push(rejectedOnTop ? text.rejectedTop : text.human(count("T3")));
-  return { tier, escalatedFrom: tier === start ? null : start, needsHuman, reasons };
 }

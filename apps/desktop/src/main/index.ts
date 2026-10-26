@@ -22,6 +22,7 @@ import { llmPort } from "./services/llm-port";
 import { ProjectService } from "./services/project-service";
 import { RegistryService } from "./services/registry-service";
 import { RoutingService } from "./services/routing-service";
+import { RunRecordStore } from "./services/run-records";
 import { RunnerService } from "./services/runner-service";
 import { SearchStore } from "./services/search-store";
 import { SettingsStore } from "./services/settings-store";
@@ -136,7 +137,13 @@ void app.whenReady().then(() => {
   const db = openDatabase(join(dataDir, "km0.db"));
   const secrets = new ElectronSecretStore();
   const registry = new RegistryService(db, ModelRegistry.parse(bundledRegistry), downloadText);
-  const settings = new SettingsStore(db, secrets, () => registry.current().registry);
+  const records = new RunRecordStore(db);
+  const settings = new SettingsStore(
+    db,
+    secrets,
+    () => registry.current().registry,
+    () => records.all(),
+  );
   const gateway = createGateway({
     recordCall: (record) => settings.recordCall(record),
     onModeDetected: (profileId, mode) => {
@@ -175,7 +182,11 @@ void app.whenReady().then(() => {
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db, () => settings.listModels());
   const config = new ConfigService(settings, agents, search);
-  const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules);
+  const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules, {
+    registry: () => registry.current().registry,
+    records,
+    pastQuota: () => settings.pastQuota(),
+  });
   const handoff = new HandoffService(db, routing, language);
   const runner = new RunnerService(
     db,
@@ -198,6 +209,7 @@ void app.whenReady().then(() => {
       search,
       config,
       registry,
+      records,
       repo,
       files,
       folders,

@@ -183,6 +183,27 @@ export function build(snapshots: Snapshots, tables: Tables): Built {
     },
     vendors: tables.vendors.map((vendor) => ({ ...vendor })),
     agents,
+    fallback: {
+      price: {
+        intercept: round(intercept + slope * priceFallback.intercept),
+        slope: round(slope * priceFallback.slope),
+        sd: toScale({ mean: 0, sd: priceFallback.sd }).sd,
+      },
+      noPrice: toScale({ mean: 0, sd: DEFAULT_FIT.abilitySd }),
+      kindSd: {
+        general: 0,
+        backend: 0,
+        debugging: 0,
+        testing: UNMEASURED_KIND_SD,
+        docs: UNMEASURED_KIND_SD,
+        frontend: round(slope * DEFAULT_FIT.capabilitySd),
+        devops: round(slope * DEFAULT_FIT.capabilitySd),
+      },
+      agent: {
+        native: offset({ mean: result.nativeEffect.mean, sd: Math.hypot(result.nativeEffect.sd, DEFAULT_FIT.agentSd) }),
+        foreign: offset({ mean: 0, sd: DEFAULT_FIT.agentSd }),
+      },
+    },
     models: models.sort((a, b) => a.id.localeCompare(b.id)),
   };
   return { registry, aligned, result, difficulty, evaluation, priceFallback };

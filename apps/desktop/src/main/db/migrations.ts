@@ -318,6 +318,7 @@ CREATE TABLE models (
   price_in_per_mtok REAL,
   price_out_per_mtok REAL,
   price_cache_read_per_mtok REAL,
+  tier_label TEXT CHECK (tier_label IN ('T1', 'T2', 'T3')),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -361,11 +362,38 @@ ALTER TABLE agents ADD COLUMN api_kinds_json TEXT NOT NULL DEFAULT '[]';
 CREATE TABLE agent_models (
   agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
   model_ref INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,
-  tier TEXT CHECK (tier IN ('T1', 'T2', 'T3')),
-  UNIQUE (agent_id, tier)
+  UNIQUE (agent_id, model_ref)
 );
 `,
     run: migrateModelCatalog,
+  },
+  {
+    id: 10,
+    name: "routing_strategy_and_run_records",
+    // A project's strategy level and budget; every run KM0 learns from, keyed by the registry model so
+    // the same model through two providers shares its record.
+    sql: `
+ALTER TABLE projects ADD COLUMN strategy_level INTEGER NOT NULL DEFAULT 3 CHECK (strategy_level BETWEEN 1 AND 5);
+ALTER TABLE projects ADD COLUMN budget_usd REAL;
+
+CREATE TABLE run_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  model_key TEXT NOT NULL,
+  agent_id TEXT NOT NULL,
+  native INTEGER NOT NULL,
+  kind TEXT NOT NULL,
+  band TEXT NOT NULL,
+  passed INTEGER NOT NULL,
+  weight REAL NOT NULL DEFAULT 1,
+  source TEXT NOT NULL CHECK (source IN ('user', 'acceptance')),
+  project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+  task_id INTEGER,
+  ref TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX run_records_model ON run_records (model_key);
+CREATE INDEX run_records_ref ON run_records (ref);
+`,
   },
 ];
 
@@ -426,10 +454,9 @@ function migrateModelCatalog(db: Database): void {
         now,
         now,
       );
-    db.prepare("INSERT INTO agent_models (agent_id, model_ref, tier) VALUES (?, ?, ?)").run(
+    db.prepare("INSERT INTO agent_models (agent_id, model_ref) VALUES (?, ?)").run(
       row.agent_id,
       Number(model.lastInsertRowid),
-      row.tier,
     );
   }
   db.exec("DROP TABLE model_catalog");

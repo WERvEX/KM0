@@ -86,7 +86,7 @@ test("documents are written after the discussion and can be edited, revised and 
   await page.screenshot({ path: "test-results/screenshots/web-documents.png", fullPage: true });
 });
 
-test("tasks are routed by rules, priced from the registry, and can be overridden", async ({ page }) => {
+test("tasks are routed by the strategy level, priced from the registry, and can be overridden", async ({ page }) => {
   await page.goto("./?simulated=1#/");
   await page.getByRole("textbox", { name: "从一句话开始" }).fill("给现有的博客加上评论功能");
   await page.getByRole("button", { name: "开始分诊" }).click();
@@ -99,32 +99,65 @@ test("tasks are routed by rules, priced from the registry, and can be overridden
   await expect(table.getByRole("row")).toHaveCount(4);
   await expect(page.getByText("共 3 个任务")).toBeVisible();
   // Claude Code's models are matched to the registry, so official prices total the plan straight away.
-  await expect(page.getByText(/预估成本 \$/)).toBeVisible();
+  const expected = page.getByText(/^期望总成本 \$/);
+  await expect(expected).toBeVisible();
   await expect(page.getByText(/节省约 \d+%/)).toBeVisible();
   await expect(table.getByText("claude-opus-5-5")).toBeVisible();
   await expect(table.getByText("建议拆分")).toBeVisible();
 
-  // Open the design task, read why it is T3, and move it to T2 by hand.
+  // A more conservative level never costs less; the aggressive one moves easy work to a cheaper model.
+  const total = async () => Number((await expected.textContent())?.replace(/[^\d.]/g, ""));
+  const level = page.getByRole("combobox", { name: "分发策略" });
+  await level.selectOption("1");
+  await expect(level).toHaveValue("1");
+  const aggressive = await total();
+  await level.selectOption("5");
+  await expect(level).toHaveValue("5");
+  const conservative = await total();
+  expect(conservative).toBeGreaterThanOrEqual(aggressive);
+  await level.selectOption("3");
+  await expect(level).toHaveValue("3");
+
+  // A budget below the plan suggests cheaper levels for some tasks.
+  await page.getByRole("textbox", { name: "项目预算（美元）" }).fill("0.01");
+  await page.getByRole("button", { name: "应用" }).click();
+  await expect(page.getByText(/预计总成本超出预算/)).toBeVisible();
+  await page.getByRole("textbox", { name: "项目预算（美元）" }).fill("");
+  await page.getByRole("button", { name: "应用" }).click();
+  await expect(page.getByText(/预计总成本超出预算/)).toHaveCount(0);
+
+  // Open the design task, read why, and give it to another model by hand.
   await table.getByRole("button", { name: "设计数据模型与权限" }).click();
   await expect(page.getByText("需要设计决策 → T3")).toBeVisible();
-  await page.getByRole("combobox", { name: "档位" }).selectOption("T2");
+  await expect(page.getByText(/能力数据：\d+ 个榜单/)).toBeVisible();
+  const combination = page.getByRole("combobox", { name: "组合" });
+  const sonnet = await combination.locator("option", { hasText: "claude-sonnet-5-5" }).first().getAttribute("value");
+  await combination.selectOption(sonnet ?? "");
   await expect(table.getByText("已手动调整")).toBeVisible();
-  await expect(table.getByText("claude-sonnet-5-5")).toHaveCount(2);
+  await expect(page.getByText("手动指定")).toBeVisible();
   await page.screenshot({ path: "test-results/screenshots/web-routing.png", fullPage: true });
-  await page.getByRole("button", { name: "恢复规则结果" }).click();
+  await page.getByRole("button", { name: "恢复策略结果" }).click();
   await expect(table.getByText("已手动调整")).toHaveCount(0);
+  await table.getByRole("button", { name: "设计数据模型与权限" }).click();
 
-  // Two failed runs on T1 move the scaffolding task up to T2; clearing them moves it back.
+  // Two failed runs on its combination move the scaffolding task up its chain; clearing them moves it back.
   await table.getByRole("button", { name: "搭建项目骨架与说明文档" }).click();
+  const scaffold = table.getByRole("row").nth(1);
+  const before = await scaffold.getByRole("cell").nth(3).textContent();
   await page.getByRole("button", { name: "记一次失败" }).click();
   await expect(table.getByText("失败 1 次")).toBeVisible();
   await page.getByRole("button", { name: "记一次失败" }).click();
-  await expect(table.getByText("由 T1 升档")).toBeVisible();
-  await expect(page.getByText("T1 已失败 2 次 → 升到 T2")).toBeVisible();
-  await expect(table.getByText("claude-sonnet-5-5")).toHaveCount(2);
+  await expect(table.getByText(/^由 T\d 升级$/)).toBeVisible();
+  await expect(page.getByText(/已在这个任务上失败，换到能力更高的组合/)).toBeVisible();
+  expect(await scaffold.getByRole("cell").nth(3).textContent()).not.toBe(before);
   await page.getByRole("button", { name: "清除失败记录" }).click();
-  await expect(table.getByText("由 T1 升档")).toHaveCount(0);
-  await expect(table.getByText("claude-haiku-5-5")).toBeVisible();
+  await expect(table.getByText(/^由 T\d 升级$/)).toHaveCount(0);
+  await expect(scaffold.getByRole("cell").nth(3)).toHaveText(before ?? "");
+
+  // A pass is recorded too and shows up on the model in Settings.
+  await page.getByRole("button", { name: "记一次通过" }).click();
+  await expect(table.getByText(/^失败 \d 次$/)).toHaveCount(0);
+  await expect(page.getByText(/^记一次通过$/)).toBeEnabled();
 
   // The hand-off package collects a brief per task and downloads as one zip.
   await page.getByRole("button", { name: "生成交接包" }).click();

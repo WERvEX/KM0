@@ -41,7 +41,7 @@ function configured() {
   });
   app.settings.setRoles({ router: router.id, planner: planner.id });
   app.settings.setPreferences({ language: "en", theme: "dark" });
-  app.agents.update("codex", false, { T1: null, T2: gpt.id, T3: null }, ["frontend"]);
+  app.agents.update("codex", false, [gpt.id], ["frontend"]);
   app.agents.move("zcode", "up");
   app.agents.createCustom({
     name: "Gemini CLI",
@@ -92,7 +92,7 @@ describe("ConfigService", () => {
     expect(target.agents.list().map((agent) => agent.id)).toEqual(source.agents.list().map((agent) => agent.id));
     expect(target.agents.list().find((agent) => agent.id === "codex")).toMatchObject({
       enabled: false,
-      models: { T2: { modelId: "gpt-x", priceInPerMTok: 0.6, priceOutPerMTok: 2.4 } },
+      models: [expect.objectContaining({ modelId: "gpt-x", priceInPerMTok: 0.6, priceOutPerMTok: 2.4 })],
       capabilities: ["frontend"],
     });
     expect(target.agents.list().find((agent) => agent.kind === "custom")).toMatchObject({
@@ -159,7 +159,7 @@ describe("ConfigService", () => {
       apiKey: "sk-old-key-1234",
       structuredMode: "tool",
     });
-    expect(app.agents.list().find((agent) => agent.id === "codex")?.models.T2).toMatchObject({
+    expect(app.agents.list().find((agent) => agent.id === "codex")?.models[0]).toMatchObject({
       modelId: "gpt-6-sol",
       priceInPerMTok: 2,
     });

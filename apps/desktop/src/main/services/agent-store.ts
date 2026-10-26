@@ -8,8 +8,6 @@ import {
   type ModelEntry,
   PRESET_AGENTS,
   ProviderKind,
-  TIERS,
-  type Tier,
   type TierModel,
 } from "@km0/shared";
 import { type Database, transaction } from "../db/sql";
@@ -43,6 +41,8 @@ const isKind = (item: unknown): item is ProviderKind => ProviderKind.safeParse(i
 export function tierModel(agent: Pick<AgentConfig, "nativeVendors">, model: ModelEntry): TierModel {
   return {
     modelRef: model.id,
+    providerId: model.providerId,
+    providerKind: model.providerKind,
     modelId: model.modelId,
     name: model.name,
     canonicalId: model.canonicalId,
@@ -51,6 +51,8 @@ export function tierModel(agent: Pick<AgentConfig, "nativeVendors">, model: Mode
     price: model.effective,
     priceInPerMTok: model.effective.input,
     priceOutPerMTok: model.effective.output,
+    tier: model.tier,
+    contextWindow: model.contextWindow,
   };
 }
 
@@ -66,8 +68,8 @@ function slug(name: string): string {
 }
 
 /**
- * Which agents may receive work, in what order, what each is good at and which model it runs per
- * tier. The presets are KM0's own adapters; custom agents are whatever the user adds.
+ * Which agents may receive work, in what order, what each is good at and which models it can run.
+ * The presets are KM0's own adapters; custom agents are whatever the user adds.
  */
 export class AgentStore {
   constructor(
@@ -77,12 +79,9 @@ export class AgentStore {
 
   list(): AgentConfig[] {
     const rows = this.db.prepare("SELECT * FROM agents").all() as unknown as AgentRow[];
-    const assignments = this.db
-      .prepare("SELECT agent_id, model_ref, tier FROM agent_models WHERE tier IS NOT NULL")
-      .all() as {
+    const assignments = this.db.prepare("SELECT agent_id, model_ref FROM agent_models ORDER BY rowid").all() as {
       agent_id: string;
       model_ref: number;
-      tier: Tier;
     }[];
     const models = new Map(this.models().map((model) => [model.id, model]));
     return rows
@@ -97,7 +96,7 @@ export class AgentStore {
           kind: row.kind,
           enabled: row.enabled === 1,
           preference: row.preference,
-          models: { T1: null, T2: null, T3: null },
+          models: [],
           capabilities: parseList(row.capabilities_json, isCapability),
           nativeVendors,
           apiKinds: preset ? preset.apiKinds : parseList(row.api_kinds_json, isKind),
@@ -106,24 +105,18 @@ export class AgentStore {
         };
         for (const assignment of assignments.filter((item) => item.agent_id === row.id)) {
           const model = models.get(assignment.model_ref);
-          if (model) config.models[assignment.tier] = tierModel(config, model);
+          if (model) config.models.push(tierModel(config, model));
         }
         return config;
       });
   }
 
-  /** Leaving out `capabilities` keeps the stored ones. */
-  update(
-    id: AgentId,
-    enabled: boolean,
-    models: Record<Tier, number | null>,
-    capabilities?: Capability[],
-  ): AgentConfig[] {
+  /** Set what the agent may run. Leaving out `capabilities` keeps the stored ones. */
+  update(id: AgentId, enabled: boolean, models: number[], capabilities?: Capability[]): AgentConfig[] {
     const agent = this.require(id);
     const known = new Map(this.models().map((model) => [model.id, model]));
-    for (const tier of TIERS) {
-      const ref = models[tier];
-      if (ref === null) continue;
+    const refs = [...new Set(models)];
+    for (const ref of refs) {
       const model = known.get(ref);
       if (!model) throw new AppError("not_found", `Model ${ref} does not exist.`);
       if (agent.apiKinds.length > 0 && !agent.apiKinds.includes(model.providerKind)) {
@@ -140,12 +133,9 @@ export class AgentStore {
           .prepare("UPDATE agents SET capabilities_json = ? WHERE id = ?")
           .run(JSON.stringify([...new Set(capabilities)]), id);
       }
-      this.db.prepare("DELETE FROM agent_models WHERE agent_id = ? AND tier IS NOT NULL").run(id);
-      for (const tier of TIERS) {
-        const ref = models[tier];
-        if (ref !== null) {
-          this.db.prepare("INSERT INTO agent_models (agent_id, model_ref, tier) VALUES (?, ?, ?)").run(id, ref, tier);
-        }
+      this.db.prepare("DELETE FROM agent_models WHERE agent_id = ?").run(id);
+      for (const ref of refs) {
+        this.db.prepare("INSERT INTO agent_models (agent_id, model_ref) VALUES (?, ?)").run(id, ref);
       }
     });
     return this.list();

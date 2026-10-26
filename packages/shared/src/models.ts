@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { ProviderKind, StructuredMode } from "./llm";
+import { Estimate } from "./registry";
+
+/** Tier labels; routing.ts re-exports the same enum as `Tier`. */
+const TierLabel = z.enum(["T1", "T2", "T3"]);
 
 /**
  * Providers and models. A provider is how models are reached and paid for: an API endpoint with a
@@ -78,6 +82,8 @@ export const ModelInput = z.object({
   priceInPerMTok: Price.default(null),
   priceOutPerMTok: Price.default(null),
   priceCacheReadPerMTok: Price.default(null),
+  /** Tier label chosen by hand; null places it by ability among the user's models. */
+  tierLabel: TierLabel.nullable().default(null),
 });
 export type ModelInput = z.input<typeof ModelInput>;
 export type ModelFields = z.output<typeof ModelInput>;
@@ -118,6 +124,19 @@ export const ModelEntry = z.object({
   priceOutPerMTok: z.number().nullable(),
   priceCacheReadPerMTok: z.number().nullable(),
   effective: EffectivePrice,
+  /** Display label: the user's, else where its general ability sits among the user's models. */
+  tier: TierLabel,
+  tierLabel: TierLabel.nullable(),
+  /** General coding ability: from the registry (or guessed from the price), and after this install's own records. */
+  ability: z.object({
+    prior: Estimate,
+    current: Estimate,
+    /** Chance of passing a typical 15-minute-to-1-hour task, before and after the records. */
+    typical: z.object({ prior: z.number(), current: z.number() }),
+    coverage: z.enum(["measured", "inferred", "none", "unmatched"]),
+    runs: z.number().int(),
+    passed: z.number().int(),
+  }),
   /** KM0 can call it for its own work: the provider has a key or the endpoint needs none. */
   callable: z.boolean(),
   createdAt: z.string(),

@@ -76,6 +76,18 @@ const screens: Screen[] = [
     },
   },
   {
+    // A task opened: why this combination, cheaper ones passed over, the chain, overrides and runs.
+    name: "routing-detail",
+    open: async () => {
+      await page.getByRole("table").getByRole("button").first().click();
+      await expect(page.getByRole("combobox", { name: /组合|Combination/ })).toBeVisible();
+      await settle();
+    },
+    close: async () => {
+      await page.getByRole("table").getByRole("button").first().click();
+    },
+  },
+  {
     name: "handoff",
     open: async () => {
       await page.getByRole("button", { name: /^(生成交接包|重新生成|Build the package|Build again)$/ }).click();

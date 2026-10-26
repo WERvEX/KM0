@@ -1,18 +1,13 @@
-import type { AgentConfig, TaskFailure, TaskFeatures, Tier } from "@km0/shared";
+import type { AgentConfig, ModelRegistry, RegistryModel, TaskFailure, TaskFeatures, TierModel } from "@km0/shared";
 import { describe, expect, it } from "vitest";
+import type { RunRecord } from "../ability/records";
+import { tierLabels } from "../ability/records";
 import { createSimulatedLlm } from "../discussion/simulator";
 import { agentConfig, tierModel } from "../testing";
 import { breakDown, breakdownSystem } from "./breakdown";
-import {
-  chooseAgent,
-  estimateCost,
-  estimateTokens,
-  planTotals,
-  routeTask,
-  type TaskBasics,
-  taskCapability,
-} from "./route";
-import { DEFAULT_ROUTING_RULES, decideTier, escalateTier } from "./scoring";
+import { estimateTokens, planTotals, type RouteOptions, routeTask, type TaskBasics, taskCapability } from "./route";
+import { DEFAULT_ROUTING_RULES, decideTier } from "./scoring";
+import { costOf } from "./strategy";
 
 /** Scores 0: one file, clear, do as written, little context, covered by tests. */
 const base: TaskFeatures = {
@@ -113,50 +108,6 @@ describe("hard rules", () => {
     expect(tierOf({ ...busy, context: "large" })).toMatchObject({ score: 8, splitSuggested: true });
   });
 });
-
-const priced = (modelId: string, input: number | null, output: number | null) => tierModel(modelId, input, output);
-
-const agents: AgentConfig[] = [
-  agentConfig({
-    id: "codex",
-    enabled: true,
-    preference: 1,
-    models: { T1: null, T2: priced("codex-mid", 2, 8), T3: priced("codex-max", 10, 40) },
-    capabilities: ["frontend", "testing"],
-  }),
-  agentConfig({
-    id: "claude_code",
-    enabled: true,
-    preference: 0,
-    models: { T1: priced("claude-haiku-5-5", 1, 5), T2: null, T3: priced("claude-opus-5-5", 5, 25) },
-    capabilities: ["backend", "debugging"],
-  }),
-  agentConfig({
-    id: "cursor",
-    enabled: false,
-    preference: 2,
-    models: { T1: null, T2: priced("x", 1, 1), T3: null },
-    capabilities: ["frontend"],
-  }),
-];
-
-describe("agents", () => {
-  it("takes the first enabled agent, by preference, that has a model for the tier", () => {
-    expect(chooseAgent(agents, "T1", "zh-CN")).toMatchObject({
-      agent: "claude_code",
-      model: { modelId: "claude-haiku-5-5" },
-    });
-    expect(chooseAgent(agents, "T2", "zh-CN")).toMatchObject({ agent: "codex", model: { modelId: "codex-mid" } });
-  });
-
-  it("falls back to the first enabled agent without a model, and to generic when none is enabled", () => {
-    const noT2 = agents.map((agent) => ({ ...agent, models: { ...agent.models, T2: null } }));
-    expect(chooseAgent(noT2, "T2", "zh-CN")).toMatchObject({ agent: "claude_code", model: null });
-    const disabled = agents.map((agent) => ({ ...agent, enabled: false }));
-    expect(chooseAgent(disabled, "T2", "zh-CN")).toMatchObject({ agent: "generic", model: null });
-  });
-});
-
 describe("capabilities", () => {
   it("reads what a task needs from its kind, and for code from its files", () => {
     expect(taskCapability({ ...base, kind: "fix" }, [])).toBe("debugging");
@@ -171,175 +122,396 @@ describe("capabilities", () => {
     expect(taskCapability(base, ["src/lib/util.ts"])).toBeNull();
     expect(taskCapability(base, ["src/ui/Button.tsx", "src/api/client.ts"])).toBeNull();
   });
-
-  it("prefers an agent good at the work among those with a model for the tier", () => {
-    expect(chooseAgent(agents, "T3", "zh-CN", { capability: "frontend" })).toMatchObject({
-      agent: "codex",
-      model: { modelId: "codex-max" },
-      reason: "擅长前端、且配置了 T3 模型的 Agent 中排在最前",
-    });
-    expect(chooseAgent(agents, "T3", "zh-CN", { capability: "backend" })).toMatchObject({ agent: "claude_code" });
-    // Nobody good at docs: the order decides, and the reason says so.
-    expect(chooseAgent(agents, "T3", "en", { capability: "docs" })).toMatchObject({
-      agent: "claude_code",
-      reason: "no agent good at docs has a T3 model; using the first enabled agent with one",
-    });
-  });
-
-  it("puts a model for the tier before the capability, and ignores disabled agents", () => {
-    // claude_code is good at debugging but has no T2 model; codex has one.
-    expect(chooseAgent(agents, "T2", "zh-CN", { capability: "debugging" })).toMatchObject({
-      agent: "codex",
-      model: { modelId: "codex-mid" },
-    });
-    // cursor is good at frontend and has a T2 model, but it is disabled.
-    expect(chooseAgent(agents, "T2", "zh-CN", { capability: "frontend" }).agent).toBe("codex");
-    expect(chooseAgent(agents, "T1", "zh-CN", { capability: "frontend", forced: "cursor" })).toMatchObject({
-      agent: "cursor",
-      reason: "手动指定",
-    });
-  });
-
-  it("names the enabled agents that are good at the work but lack a model for the tier", () => {
-    expect(chooseAgent(agents, "T2", "zh-CN", { capability: "debugging" }).reason).toBe(
-      "Claude Code 擅长调试，但没有配置 T2 模型，暂用排在最前、且配置了 T2 模型的 Agent；在“设置 → Agent”里补上模型后，这类任务会交给它",
-    );
-    // Nobody is good at docs, so there is no one to name.
-    expect(chooseAgent(agents, "T2", "en", { capability: "docs" }).reason).toBe(
-      "no agent good at docs has a T2 model; using the first enabled agent with one",
-    );
-  });
 });
 
-describe("escalation", () => {
-  const failed = (...tiers: Tier[]): TaskFailure[] =>
-    tiers.map((tier, index) => ({ tier, at: `2026-01-0${index + 1}T00:00:00.000Z`, source: "user" }));
+/** A registry model with a general ability; every other kind of work gets the same. */
+function registryModel(id: string, mean: number, sd: number, input: number, output: number): RegistryModel {
+  const ability = { mean, sd };
+  return {
+    id,
+    name: id,
+    vendor: id.split("/")[0] ?? "",
+    aliases: [],
+    released: null,
+    contextWindow: 200_000,
+    pricing: { input, output, cacheRead: null },
+    abilities: {
+      general: ability,
+      frontend: ability,
+      backend: ability,
+      debugging: ability,
+      testing: ability,
+      docs: ability,
+      devops: ability,
+    },
+    coverage: "measured",
+    observations: [{ column: "swe", source: "swebench", agent: null, value: 50, effort: null, date: null }],
+  };
+}
 
-  it("starts a task KM0 rejected one tier above where KM0 Runner finished it", () => {
-    const rejected = (tier: Tier): TaskFailure => ({
-      tier,
-      at: "2026-01-01T00:00:00.000Z",
-      source: "runner",
-      reason: "x",
-    });
-    expect(escalateTier("T1", [rejected("T2")], "zh-CN")).toEqual({
-      tier: "T3",
-      escalatedFrom: "T1",
-      needsHuman: false,
-      reasons: ["KM0 Runner 在 T2 完成的改动未通过验收 → 从 T3 重新分发"],
-    });
-    // A rejection does not count towards the two hand-run failures.
-    expect(escalateTier("T2", [rejected("T1"), ...failed("T2")], "zh-CN").tier).toBe("T2");
-    expect(escalateTier("T1", [rejected("T3")], "zh-CN")).toMatchObject({ tier: "T3", needsHuman: true });
-  });
+const registry: ModelRegistry = {
+  schemaVersion: 1,
+  generatedAt: "2026-10-01T00:00:00Z",
+  dataDate: "2026-09-30",
+  sources: [
+    {
+      id: "swebench",
+      name: "SWE-bench Verified",
+      url: "",
+      measures: "",
+      fetchedAt: "",
+      newestEntry: null,
+      entries: 1,
+      unmatched: 0,
+    },
+  ],
+  difficulty: { bands: [] },
+  vendors: [],
+  agents: [
+    {
+      id: "pi",
+      name: "Pi",
+      nativeVendors: [],
+      offset: { native: { mean: 0, sd: 0.05 }, foreign: { mean: 0, sd: 0.05 } },
+      evidence: 0,
+    },
+    {
+      id: "claude_code",
+      name: "Claude Code",
+      nativeVendors: ["anthropic"],
+      offset: { native: { mean: 0.7, sd: 0.1 }, foreign: { mean: 0, sd: 0.05 } },
+      evidence: 5,
+    },
+  ],
+  models: [
+    registryModel("v/cheap", -1, 0.3, 0.2, 1),
+    registryModel("v/mid", 0.7, 0.3, 1, 5),
+    registryModel("v/strong", 2, 0.3, 5, 25),
+    registryModel("v/vague", 1.5, 1.5, 0.3, 1.5),
+    registryModel("anthropic/opus", 1.6, 0.3, 5, 25),
+  ],
+};
 
-  it("moves a task up one tier after two failures on its tier", () => {
-    expect(escalateTier("T1", failed("T1"), "zh-CN")).toEqual({
-      tier: "T1",
-      escalatedFrom: null,
-      needsHuman: false,
-      reasons: [],
-    });
-    expect(escalateTier("T1", failed("T1", "T1"), "zh-CN")).toEqual({
-      tier: "T2",
-      escalatedFrom: "T1",
-      needsHuman: false,
-      reasons: ["T1 已失败 2 次 → 升到 T2"],
-    });
-    expect(escalateTier("T1", failed("T1", "T1", "T2", "T2"), "zh-CN")).toMatchObject({
-      tier: "T3",
-      escalatedFrom: "T1",
-      reasons: ["T1 已失败 2 次 → 升到 T2", "T2 已失败 2 次 → 升到 T3"],
-    });
+const known = (ref: number, canonicalId: string, extra: Partial<TierModel> = {}): TierModel => {
+  const found = registry.models.find((model) => model.id === canonicalId) as RegistryModel;
+  return tierModel(canonicalId.split("/")[1] ?? canonicalId, found.pricing.input, found.pricing.output, {
+    modelRef: ref,
+    canonicalId,
+    vendor: found.vendor,
+    ...extra,
   });
+};
 
-  it("hands a task that keeps failing on T3 to a person", () => {
-    const result = escalateTier("T2", failed("T2", "T2", "T3", "T3"), "en");
-    expect(result).toMatchObject({ tier: "T3", escalatedFrom: "T2", needsHuman: true });
-    expect(result.reasons.at(-1)).toBe(
-      "failed 2 times on T3 too → a person has to decide: split it, clarify it or do it by hand",
-    );
-  });
+const cheap = known(1, "v/cheap", { tier: "T1" });
+const mid = known(2, "v/mid", { tier: "T2" });
+const strong = known(3, "v/strong", { tier: "T3" });
+const vague = known(4, "v/vague", { tier: "T2" });
 
-  it("counts only failures on the tier the task starts from or reaches", () => {
-    expect(escalateTier("T3", failed("T1", "T1"), "zh-CN")).toMatchObject({ tier: "T3", escalatedFrom: null });
-    expect(escalateTier("T1", failed("T2", "T2"), "zh-CN")).toMatchObject({ tier: "T1", escalatedFrom: null });
-  });
+const pi = (models: TierModel[], extra: Partial<AgentConfig> = {}) =>
+  agentConfig({ id: "pi", preference: 0, models, ...extra });
+
+const task = (overrides: Partial<TaskBasics> = {}): TaskBasics => ({
+  id: 1,
+  seq: 1,
+  title: "t",
+  goal: "g",
+  acceptance: [],
+  files: [],
+  dependsOn: [],
+  decisionKeys: [],
+  sections: [],
+  features: base,
+  override: null,
+  failures: [],
+  ...overrides,
 });
+
+const route = (basics: TaskBasics, agents: AgentConfig[], options: RouteOptions = {}) =>
+  routeTask(basics, agents, "zh-CN", { registry, ...options });
 
 describe("cost", () => {
   it("estimates a token range per scope and prices it", () => {
     const tokens = estimateTokens(base);
     expect(tokens).toEqual({ input: { low: 20_000, high: 80_000 }, output: { low: 1_500, high: 6_000 } });
-    expect(estimateCost(priced("m", 1, 5), tokens)).toEqual({ low: 0.0275, high: 0.11 });
-    expect(estimateCost(priced("m", null, 5), tokens)).toBeNull();
+    expect(costOf({ input: 1, output: 5 }, tokens)).toEqual({ low: 0.0275, high: 0.11 });
+    expect(costOf({ input: null, output: 5 }, tokens)).toBeNull();
     expect(estimateTokens({ ...base, context: "large", ambiguity: "high" }).input.high).toBe(156_000);
   });
 
-  const task = (overrides: Partial<TaskBasics> = {}): TaskBasics => ({
-    id: 1,
-    seq: 1,
-    title: "t",
-    goal: "g",
-    acceptance: [],
-    files: [],
-    dependsOn: [],
-    decisionKeys: [],
-    sections: [],
-    features: base,
-    override: null,
-    failures: [],
-    ...overrides,
+  it("prices a run by the provider's billing: relay multiplied, subscription and free at nothing", () => {
+    const relay = { ...mid, price: { ...mid.price, mode: "relay" as const, input: 2, output: 10 } };
+    const subscription = {
+      ...mid,
+      price: { mode: "subscription" as const, input: 0, output: 0, cacheRead: 0, source: "billing" as const },
+    };
+    const routedRelay = route(task(), [pi([relay])]);
+    const routedToken = route(task(), [pi([mid])]);
+    expect(routedRelay.cost?.low).toBeCloseTo((routedToken.cost?.low ?? 0) * 2);
+    expect(route(task(), [pi([subscription])]).expectedCost).toBe(0);
+  });
+});
+
+describe("strategy levels", () => {
+  const agents = [pi([cheap, mid, strong, vague])];
+
+  it("takes the cheapest combination that meets the level's target, and the likeliest when none does", () => {
+    const aggressive = route(task(), agents, { level: 1 });
+    expect(aggressive.meetsTarget).toBe(true);
+    expect(aggressive.choice?.pass.atLevel).toBeGreaterThanOrEqual(0.5);
+    const conservative = route(task(), agents, { level: 5 });
+    expect(conservative.model).toBe("strong");
+    expect(conservative.agentReason).toMatch(/没有组合/);
+    expect(conservative.meetsTarget).toBe(false);
+    expect(aggressive.agentReason).toMatch(/期望成本最低/);
   });
 
-  it("routes by the rules and lets the user override tier, agent and model", () => {
-    const routed = routeTask(task(), agents, "zh-CN");
-    expect(routed).toMatchObject({ ruleTier: "T1", tier: "T1", agent: "claude_code", model: "claude-haiku-5-5" });
-    expect(routed.costAllT3).toEqual(estimateCost(priced("o", 5, 25), routed.tokens));
-
-    const lifted = routeTask(task({ override: { tier: "T3" } }), agents, "zh-CN");
-    expect(lifted).toMatchObject({ ruleTier: "T1", tier: "T3", agent: "claude_code", model: "claude-opus-5-5" });
-
-    const moved = routeTask(task({ override: { agent: "codex" } }), agents, "zh-CN");
-    expect(moved).toMatchObject({ agent: "codex", model: null, cost: null, agentReason: "手动指定" });
-
-    // A typed model gets the catalog price when it matches an entry of the agent.
-    const typed = routeTask(task({ override: { model: "claude-opus-5-5" } }), agents, "zh-CN");
-    expect(typed).toMatchObject({ tier: "T1", model: "claude-opus-5-5" });
-    expect(typed.cost).toEqual(typed.costAllT3);
-    expect(routeTask(task({ override: { model: "my-model" } }), agents, "zh-CN").cost).toBeNull();
+  it("gives an uncertain model a chance at aggressive levels only", () => {
+    const options = route(task(), agents, { level: 1 }).options;
+    const vagueOption = options.find((option) => option.modelRef === 4);
+    const midOption = options.find((option) => option.modelRef === 2);
+    expect(vagueOption?.pass.low).toBeLessThan(midOption?.pass.low ?? 0);
+    expect(route(task(), [pi([mid, vague, strong])], { level: 1 }).model).toBe("vague");
+    expect(route(task(), [pi([mid, vague, strong])], { level: 4 }).model).not.toBe("vague");
   });
 
-  it("routes a lifted task on the new tier and drops a model typed for the old one", () => {
-    const failures: TaskFailure[] = [
-      { tier: "T1", at: "2026-01-01T00:00:00.000Z", source: "user" },
-      { tier: "T1", at: "2026-01-02T00:00:00.000Z", source: "user" },
-    ];
-    const lifted = routeTask(task({ failures, override: { model: "my-model" } }), agents, "zh-CN");
-    expect(lifted).toMatchObject({
-      ruleTier: "T1",
-      tier: "T2",
-      escalatedFrom: "T1",
-      agent: "codex",
-      model: "codex-mid",
+  it("never costs less or passes less often at a more conservative level", () => {
+    // Random catalogs with equal uncertainty: expected cost never falls, nor does the chance of passing.
+    let seed = 7;
+    const random = () => {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    };
+    for (let round = 0; round < 60; round += 1) {
+      const models = Array.from({ length: 4 }, (_, index) => {
+        const id = `r/m${round}-${index}`;
+        const price = 0.1 + random() * 20;
+        registry.models.push(registryModel(id, -2 + random() * 5, 0.3, price / 5, price));
+        return known(100 + index, id);
+      });
+      const features: TaskFeatures = { ...base, scope: random() < 0.5 ? "few_files" : "many_files" };
+      const routed = [1, 2, 3, 4, 5].map((level) =>
+        route(task({ features }), [pi(models)], { level: level as 1 | 2 | 3 | 4 | 5 }),
+      );
+      for (let index = 1; index < routed.length; index += 1) {
+        const before = routed[index - 1];
+        const after = routed[index];
+        expect(after?.expectedCost ?? 0).toBeGreaterThanOrEqual((before?.expectedCost ?? 0) - 1e-9);
+        expect(after?.choice?.pass.mean ?? 0).toBeGreaterThanOrEqual((before?.choice?.pass.mean ?? 0) - 1e-9);
+      }
+      const costs = routed[0]?.levelCosts ?? [];
+      expect(costs).toEqual(routed.map((item) => item.expectedCost));
+      registry.models.splice(-4);
+    }
+  });
+
+  it("prefers the cheaper of two equally able models", () => {
+    const pricey = {
+      ...mid,
+      modelRef: 9,
+      modelId: "mid-pricey",
+      name: "mid-pricey",
+      price: { ...mid.price, input: 3, output: 15 },
+    };
+    expect(route(task(), [pi([pricey, mid])]).model).toBe("mid");
+    expect(route(task(), [pi([mid, pricey])]).model).toBe("mid");
+  });
+
+  it("routes risky tasks at least at level 4 and requires the ability floor", () => {
+    const risky = task({ features: { ...base, risks: ["security"] } });
+    const routed = route(risky, agents, { level: 1 });
+    expect(routed).toMatchObject({ level: 4, levelSource: "risk" });
+    expect(routed.options.find((option) => option.modelRef === 1)?.excluded).toBe("risk_floor");
+    expect(route(risky, agents, { level: 5 }).levelSource).toBe("project");
+    // A level set on the task still cannot go below the risk level.
+    expect(route(task({ ...risky, override: { level: 2 } }), agents).level).toBe(4);
+    expect(route(task({ override: { level: 2 } }), agents)).toMatchObject({ level: 2, levelSource: "task" });
+  });
+
+  it("explains why cheaper combinations were passed over, and where the numbers come from", () => {
+    const routed = route(task(), agents, { level: 3 });
+    expect(routed.passedOver.length).toBeGreaterThan(0);
+    expect(routed.passedOver[0]).toMatch(/低于目标 70%/);
+    expect(routed.evidence).toMatch(/1 个榜单（SWE-bench Verified），截至 2026-09-30/);
+    const en = routeTask(task(), agents, "en", { registry, level: 3 });
+    expect(en.passedOver[0]).toMatch(/below the 70% target/);
+  });
+});
+
+describe("hard constraints", () => {
+  it("rules out a context window smaller than the task needs", () => {
+    const small = { ...strong, contextWindow: 64_000 };
+    const routed = route(task({ features: { ...base, context: "large" } }), [pi([small, mid])], { level: 5 });
+    expect(routed.model).toBe("mid");
+    expect(routed.options.find((option) => option.modelRef === 3)?.excluded).toBe("context");
+  });
+
+  it("rules out a subscription past its quota, or prices it per token when it allows that", () => {
+    const subscription = {
+      ...mid,
+      price: { mode: "subscription" as const, input: 0, output: 0, cacheRead: 0, source: "billing" as const },
+    };
+    const unavailable = route(task(), [pi([subscription, cheap])], { level: 1, pastQuota: () => "unavailable" });
+    expect(unavailable.options.find((option) => option.modelRef === 2)?.excluded).toBe("quota");
+    const overflow = route(task(), [pi([subscription])], { pastQuota: () => ({ ...mid.price }) });
+    expect(overflow.expectedCost).toBeGreaterThan(0);
+  });
+
+  it("ignores models of another API format and disabled agents", () => {
+    const anthropic = { ...strong, providerKind: "anthropic" as const };
+    const codex = agentConfig({ id: "codex", models: [anthropic], apiKinds: ["openai"] });
+    expect(route(task(), [codex, pi([mid], { enabled: false, preference: 1 })]).choice).toBeNull();
+  });
+
+  it("falls back to the first enabled agent without a model, and to generic when none is enabled", () => {
+    const routed = route(task(), [agentConfig({ id: "cursor" })]);
+    expect(routed).toMatchObject({
+      agent: "cursor",
+      model: null,
+      choice: null,
+      agentReason: "这个 Agent 没有可用的模型",
     });
-    expect(lifted.reasons.at(-1)).toBe("T1 已失败 2 次 → 升到 T2");
-    expect(lifted.failures).toEqual(failures);
+    expect(route(task(), [pi([mid], { enabled: false })])).toMatchObject({ agent: "generic", model: null });
+  });
+});
 
-    const fix = routeTask(task({ features: { ...base, kind: "fix" } }), agents, "zh-CN");
-    expect(fix).toMatchObject({ ruleTier: "T2", capability: "debugging", agent: "codex", needsHuman: false });
+describe("agents", () => {
+  const opusNative = known(5, "anthropic/opus", { native: true });
+  const opusForeign = known(5, "anthropic/opus");
+
+  it("runs a model in its vendor's own agent when that is at most 5 points less likely to pass", () => {
+    const claude = agentConfig({ id: "claude_code", preference: 1, models: [opusNative] });
+    const routed = route(task(), [pi([opusForeign]), claude], { level: 5 });
+    expect(routed.agent).toBe("claude_code");
+    expect(routed.choice?.native).toBe(true);
+    expect(routed.options.find((option) => option.agent === "pi")?.excluded).toBe("native");
   });
 
-  it("totals priced tasks and compares them with running everything on T3", () => {
-    const cheap = routeTask(task(), agents, "zh-CN");
-    const unpriced = routeTask(task({ id: 2, seq: 2, override: { model: "my-model" } }), agents, "zh-CN");
-    const { totals, tierCounts } = planTotals([cheap, unpriced]);
-    expect(tierCounts).toEqual({ T1: 2, T2: 0, T3: 0 });
+  it("breaks ties by the capability the task needs, then by preference", () => {
+    const free = {
+      ...mid,
+      price: { mode: "free" as const, input: 0, output: 0, cacheRead: 0, source: "billing" as const },
+    };
+    const first = pi([free]);
+    // Claude Code adds nothing to another vendor's model here, the same as Pi.
+    const second = agentConfig({ id: "claude_code", preference: 1, models: [free], capabilities: ["frontend"] });
+    expect(route(task(), [first, second]).agent).toBe("pi");
+    expect(route(task({ files: ["src/components/App.tsx"] }), [first, second]).agent).toBe("claude_code");
+  });
+
+  it("takes an agent and model chosen by hand, even past a constraint", () => {
+    const routed = route(task({ override: { agent: "pi", modelRef: 1 } }), [pi([cheap, strong])], { level: 5 });
+    expect(routed).toMatchObject({ model: "cheap", agentReason: "手动指定", passedOver: [] });
+    // KM0 0.1's tier override keeps models with that label.
+    expect(route(task({ override: { tier: "T3" } }), [pi([cheap, mid, strong])], { level: 1 }).model).toBe("strong");
+    expect(route(task({ override: { model: "mid" } }), [pi([cheap, mid, strong])]).model).toBe("mid");
+  });
+});
+
+describe("escalation", () => {
+  const agents = [pi([cheap, mid, strong])];
+  const failure = (modelRef: number, source: TaskFailure["source"] = "user"): TaskFailure => ({
+    tier: "T1",
+    at: "2026-01-01T00:00:00Z",
+    source,
+    agent: "pi",
+    modelRef,
+  });
+
+  it("moves a task to a stronger combination after two failures, or one rejection of KM0 Runner's work", () => {
+    const start = route(task(), agents, { level: 1 });
+    expect(start.model).toBe("cheap");
+    expect(start.chain.map((step) => step.modelId)).toEqual(["mid", "strong"]);
+    expect(route(task({ failures: [failure(1)] }), agents, { level: 1 }).model).toBe("cheap");
+    const lifted = route(task({ failures: [failure(1), failure(1)] }), agents, { level: 1 });
+    expect(lifted).toMatchObject({ model: "mid", escalatedFrom: "T1" });
+    expect(lifted.agentReason).toMatch(/已在这个任务上失败/);
+    expect(route(task({ failures: [failure(1, "runner")] }), agents, { level: 1 }).model).toBe("mid");
+  });
+
+  it("hands a task to a person once the chain is used up", () => {
+    const failures = [failure(1), failure(1), failure(2), failure(2), failure(3, "runner")];
+    const routed = route(task({ failures }), agents);
+    expect(routed).toMatchObject({ needsHuman: true, choice: null });
+    expect(routed.reasons.at(-1)).toMatch(/需要人来决定/);
+  });
+
+  it("reads KM0 0.1 failures by tier", () => {
+    const old: TaskFailure[] = [
+      { tier: "T1", at: "a", source: "user" },
+      { tier: "T1", at: "b", source: "user" },
+    ];
+    expect(route(task({ failures: old }), agents, { level: 1 }).choice?.tier).not.toBe("T1");
+  });
+});
+
+describe("local records", () => {
+  const agents = [pi([cheap, mid, strong])];
+  const record = (passed: boolean): RunRecord => ({
+    modelKey: "v/cheap",
+    agent: "pi",
+    native: false,
+    kind: "general",
+    band: "lt15m",
+    passed,
+    weight: 1,
+  });
+
+  it("learns from this install's runs: repeated failures move work off a model", () => {
+    expect(route(task(), agents, { level: 1 }).model).toBe("cheap");
+    const records = Array.from({ length: 8 }, () => record(false));
+    const routed = route(task(), agents, { level: 1, records });
+    expect(routed.model).not.toBe("cheap");
+    expect(routed.options.find((option) => option.modelRef === 1)?.localRecords).toBe(8);
+  });
+
+  it("guesses a model the registry does not list from its price, very uncertainly", () => {
+    const unknown = tierModel("my-model", 1, 5, { modelRef: 7 });
+    const routed = route(task(), [pi([unknown])]);
+    expect(routed.choice?.coverage).toBe("unmatched");
+    expect(routed.evidence).toMatch(/按价格估计/);
+  });
+
+  it("labels models by where their ability sits among the user's models, unless set by hand", () => {
+    const labels = tierLabels([
+      { id: 1, ability: -1, label: null },
+      { id: 2, ability: 0.5, label: null },
+      { id: 3, ability: 2, label: null },
+      { id: 4, ability: 2, label: "T1" },
+    ]);
+    expect([...labels.entries()]).toEqual([
+      [1, "T1"],
+      [2, "T2"],
+      [3, "T3"],
+      [4, "T1"],
+    ]);
+    expect(tierLabels([{ id: 1, ability: 0, label: null }]).get(1)).toBe("T2");
+  });
+});
+
+describe("plan totals", () => {
+  const agents = [pi([cheap, mid, strong])];
+
+  it("totals priced tasks and compares them with the strongest combination", () => {
+    const one = route(task(), agents, { level: 1 });
+    const unpriced = route(task({ id: 2, seq: 2 }), [pi([tierModel("x", null, null, { modelRef: 8 })])]);
+    const { totals } = planTotals([one, unpriced]);
     expect(totals.unpriced).toBe(1);
-    expect(totals.cost).toEqual(cheap.cost);
-    // Haiku-priced work against Opus-priced work: 1/5 of the cost.
-    expect(totals.saving).toBeCloseTo(0.8);
-    expect(planTotals([unpriced]).totals).toEqual({ cost: null, costAllT3: null, saving: null, unpriced: 1 });
+    expect(totals.cost).toEqual(one.cost);
+    expect(totals.saving).toBeGreaterThan(0.9);
+    expect(totals.expectedCost).toBeCloseTo(one.expectedCost ?? 0);
+  });
+
+  it("over budget, names tasks that fit at a cheaper level, largest saving first", () => {
+    const tasks = [1, 2, 3].map((id) => route(task({ id, seq: id }), agents, { level: 5 }));
+    const total = tasks.reduce((sum, item) => sum + (item.expectedCost ?? 0), 0);
+    expect(planTotals(tasks, null).budgetAdvice).toBeNull();
+    expect(planTotals(tasks, total * 2).budgetAdvice).toBeNull();
+    const advice = planTotals(tasks, total / 2).budgetAdvice;
+    expect(advice?.fits).toBe(true);
+    expect(advice?.moves[0]?.level).toBeLessThan(5);
+    const impossible = planTotals(tasks, 0.000001).budgetAdvice;
+    expect(impossible?.fits).toBe(false);
+    expect(impossible?.moves).toHaveLength(3);
   });
 });
 

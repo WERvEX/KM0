@@ -155,12 +155,14 @@ export class RunnerService {
           judged_at: nowIso(),
         };
         this.saveVerdict(row.id, verdict);
-        await this.routing.setRunnerRejection(
-          projectId,
-          row.seq,
-          verdict.judged_at,
-          verdict.accepted ? null : { tier: finishedTier(report), reason: verdict.reason },
-        );
+        await this.routing.setRunnerVerdict(projectId, row.seq, verdict.judged_at, {
+          accepted: verdict.accepted,
+          tier: finishedTier(report),
+          reason: verdict.reason,
+          attempts: report.attempts,
+          byUser: false,
+          ref: `runner:${run.run_id}:${report.task_id}`,
+        });
       }
       await this.tryWriteBack(run);
       return this.read(this.run(projectId, runRef));
@@ -184,12 +186,14 @@ export class RunnerService {
       const final = verdict.user_override ?? verdict.accepted;
       // KM0's reason argues for acceptance when the user rejects what it accepted, so the next prompt says who decided.
       const reason = verdict.accepted && !final ? OVERRULED[this.language()](verdict.reason) : verdict.reason;
-      await this.routing.setRunnerRejection(
-        projectId,
-        row.seq,
-        verdict.judged_at,
-        final ? null : { tier: finishedTier(report), reason },
-      );
+      await this.routing.setRunnerVerdict(projectId, row.seq, verdict.judged_at, {
+        accepted: final,
+        tier: finishedTier(report),
+        reason,
+        attempts: report.attempts,
+        byUser: verdict.user_override !== null,
+        ref: `runner:${verdict.run_id}:${report.task_id}`,
+      });
       const run = this.run(projectId, row.run_ref);
       await this.tryWriteBack(run);
       return this.read(this.run(projectId, row.run_ref));

@@ -42,9 +42,11 @@ import {
   CustomAgentInput,
   MoveAgentInput,
   OverrideTaskInput,
+  RecordRunInput,
   RoutingPlan,
   RoutingRules,
   RoutingRulesState,
+  StrategyInput,
   TaskRef,
   UpdateAgentInput,
 } from "./routing";
@@ -81,6 +83,8 @@ export const ipcContract = {
   /** Calls the model once through its provider; KM0's roles need a model that passes. */
   "settings.models.test": channel(Id, ConnectionTestResult),
   /** Registry models matching a search, to pick by hand which one a model is. */
+  /** Forget this install's records of the model's runs, so its ability goes back to the registry's. */
+  "settings.models.clearRecords": channel(Id, ModelEntry),
   "settings.models.registryChoices": channel(z.object({ query: z.string().max(100) }), z.array(RegistryChoice)),
   "settings.roles.get": channel(z.void(), RoleAssignment),
   "settings.roles.set": channel(RoleAssignment, RoleAssignment),
@@ -148,9 +152,15 @@ export const ipcContract = {
 
   "routing.get": channel(z.object({ projectId: z.number().int().positive() }), RoutingPlan.nullable()),
   "routing.plan": channel(z.object({ projectId: z.number().int().positive() }), RoutingPlan),
+  /** The project's strategy level and budget. */
+  "routing.strategy": channel(StrategyInput, RoutingPlan.nullable()),
   "task.override": channel(OverrideTaskInput, RoutingPlan),
-  /** Record one run of the task that did not pass its tests or acceptance criteria. */
-  "task.fail": channel(TaskRef, RoutingPlan),
+  /**
+   * Record one run of the task by hand: passed, or did not pass its tests or acceptance criteria. Both teach the
+   * model's ability; enough failures move the task up its escalation chain.
+   */
+  "task.record": channel(RecordRunInput, RoutingPlan),
+  /** Forget the task's failed runs and the records made by hand for it. */
   "task.clearFailures": channel(TaskRef, RoutingPlan),
 
   "handoff.build": channel(

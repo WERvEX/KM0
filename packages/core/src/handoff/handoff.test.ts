@@ -22,18 +22,17 @@ const agents: AgentConfig[] = [
     id: "claude_code",
     enabled: true,
     preference: 0,
-    models: {
-      T1: tierModel("claude-haiku-5-5"),
-      T2: tierModel("claude-sonnet-5-5"),
-      T3: null,
-    },
+    models: [
+      tierModel("claude-haiku-5-5", 1, 5, { modelRef: 1, tier: "T1", providerKind: "anthropic" }),
+      tierModel("claude-sonnet-5-5", 3, 15, { modelRef: 2, tier: "T2", providerKind: "anthropic" }),
+    ],
     capabilities: ["backend"],
   }),
   agentConfig({
     id: "codex",
     enabled: true,
     preference: 1,
-    models: { T1: null, T2: null, T3: tierModel("gpt-codex-max") },
+    models: [tierModel("gpt-codex-max", 10, 40, { modelRef: 3, tier: "T3" })],
     capabilities: [],
   }),
 ];
@@ -73,6 +72,7 @@ function input(): HandoffInput {
       }),
       agents,
       "zh-CN",
+      { level: 1 },
     ),
     routeTask(
       basics(2, {
@@ -90,12 +90,15 @@ function input(): HandoffInput {
       }),
       agents,
       "zh-CN",
+      { level: 1 },
     ),
   ];
   const plan: RoutingPlan = {
     projectId: 7,
     createdAt: "2026-01-01T00:00:00.000Z",
     tasks,
+    level: 1,
+    budget: null,
     ...planTotals(tasks),
     basedOn: [],
     outdated: false,
@@ -188,17 +191,24 @@ describe("hand-off package", () => {
     expect(second).toContain("交给人来决定");
   });
 
-  it("tells the agent when failures moved the task up a tier", () => {
+  it("tells the agent when failures moved the task up its escalation chain", () => {
     const data = input();
     const first = data.plan.tasks[0];
     expect(buildHandoff(data).tasks[0]?.prompt).toContain(
-      "这一档（T1）记满 2 次失败后，KM0 会把整个任务升到 T2 重做。",
+      "当前组合（claude-haiku-5-5, T1）记满 2 次失败后，KM0 会把整个任务交给 claude-sonnet-5-5 (Claude Code, T2) 重做。",
     );
-    const failed = { tier: "T1" as const, at: "2026-01-01T00:00:00.000Z", source: "user" as const };
+    const failed = {
+      tier: "T1" as const,
+      at: "2026-01-01T00:00:00.000Z",
+      source: "user" as const,
+      agent: "claude_code",
+      modelRef: 1,
+    };
     const lifted = routeTask(
       basics(1, { title: first?.title ?? "", files: first?.files ?? [], failures: [failed, failed] }),
       agents,
       "zh-CN",
+      { level: 1 },
     );
     data.plan.tasks[0] = lifted;
     const prompt = buildHandoff(data).tasks[0]?.prompt ?? "";
@@ -284,13 +294,13 @@ describe("a custom agent in a package", () => {
       name: "Gemini CLI",
       kind: "custom",
       preference: -1,
-      models: { T1: tierModel("gemini-4-flash"), T2: null, T3: null },
+      models: [tierModel("gemini-4-flash", 0.5, 2, { modelRef: 4, tier: "T1" })],
       capabilities: ["backend"],
       instructionFile: "GEMINI.md",
       launchTemplate: "gemini -m {model} -p {prompt}",
     });
     const all = [gemini, ...agents];
-    const task = routeTask(basics(1, { files: ["src/server/api.ts"] }), all, "zh-CN");
+    const task = routeTask(basics(1, { files: ["src/server/api.ts"] }), all, "zh-CN", { level: 1 });
     expect(task).toMatchObject({ tier: "T1", agent: "gemini-cli", model: "gemini-4-flash" });
 
     const base = input();

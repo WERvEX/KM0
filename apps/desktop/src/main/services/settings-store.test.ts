@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { migrate, openDatabase } from "../db/database";
 import { migrations } from "../db/migrations";
 import { AgentStore } from "./agent-store";
+import { RunRecordStore } from "./run-records";
 import { PlainSecretStore } from "./secrets";
 import { SettingsStore } from "./settings-store";
 
@@ -107,9 +108,13 @@ describe("database", () => {
     const claude = agents.list().find((agent) => agent.id === "claude_code");
     const codex = agents.list().find((agent) => agent.id === "codex");
     // The catalog KM0 0.1 shipped for Claude Code, and the one typed for Codex.
-    expect(claude?.models.T3).toMatchObject({ modelId: "claude-opus-5-5", vendor: "anthropic", native: true });
+    expect(claude?.models.find((model) => model.tier === "T3")).toMatchObject({
+      modelId: "claude-opus-5-5",
+      vendor: "anthropic",
+      native: true,
+    });
     expect(claude?.name).toBe("Claude Code");
-    expect(codex?.models.T2).toMatchObject({ modelId: "gpt-6-sol", priceInPerMTok: 2 });
+    expect(codex?.models).toEqual([expect.objectContaining({ modelId: "gpt-6-sol", priceInPerMTok: 2, tier: "T2" })]);
     expect(
       settings
         .listProviders()
@@ -312,5 +317,80 @@ describe("preferences and logs", () => {
     expect(settings.getRoutingRules().rules.tierLimits).toEqual({ T1: 1, T2: 4 });
     expect(() => settings.setRoutingRules({ ...rules, tierLimits: { T1: 5, T2: 2 } })).toThrow();
     expect(settings.setRoutingRules(null)).toEqual(defaults);
+  });
+});
+
+describe("abilities and quotas", () => {
+  it("labels models by ability, keeps a label set by hand and learns from this install's runs", () => {
+    const db = openDatabase(":memory:");
+    const records = new RunRecordStore(db);
+    const settings = new SettingsStore(
+      db,
+      new PlainSecretStore(),
+      () => registry,
+      () => records.all(),
+    );
+    const provider = settings.createProvider({ name: "DeepSeek", kind: "openai" });
+    const flash = settings.createModel({ providerId: provider.id, modelId: "deepseek-v4-flash" });
+    expect(flash.ability).toMatchObject({ coverage: "measured", runs: 0 });
+    const own = settings.createModel({ providerId: provider.id, modelId: "my-local", priceOutPerMTok: 0.5 });
+    expect(own.ability.coverage).toBe("unmatched");
+    expect(settings.updateModel(own.id, { providerId: provider.id, modelId: "my-local", tierLabel: "T3" }).tier).toBe(
+      "T3",
+    );
+    records.add({
+      modelKey: "deepseek/deepseek-v4-flash",
+      agent: "pi",
+      native: false,
+      kind: "general",
+      band: "15m-1h",
+      passed: false,
+      weight: 1,
+      source: "user",
+      projectId: null,
+      taskId: null,
+      ref: null,
+    });
+    const after = settings.getModel(flash.id).ability;
+    expect(after).toMatchObject({ runs: 1, passed: 0 });
+    expect(after.current.mean).toBeLessThan(after.prior.mean);
+    records.clearModel("deepseek/deepseek-v4-flash");
+    expect(settings.getModel(flash.id).ability.runs).toBe(0);
+  });
+
+  it("treats a subscription past its quota as unavailable, or priced per token when it allows that", () => {
+    const db = openDatabase(":memory:");
+    const settings = new SettingsStore(db, new PlainSecretStore(), () => registry);
+    const quota = { amount: 1, unit: "requests" as const, window: "5h" as const };
+    const provider = settings.createProvider({
+      name: "Plan",
+      kind: "openai",
+      billing: { mode: "subscription", monthlyFee: 20, quota, overflow: "unavailable" },
+    });
+    const model = settings.createModel({ providerId: provider.id, modelId: "deepseek-v4-flash" });
+    const tier = { modelRef: model.id, providerId: provider.id } as Parameters<
+      ReturnType<SettingsStore["pastQuota"]>
+    >[0];
+    expect(settings.pastQuota()(tier)).toBeNull();
+    settings.recordCall({
+      profileId: model.id,
+      model: model.modelId,
+      purpose: "triage",
+      projectId: null,
+      mode: "text",
+      attempt: 1,
+      inputTokens: 10,
+      outputTokens: 10,
+      costUsd: 0,
+      latencyMs: 1,
+      error: null,
+    });
+    expect(settings.pastQuota()(tier)).toBe("unavailable");
+    settings.updateProvider(provider.id, {
+      name: "Plan",
+      kind: "openai",
+      billing: { mode: "subscription", monthlyFee: 20, quota, overflow: "token" },
+    });
+    expect(settings.pastQuota()(tier)).toMatchObject({ mode: "token", source: "registry" });
   });
 });

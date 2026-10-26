@@ -1,15 +1,20 @@
 import {
   DEFAULT_ROUTING_RULES,
+  EMPTY_REGISTRY,
   effectivePrice,
   type LlmCallRecord,
   matchRegistryModel,
+  modelAbility,
   type ResolvedProfile,
+  type RunRecord,
+  tierLabels,
 } from "@km0/core";
 import {
   AppError,
   Billing,
   DEFAULT_BILLING,
   DEFAULT_PREFERENCES,
+  type EffectivePrice,
   type LlmRole,
   type ModelEntry,
   ModelInput,
@@ -18,10 +23,13 @@ import {
   type Provider,
   ProviderInput,
   type ProviderKind,
+  type Quota,
   type RoleAssignment,
   RoutingRules,
   type RoutingRulesState,
   type StructuredMode,
+  type Tier,
+  type TierModel,
 } from "@km0/shared";
 import { type Database, nowIso, transaction } from "../db/sql";
 import { keyHint, type SecretStore } from "./secrets";
@@ -50,6 +58,7 @@ interface ModelRow {
   price_in_per_mtok: number | null;
   price_out_per_mtok: number | null;
   price_cache_read_per_mtok: number | null;
+  tier_label: Tier | null;
   created_at: string;
   updated_at: string;
 }
@@ -79,16 +88,14 @@ function toProvider(row: ProviderRow): Provider {
 
 const ROLE_KEYS: Record<LlmRole, string> = { router: "role.router", planner: "role.planner" };
 
-/** A registry with no models, for stores built without one (tests, first start). */
-export const EMPTY_REGISTRY: ModelRegistry = {
-  schemaVersion: 1,
-  generatedAt: "",
-  dataDate: "",
-  sources: [],
-  difficulty: { bands: [] },
-  vendors: [],
-  agents: [],
-  models: [],
+export { EMPTY_REGISTRY };
+
+/** How far back a quota window reaches, in milliseconds; windows roll rather than reset on a calendar. */
+const WINDOW_MS: Record<Quota["window"], number> = {
+  "5h": 5 * 3_600_000,
+  day: 86_400_000,
+  week: 7 * 86_400_000,
+  month: 30 * 86_400_000,
 };
 
 /**
@@ -101,6 +108,7 @@ export class SettingsStore {
     private readonly db: Database,
     private readonly secrets: SecretStore,
     private readonly registry: () => ModelRegistry = () => EMPTY_REGISTRY,
+    private readonly records: () => RunRecord[] = () => [],
   ) {}
 
   // Providers
@@ -192,15 +200,21 @@ export class SettingsStore {
       (this.db.prepare("SELECT * FROM providers").all() as unknown as ProviderRow[]).map((row) => [row.id, row]),
     );
     const rows = this.db.prepare("SELECT * FROM models ORDER BY name").all() as unknown as ModelRow[];
-    return rows.flatMap((row) => {
+    const records = this.records();
+    const entries = rows.flatMap((row) => {
       const provider = providers.get(row.provider_id);
-      return provider ? [this.toEntry(row, provider)] : [];
+      return provider ? [this.toEntry(row, provider, records)] : [];
     });
+    // Tier labels depend on every model: each is placed among the user's own.
+    const labels = tierLabels(
+      entries.map((entry) => ({ id: entry.id, ability: entry.ability.current.mean, label: entry.tierLabel })),
+    );
+    return entries.map((entry) => ({ ...entry, tier: labels.get(entry.id) ?? "T2" }));
   }
 
   getModel(id: number): ModelEntry {
-    const row = this.modelRow(id);
-    return this.toEntry(row, this.providerRow(row.provider_id));
+    this.modelRow(id);
+    return this.listModels().find((entry) => entry.id === id) as ModelEntry;
   }
 
   createModel(input: ModelInput): ModelEntry {
@@ -211,8 +225,8 @@ export class SettingsStore {
       const result = this.db
         .prepare(
           `INSERT INTO models (provider_id, name, model_id, canonical_id, context_window, structured_mode, temperature,
-             price_in_per_mtok, price_out_per_mtok, price_cache_read_per_mtok, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             price_in_per_mtok, price_out_per_mtok, price_cache_read_per_mtok, tier_label, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           data.providerId,
@@ -225,6 +239,7 @@ export class SettingsStore {
           data.priceInPerMTok,
           data.priceOutPerMTok,
           data.priceCacheReadPerMTok,
+          data.tierLabel,
           now,
           now,
         );
@@ -249,7 +264,7 @@ export class SettingsStore {
         .prepare(
           `UPDATE models SET provider_id = ?, name = ?, model_id = ?, canonical_id = ?, context_window = ?,
              structured_mode = ?, temperature = ?, price_in_per_mtok = ?, price_out_per_mtok = ?,
-             price_cache_read_per_mtok = ?, updated_at = ? WHERE id = ?`,
+             price_cache_read_per_mtok = ?, tier_label = ?, updated_at = ? WHERE id = ?`,
         )
         .run(
           data.providerId,
@@ -262,6 +277,7 @@ export class SettingsStore {
           data.priceInPerMTok,
           data.priceOutPerMTok,
           data.priceCacheReadPerMTok,
+          data.tierLabel,
           nowIso(),
           id,
         );
@@ -370,7 +386,67 @@ export class SettingsStore {
       );
   }
 
-  private toEntry(row: ModelRow, provider: ProviderRow): ModelEntry {
+  /**
+   * Subscriptions past their quota, judged from KM0's own calls in the quota's window: what a run
+   * costs then (per token, at the official price), or that the model is unavailable until it resets.
+   * Runs of coding agents count once KM0 starts them itself.
+   */
+  pastQuota(): (model: TierModel) => EffectivePrice | "unavailable" | null {
+    const past = new Map<number, "token" | "unavailable">();
+    const providers = this.db.prepare("SELECT * FROM providers").all() as unknown as ProviderRow[];
+    const now = Date.now();
+    for (const provider of providers) {
+      const billing = parseBilling(provider.billing_json);
+      if (billing.mode !== "subscription" || !billing.quota) continue;
+      const since = new Date(now - WINDOW_MS[billing.quota.window]).toISOString();
+      const calls = this.db
+        .prepare(
+          `SELECT c.input_tokens AS input, c.output_tokens AS output, c.profile_id AS model FROM llm_calls c
+           JOIN models m ON m.id = c.profile_id WHERE m.provider_id = ? AND c.created_at >= ?`,
+        )
+        .all(provider.id, since) as { input: number; output: number; model: number }[];
+      let used = 0;
+      if (billing.quota.unit === "requests") used = calls.length;
+      else if (billing.quota.unit === "tokens") used = calls.reduce((sum, call) => sum + call.input + call.output, 0);
+      else {
+        const prices = new Map<number, EffectivePrice>();
+        for (const call of calls) {
+          let price = prices.get(call.model);
+          if (!price) {
+            price = this.tokenPrice(this.modelRow(call.model));
+            prices.set(call.model, price);
+          }
+          used += (call.input * (price.input ?? 0) + call.output * (price.output ?? 0)) / 1e6;
+        }
+      }
+      if (used >= billing.quota.amount) past.set(provider.id, billing.overflow);
+    }
+    return (model) => {
+      const overflow = past.get(model.providerId);
+      if (!overflow) return null;
+      return overflow === "unavailable" ? "unavailable" : this.tokenPrice(this.modelRow(model.modelRef));
+    };
+  }
+
+  /** The model's price per token as if its provider charged per token: past a subscription's quota. */
+  private tokenPrice(row: ModelRow): EffectivePrice {
+    const registry = this.registry();
+    const match = row.canonical_id
+      ? { canonicalId: row.canonical_id }
+      : matchRegistryModel(registry, row.model_id, row.name);
+    const known = match.canonicalId ? registry.models.find((model) => model.id === match.canonicalId) : undefined;
+    return effectivePrice(
+      { mode: "token" },
+      {
+        priceInPerMTok: row.price_in_per_mtok,
+        priceOutPerMTok: row.price_out_per_mtok,
+        priceCacheReadPerMTok: row.price_cache_read_per_mtok,
+      },
+      known?.pricing ?? null,
+    );
+  }
+
+  private toEntry(row: ModelRow, provider: ProviderRow, records: RunRecord[] = this.records()): ModelEntry {
     const registry = this.registry();
     const match = row.canonical_id
       ? { canonicalId: row.canonical_id, problem: null, candidates: [] as string[] }
@@ -403,6 +479,13 @@ export class SettingsStore {
           priceCacheReadPerMTok: row.price_cache_read_per_mtok,
         },
         known?.pricing ?? null,
+      ),
+      tier: row.tier_label ?? "T2",
+      tierLabel: row.tier_label,
+      ability: modelAbility(
+        registry,
+        { id: row.id, canonicalId: match.canonicalId, priceOutPerMTok: row.price_out_per_mtok },
+        records,
       ),
       // A local endpoint may need no key; a hosted one without a key cannot be called by KM0.
       callable: provider.api_key_encrypted !== null || provider.base_url !== null,

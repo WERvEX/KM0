@@ -7,7 +7,6 @@ import {
   type ImportSummary,
   isPresetAgent,
   TIERS,
-  type Tier,
 } from "@km0/shared";
 import type { AgentStore } from "./agent-store";
 import type { SearchStore } from "./search-store";
@@ -53,6 +52,7 @@ export class ConfigService {
         priceInPerMTok: model.priceInPerMTok,
         priceOutPerMTok: model.priceOutPerMTok,
         priceCacheReadPerMTok: model.priceCacheReadPerMTok,
+        tierLabel: model.tierLabel,
       })),
       roles: { router: nameOf(roles.router), planner: nameOf(roles.planner) },
       preferences: this.settings.getPreferences(),
@@ -61,11 +61,7 @@ export class ConfigService {
         name: agent.name,
         kind: agent.kind,
         enabled: agent.enabled,
-        models: {
-          T1: agent.models.T1?.name ?? null,
-          T2: agent.models.T2?.name ?? null,
-          T3: agent.models.T3?.name ?? null,
-        },
+        models: agent.models.map((model) => model.name),
         capabilities: agent.capabilities,
         instructionFile: agent.instructionFile,
         launchTemplate: agent.launchTemplate,
@@ -156,16 +152,13 @@ export class ConfigService {
         continue;
       }
       if (!target) continue;
-      const tiers = Object.fromEntries(TIERS.map((tier) => [tier, modelId(agent.models[tier])])) as Record<
-        Tier,
-        number | null
-      >;
       // A model the agent cannot use (another API format) is left out rather than failing the import.
-      for (const tier of TIERS) {
-        const model = models.find((item) => item.id === tiers[tier]);
-        if (model && target.apiKinds.length > 0 && !target.apiKinds.includes(model.providerKind)) tiers[tier] = null;
-      }
-      this.agents.update(target.id, agent.enabled, tiers, agent.capabilities);
+      const refs = agent.models.flatMap((name) => {
+        const model = models.find((item) => item.name === name);
+        if (!model || (target.apiKinds.length > 0 && !target.apiKinds.includes(model.providerKind))) return [];
+        return [model.id];
+      });
+      this.agents.update(target.id, agent.enabled, refs, agent.capabilities);
       if (agent.kind !== "custom") summary.agentsUpdated += 1;
       order.push(target.id);
     }
@@ -201,6 +194,7 @@ export function upgrade(old: ConfigBundleV1): ConfigBundleV2 {
     priceInPerMTok: profile.priceInPerMTok,
     priceOutPerMTok: profile.priceOutPerMTok,
     priceCacheReadPerMTok: null,
+    tierLabel: null,
   }));
   const names = new Set([...providers.map((p) => p.name), ...models.map((m) => m.name)]);
   const unique = (name: string) => {
@@ -210,7 +204,7 @@ export function upgrade(old: ConfigBundleV1): ConfigBundleV2 {
     return candidate;
   };
   const agents: ConfigBundleV2["agents"] = old.agents.map((agent) => {
-    const tiers: Record<Tier, string | null> = { T1: null, T2: null, T3: null };
+    const available: string[] = [];
     const typed = TIERS.flatMap((tier) => (agent.models[tier] ? [[tier, agent.models[tier]] as const] : []));
     if (typed.length > 0) {
       const provider = unique(agent.id);
@@ -220,7 +214,7 @@ export function upgrade(old: ConfigBundleV1): ConfigBundleV2 {
         baseUrl: null,
         billing: { mode: "token" },
       });
-      for (const [tier, model] of typed) {
+      for (const [, model] of typed) {
         const name = unique(model.modelId);
         models.push({
           provider,
@@ -233,8 +227,10 @@ export function upgrade(old: ConfigBundleV1): ConfigBundleV2 {
           priceInPerMTok: model.priceInPerMTok,
           priceOutPerMTok: model.priceOutPerMTok,
           priceCacheReadPerMTok: null,
+          // Labels follow ability among the user's models, as for any new model.
+          tierLabel: null,
         });
-        tiers[tier] = name;
+        available.push(name);
       }
     }
     return {
@@ -242,7 +238,7 @@ export function upgrade(old: ConfigBundleV1): ConfigBundleV2 {
       name: agent.id,
       kind: "preset",
       enabled: agent.enabled,
-      models: tiers,
+      models: available,
       capabilities: agent.capabilities ?? [],
       instructionFile: null,
       launchTemplate: null,

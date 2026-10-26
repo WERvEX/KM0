@@ -1,20 +1,34 @@
-import type {
-  AgentConfig,
-  AgentId,
-  Capability,
-  CostRange,
-  RoutedTask,
-  RoutingPlan,
-  RoutingRules,
-  TaskFailure,
-  TaskFeatures,
-  TaskOverride,
-  Tier,
-  TierModel,
+import {
+  type AbilityKind,
+  type AgentConfig,
+  type Capability,
+  type CostRange,
+  DEFAULT_LEVEL,
+  type ModelRegistry,
+  RISK_LEVEL,
+  type RoutedTask,
+  type RoutingPlan,
+  type RoutingRules,
+  type StrategyLevel,
+  type TaskFailure,
+  type TaskFeatures,
+  type TaskOverride,
 } from "@km0/shared";
-import { TIERS } from "@km0/shared";
+import { EMPTY_REGISTRY, type RunRecord } from "../ability/records";
 import type { Language } from "../discussion/prompts";
-import { DEFAULT_ROUTING_RULES, decideTier, escalateTier } from "./scoring";
+import { DEFAULT_ROUTING_RULES, decideTier } from "./scoring";
+import {
+  bandFor,
+  CONTEXT_NEED,
+  candidates,
+  evidenceLine,
+  explainChoice,
+  levelCosts,
+  passedOver,
+  STRATEGY_TEXT,
+  type StrategyContext,
+  select,
+} from "./strategy";
 
 /**
  * Tokens one agent run is expected to use, by scope. Coding agents re-read files and tool output
@@ -36,13 +50,6 @@ export function estimateTokens(features: TaskFeatures): { input: CostRange; outp
   const output = base.output * ambiguityFactor;
   const range = (value: number) => ({ low: Math.round(value * RANGE.low), high: Math.round(value * RANGE.high) });
   return { input: range(input), output: range(output) };
-}
-
-export function estimateCost(model: TierModel | null, tokens: { input: CostRange; output: CostRange }) {
-  if (!model || model.priceInPerMTok === null || model.priceOutPerMTok === null) return null;
-  const at = (side: keyof CostRange) =>
-    (tokens.input[side] * (model.priceInPerMTok ?? 0) + tokens.output[side] * (model.priceOutPerMTok ?? 0)) / 1e6;
-  return { low: at("low"), high: at("high") };
 }
 
 /** Paths that are mostly user interface, or mostly server, data or tooling code. */
@@ -76,94 +83,6 @@ export function taskCapability(features: TaskFeatures, files: string[]): Capabil
   }
 }
 
-const AGENT_TEXT = {
-  "zh-CN": {
-    capability: {
-      frontend: "前端",
-      backend: "后端",
-      debugging: "调试",
-      testing: "测试",
-      docs: "文档",
-      devops: "部署与配置",
-    },
-    forced: "手动指定",
-    first: (tier: Tier) => `已启用的 Agent 中排在最前、且配置了 ${tier} 模型`,
-    matched: (skill: string, tier: Tier) => `擅长${skill}、且配置了 ${tier} 模型的 Agent 中排在最前`,
-    unmatched: (skill: string, tier: Tier) =>
-      `没有擅长${skill}的 Agent 配置了 ${tier} 模型，改用排在最前、且配置了 ${tier} 模型的 Agent`,
-    idle: (names: string, skill: string, tier: Tier) =>
-      `${names} 擅长${skill}，但没有配置 ${tier} 模型，暂用排在最前、且配置了 ${tier} 模型的 Agent；在“设置 → Agent”里补上模型后，这类任务会交给它`,
-    noModel: (tier: Tier) => `没有 Agent 配置 ${tier} 模型，暂用排在最前的 Agent`,
-    none: "没有启用的 Agent，使用通用提示词",
-  },
-  en: {
-    capability: {
-      frontend: "frontend",
-      backend: "backend",
-      debugging: "debugging",
-      testing: "testing",
-      docs: "docs",
-      devops: "devops",
-    },
-    forced: "chosen by hand",
-    first: (tier: Tier) => `first enabled agent with a ${tier} model`,
-    matched: (skill: string, tier: Tier) => `first agent good at ${skill} with a ${tier} model`,
-    unmatched: (skill: string, tier: Tier) =>
-      `no agent good at ${skill} has a ${tier} model; using the first enabled agent with one`,
-    idle: (names: string, skill: string, tier: Tier) =>
-      `${names} is good at ${skill} but has no ${tier} model, so the first enabled agent with one is used; add a model under Settings → Agents to send these tasks there`,
-    noModel: (tier: Tier) => `no agent has a ${tier} model; using the first enabled agent`,
-    none: "no agent is enabled; using the generic prompt",
-  },
-} as const;
-
-/**
- * The agent for a task: among enabled agents that have a model for the tier, the first by
- * preference that is good at what the task needs, else the first by preference. A model for the
- * tier matters more than the capability, since without one there is no price and no command.
- */
-export function chooseAgent(
-  agents: AgentConfig[],
-  tier: Tier,
-  language: Language,
-  options: { forced?: AgentId; capability?: Capability | null } = {},
-): { agent: AgentId; model: TierModel | null; reason: string } {
-  const text = AGENT_TEXT[language];
-  const { forced, capability } = options;
-  if (forced) {
-    const config = agents.find((agent) => agent.id === forced);
-    return { agent: forced, model: config?.models[tier] ?? null, reason: text.forced };
-  }
-  const enabled = agents.filter((agent) => agent.enabled).sort((a, b) => a.preference - b.preference);
-  const withModel = enabled.filter((agent) => agent.models[tier]);
-  if (capability) {
-    const skill = text.capability[capability];
-    const good = withModel.find((agent) => agent.capabilities.includes(capability));
-    if (good) return { agent: good.id, model: good.models[tier], reason: text.matched(skill, tier) };
-    const fallback = withModel[0];
-    if (fallback) {
-      // Name the agents that would take the task once they have a model, so the fix is obvious.
-      const idle = enabled.filter((agent) => agent.capabilities.includes(capability)).map((agent) => agent.name);
-      const reason =
-        idle.length > 0
-          ? text.idle(idle.join(language === "zh-CN" ? "、" : ", "), skill, tier)
-          : text.unmatched(skill, tier);
-      return { agent: fallback.id, model: fallback.models[tier], reason };
-    }
-  }
-  const first = withModel[0];
-  if (first) return { agent: first.id, model: first.models[tier], reason: text.first(tier) };
-  const any = enabled[0];
-  if (any) return { agent: any.id, model: null, reason: text.noModel(tier) };
-  return { agent: "generic", model: null, reason: text.none };
-}
-
-/** A model ID typed by hand gets the price of the matching catalog entry, if there is one. */
-function priceOf(agent: AgentConfig | undefined, modelId: string): TierModel | null {
-  if (!agent) return null;
-  return TIERS.map((tier) => agent.models[tier]).find((model) => model?.modelId === modelId) ?? null;
-}
-
 export interface TaskBasics {
   id: number;
   seq: number;
@@ -180,51 +99,109 @@ export interface TaskBasics {
   failures: TaskFailure[];
 }
 
+export interface RouteOptions {
+  rules?: RoutingRules;
+  registry?: ModelRegistry;
+  records?: RunRecord[];
+  /** The project's strategy level. */
+  level?: StrategyLevel;
+  pastQuota?: StrategyContext["pastQuota"];
+}
+
 /**
- * Tier, agent, model and cost for a task: rules first, then whatever the user overrode, then a
- * lift for failed runs. Once failures lift the task, a model typed by hand no longer applies.
+ * Difficulty, strategy level, agent, model and cost for a task. The rules give the task a score and
+ * a tier, which place it in a difficulty band; the strategy picks the combination; what the user
+ * overrode and the task's failed runs apply on top.
  */
 export function routeTask(
   task: TaskBasics,
   agents: AgentConfig[],
   language: Language,
-  rules: RoutingRules = DEFAULT_ROUTING_RULES,
+  options: RouteOptions = {},
 ): RoutedTask {
-  const decision = decideTier(task.features, language, rules);
-  const override = task.override;
-  const escalation = escalateTier(override?.tier ?? decision.tier, task.failures, language);
-  const tier = escalation.tier;
+  const registry = options.registry ?? EMPTY_REGISTRY;
+  const decision = decideTier(task.features, language, options.rules ?? DEFAULT_ROUTING_RULES);
   const capability = taskCapability(task.features, task.files);
-  const chosen = chooseAgent(agents, tier, language, { forced: override?.agent, capability });
-  const config = agents.find((agent) => agent.id === chosen.agent);
-  const typed = escalation.escalatedFrom ? undefined : override?.model;
-  const model = typed ? priceOf(config, typed) : chosen.model;
+  const abilityKind: AbilityKind = capability ?? "general";
   const tokens = estimateTokens(task.features);
+  const band = bandFor(registry, decision.tier, decision.score);
+  const risky = task.features.risks.length > 0;
+  const asked = task.override?.level ?? options.level ?? DEFAULT_LEVEL;
+  const level = (risky ? Math.max(asked, RISK_LEVEL) : asked) as StrategyLevel;
+  const levelSource = risky && asked < RISK_LEVEL ? "risk" : task.override?.level ? "task" : "project";
+
+  const all = candidates(
+    { features: task.features, tier: decision.tier, score: decision.score, abilityKind, capability, tokens },
+    agents,
+    { registry, records: options.records ?? [], pastQuota: options.pastQuota },
+  );
+  const settings = { risky, failures: task.failures, override: task.override };
+  const selection = select(all, level, settings);
+  const choice = selection.choice;
+  const fallback = agents.filter((agent) => agent.enabled).sort((a, b) => a.preference - b.preference)[0];
+  const agent = choice?.agent ?? task.override?.agent ?? fallback?.id ?? "generic";
+  const config = agents.find((item) => item.id === agent);
+  const model = config?.models.find((item) => item.modelRef === choice?.modelRef);
+  const text = STRATEGY_TEXT[language];
+  const agentReason =
+    choice || !config || selection.exhausted ? explainChoice(selection, level, language) : text.noModel;
+  const reasons = [...decision.reasons];
+  if (selection.exhausted) reasons.push(text.exhausted);
+
   return {
     ...task,
     testCommand: task.testCommand ?? null,
     score: decision.score,
     ruleTier: decision.tier,
-    tier,
-    reasons: [...decision.reasons, ...escalation.reasons],
-    escalatedFrom: escalation.escalatedFrom,
-    needsHuman: escalation.needsHuman,
+    tier: choice?.tier ?? decision.tier,
+    reasons,
+    escalatedFrom: selection.movedFrom && choice ? selection.movedFrom.tier : null,
+    needsHuman: selection.exhausted,
     capability,
-    agent: chosen.agent,
-    agentReason: chosen.reason,
-    model: typed ?? chosen.model?.modelId ?? null,
+    abilityKind,
+    level,
+    levelSource,
+    band: band.id,
+    difficulty: band.difficulty,
+    agent,
+    agentReason,
+    modelRef: choice?.modelRef ?? null,
+    model: choice?.modelId ?? null,
+    choice,
+    meetsTarget: selection.meetsTarget,
+    chain: selection.chain,
+    options: selection.options,
+    passedOver: passedOver(
+      selection,
+      level,
+      {
+        contextNeed: CONTEXT_NEED[task.features.context],
+        windowOf: (ref) =>
+          agents.flatMap((item) => item.models).find((item) => item.modelRef === ref)?.contextWindow ?? null,
+      },
+      language,
+    ),
+    evidence: evidenceLine(registry, choice, model?.canonicalId ?? null, language),
     tokens,
-    cost: estimateCost(model, tokens),
-    costAllT3: estimateCost(config?.models.T3 ?? null, tokens),
+    cost: choice?.cost ?? null,
+    expectedCost: choice?.expectedCost ?? null,
+    levelCosts: levelCosts(all, settings),
+    costStrongest: selection.strongest?.cost ?? null,
     splitSuggested: decision.splitSuggested,
   };
 }
 
 const middle = (range: CostRange) => (range.low + range.high) / 2;
 
-/** Sums over the tasks that have a price both as routed and on T3. */
-export function planTotals(tasks: RoutedTask[]): Pick<RoutingPlan, "totals" | "tierCounts"> {
-  const priced = tasks.filter((task) => task.cost && task.costAllT3);
+/**
+ * Sums over the tasks that have a price both as routed and on the strongest combination; over a
+ * budget, the tasks that could move to a cheaper level, largest saving first, until the plan fits.
+ */
+export function planTotals(
+  tasks: RoutedTask[],
+  budget: number | null = null,
+): Pick<RoutingPlan, "totals" | "tierCounts" | "budgetAdvice"> {
+  const priced = tasks.filter((task) => task.cost && task.costStrongest);
   const sum = (pick: (task: RoutedTask) => CostRange | null) =>
     priced.length === 0
       ? null
@@ -236,9 +213,53 @@ export function planTotals(tasks: RoutedTask[]): Pick<RoutingPlan, "totals" | "t
           { low: 0, high: 0 },
         );
   const cost = sum((task) => task.cost);
-  const costAllT3 = sum((task) => task.costAllT3);
-  const saving = cost && costAllT3 && middle(costAllT3) > 0 ? 1 - middle(cost) / middle(costAllT3) : null;
+  const costStrongest = sum((task) => task.costStrongest);
+  const saving = cost && costStrongest && middle(costStrongest) > 0 ? 1 - middle(cost) / middle(costStrongest) : null;
+  const expected = tasks.filter((task) => task.expectedCost !== null);
+  const expectedCost =
+    expected.length === 0 ? null : expected.reduce((total, task) => total + (task.expectedCost ?? 0), 0);
   const tierCounts = { T1: 0, T2: 0, T3: 0 };
   for (const task of tasks) tierCounts[task.tier] += 1;
-  return { totals: { cost, costAllT3, saving, unpriced: tasks.length - priced.length }, tierCounts };
+
+  let budgetAdvice: RoutingPlan["budgetAdvice"] = null;
+  if (budget !== null && expectedCost !== null && expectedCost > budget) {
+    const over = expectedCost - budget;
+    const moves = tasks
+      .flatMap((task) => {
+        const current = task.expectedCost;
+        if (current === null) return [];
+        const lowest = task.features.risks.length > 0 ? RISK_LEVEL : 1;
+        // The cheapest level below the current one; equal costs keep the more conservative level.
+        let best: { level: StrategyLevel; saving: number } | null = null;
+        for (let level = task.level - 1; level >= lowest; level -= 1) {
+          const value = task.levelCosts[level - 1];
+          if (value === null || value === undefined) continue;
+          const gain = current - value;
+          if (gain > 1e-9 && (!best || gain > best.saving + 1e-9))
+            best = { level: level as StrategyLevel, saving: gain };
+        }
+        return best ? [{ taskId: task.id, seq: task.seq, ...best }] : [];
+      })
+      .sort((a, b) => b.saving - a.saving);
+    const chosen: typeof moves = [];
+    let left = over;
+    for (const move of moves) {
+      if (left <= 0) break;
+      chosen.push(move);
+      left -= move.saving;
+    }
+    budgetAdvice = { over, fits: left <= 0, moves: chosen };
+  }
+  return {
+    totals: {
+      cost,
+      expectedCost,
+      costStrongest,
+      saving,
+      unpriced: tasks.length - priced.length,
+      belowTarget: tasks.filter((task) => task.choice && !task.meetsTarget).length,
+    },
+    tierCounts,
+    budgetAdvice,
+  };
 }

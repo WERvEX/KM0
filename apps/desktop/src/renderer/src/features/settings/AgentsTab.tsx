@@ -7,18 +7,18 @@ import {
   type ProviderKind,
   type RegistryInfo,
   RoutingRules,
-  TIERS,
-  type Tier,
 } from "@km0/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Loader2, Pencil, Plus, RefreshCw, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Badge, TierBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/cn";
 import { useFiles } from "@/lib/files";
 import { call, errorMessage } from "@/lib/ipc";
 import { useIpcMutation, useIpcQuery } from "@/lib/queries";
@@ -253,13 +253,10 @@ function RoutingRulesSection() {
   );
 }
 
-type Draft = Record<Tier, number | null>;
+/** The model entries an agent may run, in a stable order so drafts compare by value. */
+type Draft = number[];
 
-const toDraft = (agent: AgentConfig): Draft => ({
-  T1: agent.models.T1?.modelRef ?? null,
-  T2: agent.models.T2?.modelRef ?? null,
-  T3: agent.models.T3?.modelRef ?? null,
-});
+const toDraft = (agent: AgentConfig): Draft => agent.models.map((model) => model.modelRef).sort((a, b) => a - b);
 
 function AgentCard({
   agent,
@@ -394,53 +391,45 @@ function AgentCard({
           ))}
         </div>
       </fieldset>
-      <div className="mt-3 grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-2 text-xs">
-        {TIERS.map((tier) => {
-          const chosen = models.find((model) => model.id === draft[tier]);
-          return (
-            <div key={tier} className="contents">
-              <span className="font-medium" title={t(`settings.agents.tierHint.${tier}`)}>
-                {tier}
-              </span>
-              <Select
-                className="h-8"
-                aria-label={`${name} ${tier}`}
-                value={draft[tier] === null ? "" : String(draft[tier])}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    [tier]: event.target.value ? Number(event.target.value) : null,
-                  }))
-                }
-              >
-                <option value="">{t("settings.agents.noModel")}</option>
-                {options.map((model) => (
-                  <option key={model.id} value={model.id} disabled={!usable(model)}>
-                    {model.name}
-                    {native(model) ? ` · ${t("settings.agents.native")}` : ""}
-                    {usable(model) ? "" : ` ${t("settings.agents.incompatible")}`}
-                  </option>
-                ))}
-              </Select>
-              <span className="min-w-12 text-right">
-                {chosen && native(chosen) ? (
-                  <span className="rounded bg-success/15 px-1.5 py-0.5 text-success">
-                    {t("settings.agents.native")}
-                  </span>
-                ) : chosen?.vendor && agent.nativeVendors.length > 0 ? (
+      <fieldset className="mt-3">
+        <legend className="mb-1.5 text-xs text-muted">{t("settings.agents.models")}</legend>
+        {options.length === 0 ? (
+          <p className="text-xs text-muted">{t("settings.agents.noModels")}</p>
+        ) : (
+          <ul className="grid gap-1 text-xs sm:grid-cols-2">
+            {options.map((model) => (
+              <li key={model.id} className="flex min-w-0 items-center gap-2">
+                <label className={cn("flex min-w-0 items-center gap-1.5", !usable(model) && "text-muted")}>
+                  <input
+                    type="checkbox"
+                    disabled={!usable(model)}
+                    checked={draft.includes(model.id)}
+                    onChange={(event) =>
+                      setDraft((current) =>
+                        event.target.checked
+                          ? [...current, model.id].sort((a, b) => a - b)
+                          : current.filter((id) => id !== model.id),
+                      )
+                    }
+                  />
+                  <span className="truncate">{model.name}</span>
+                </label>
+                <TierBadge tier={model.tier} />
+                {!usable(model) ? (
+                  <span className="text-muted">{t("settings.agents.incompatible")}</span>
+                ) : native(model) ? (
+                  <Badge tone="success">{t("settings.agents.native")}</Badge>
+                ) : model.vendor && agent.nativeVendors.length > 0 ? (
                   // Another vendor's model in a vendor's own agent: allowed, but worth knowing.
-                  <span
-                    className="rounded bg-warning/15 px-1.5 py-0.5 text-warning"
-                    title={t("settings.agents.notNative", { agent: name })}
-                  >
+                  <Badge tone="warning" title={t("settings.agents.notNative", { agent: name })}>
                     {t("settings.agents.foreign")}
-                  </span>
+                  </Badge>
                 ) : null}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </fieldset>
       {dirty || update.error ? (
         <div className="mt-3 flex items-center gap-3">
           <Button size="sm" variant="primary" disabled={!dirty || update.isPending} onClick={save}>

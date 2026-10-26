@@ -1,4 +1,4 @@
-import type { Gateway } from "@km0/core";
+import { type Gateway, modelKey } from "@km0/core";
 import type { AppInfo } from "@km0/shared";
 import type { Handlers } from "./ipc/router";
 import type { AgentStore } from "./services/agent-store";
@@ -11,6 +11,7 @@ import type { ProjectService } from "./services/project-service";
 import type { RegistryService } from "./services/registry-service";
 import { type RepoAccess, scanPath } from "./services/repo-access";
 import type { RoutingService } from "./services/routing-service";
+import type { RunRecordStore } from "./services/run-records";
 import type { RunnerService } from "./services/runner-service";
 import type { SearchStore } from "./services/search-store";
 import type { SettingsStore } from "./services/settings-store";
@@ -26,6 +27,7 @@ export interface HandlerDeps {
   search: SearchStore;
   config: ConfigService;
   registry: RegistryService;
+  records: RunRecordStore;
   repo: RepoAccess;
   files: FilePort;
   /** Absent in the browser build, which uses the browser's own folder picker. */
@@ -45,6 +47,7 @@ export function createHandlers({
   search,
   config,
   registry,
+  records,
   repo,
   files,
   folders,
@@ -70,6 +73,10 @@ export function createHandlers({
         settings.setStructuredMode(id, result.detectedMode);
       }
       return result;
+    },
+    "settings.models.clearRecords": ({ id }) => {
+      records.clearModel(modelKey(settings.getModel(id)));
+      return settings.getModel(id);
     },
     "settings.models.registryChoices": ({ query }) => registry.choices(query),
     "settings.roles.get": () => settings.getRoles(),
@@ -132,7 +139,8 @@ export function createHandlers({
     "routing.get": ({ projectId }) => routing.get(projectId),
     "routing.plan": ({ projectId }) => routing.plan(projectId),
     "task.override": ({ projectId, taskId, override }) => routing.override(projectId, taskId, override),
-    "task.fail": ({ projectId, taskId }) => routing.recordFailure(projectId, taskId),
+    "routing.strategy": ({ projectId, level, budget }) => routing.setStrategy(projectId, level, budget),
+    "task.record": ({ projectId, taskId, passed }) => routing.record(projectId, taskId, passed),
     "task.clearFailures": ({ projectId, taskId }) => routing.clearFailures(projectId, taskId),
 
     "handoff.build": ({ projectId, target }) => handoff.build(projectId, target),

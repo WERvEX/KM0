@@ -16,6 +16,7 @@ import { llmPort } from "../main/services/llm-port";
 import { ProjectService } from "../main/services/project-service";
 import { RegistryService } from "../main/services/registry-service";
 import { RoutingService } from "../main/services/routing-service";
+import { RunRecordStore } from "../main/services/run-records";
 import { RunnerService } from "../main/services/runner-service";
 import { SearchStore } from "../main/services/search-store";
 import { PlainSecretStore } from "../main/services/secrets";
@@ -54,7 +55,13 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.text();
   });
-  const settings = new SettingsStore(db, secrets, () => registry.current().registry);
+  const records = new RunRecordStore(db);
+  const settings = new SettingsStore(
+    db,
+    secrets,
+    () => registry.current().registry,
+    () => records.all(),
+  );
   const gateway = createGateway({
     recordCall: (record) => settings.recordCall(record),
     onModeDetected: (profileId, mode) => {
@@ -80,7 +87,11 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db, () => settings.listModels());
   const config = new ConfigService(settings, agents, search);
-  const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules);
+  const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules, {
+    registry: () => registry.current().registry,
+    records,
+    pastQuota: () => settings.pastQuota(),
+  });
   const handoff = new HandoffService(db, routing, language);
   const runner = new RunnerService(db, webRunAccess(), routing, llmFor, language, () =>
     simulated ? "simulated" : settings.profileForRole("planner").model,
@@ -97,6 +108,7 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
       search,
       config,
       registry,
+      records,
       repo,
       files: noFilePort,
       folders: null,
