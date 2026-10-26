@@ -59,7 +59,7 @@ export const en: Messages = {
     steps: {
       triage: "Triage: classify the task and pick the fast, light or full path",
       discuss: "Discuss: settle scale, requirements, tech stack and design step by step",
-      route: "Route: split into tasks and pick a model tier and agent for each",
+      route: "Route: split into tasks and pick an agent and model for each by your dispatch strategy",
       handoff: "Hand off: produce packages a coding agent can start from",
     },
   },

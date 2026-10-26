@@ -89,6 +89,8 @@ test("a run is checked, started, followed, stopped and redone, and its results a
   await dialog.getByRole("button", { name: "开始执行" }).click();
   await expect(dialog).toBeHidden();
   await expect(latestRun().getByText("执行中").first()).toBeVisible();
+  // The task shows up with the first progress event.
+  await expect(latestRun().getByText("按确认的范围完成改动")).toBeVisible();
   await page.screenshot({ path: "test-results/screenshots/execution-running.png", fullPage: true });
   await expect(latestRun().getByText("已结束", { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(latestRun().getByText("通过", { exact: true })).toBeVisible();
