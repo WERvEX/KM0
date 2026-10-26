@@ -7,6 +7,8 @@ export * from "./files";
 export * from "./handoff";
 export * from "./ipc";
 export * from "./llm";
+export * from "./model-names";
+export * from "./models";
 export * from "./registry";
 export * from "./repo";
 export * from "./research";

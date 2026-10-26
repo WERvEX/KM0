@@ -85,13 +85,13 @@ function setup(provider = new FakeProvider([])) {
   return { dispatch, settings, provider };
 }
 
-const profileInput = { name: "Local", provider: "openai", baseUrl: "http://localhost:8080/v1", model: "m" };
+const providerInput = { name: "Local", kind: "openai", baseUrl: "http://localhost:8080/v1" };
 
 describe("IPC dispatcher", () => {
   it("rejects unknown channels and invalid input without calling a handler", async () => {
     const { dispatch } = setup();
     await expect(dispatch("fs.readFile", {})).resolves.toMatchObject({ ok: false, error: { kind: "validation" } });
-    await expect(dispatch("settings.profiles.create", { name: "" })).resolves.toMatchObject({
+    await expect(dispatch("settings.providers.create", { name: "" })).resolves.toMatchObject({
       ok: false,
       error: { kind: "validation" },
     });
@@ -99,9 +99,9 @@ describe("IPC dispatcher", () => {
 
   it("returns handler data and serializes domain errors", async () => {
     const { dispatch } = setup();
-    const created = await dispatch("settings.profiles.create", profileInput);
+    const created = await dispatch("settings.providers.create", providerInput);
     expect(created).toMatchObject({ ok: true, data: { name: "Local", hasApiKey: false } });
-    await expect(dispatch("settings.profiles.delete", { id: 999 })).resolves.toMatchObject({
+    await expect(dispatch("settings.models.delete", { id: 999 })).resolves.toMatchObject({
       ok: false,
       error: { kind: "not_found" },
     });
@@ -114,9 +114,13 @@ describe("IPC dispatcher", () => {
       toolReply({ ok: true }),
     ]);
     const { dispatch, settings } = setup(provider);
-    const created = (await dispatch("settings.profiles.create", profileInput)) as { ok: true; data: { id: number } };
-    const result = await dispatch("settings.profiles.test", { id: created.data.id });
+    const local = (await dispatch("settings.providers.create", providerInput)) as { ok: true; data: { id: number } };
+    const created = (await dispatch("settings.models.create", { providerId: local.data.id, modelId: "m" })) as {
+      ok: true;
+      data: { id: number };
+    };
+    const result = await dispatch("settings.models.test", { id: created.data.id });
     expect(result).toMatchObject({ ok: true, data: { ok: true, detectedMode: "tool" } });
-    expect(settings.getProfile(created.data.id).structuredMode).toBe("tool");
+    expect(settings.getModel(created.data.id).structuredMode).toBe("tool");
   });
 });

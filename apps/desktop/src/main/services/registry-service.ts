@@ -3,6 +3,7 @@ import {
   ModelRegistry,
   REGISTRY_SCHEMA_VERSION,
   REGISTRY_UPDATE_URL,
+  type RegistryChoice,
   type RegistryInfo,
   type RegistryUpdateResult,
 } from "@km0/shared";
@@ -56,6 +57,19 @@ export class RegistryService {
       },
       sources: registry.sources.map(({ name, url, newestEntry }) => ({ name, url, newestEntry })),
     };
+  }
+
+  /** Registry models whose ID or name contains every word of the query, newest first; at most 30. */
+  choices(query: string): RegistryChoice[] {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    return this.current()
+      .registry.models.filter((model) => {
+        const text = `${model.id} ${model.name}`.toLowerCase();
+        return words.every((word) => text.includes(word));
+      })
+      .sort((a, b) => (b.released ?? "").localeCompare(a.released ?? "") || a.id.localeCompare(b.id))
+      .slice(0, 30)
+      .map((model) => ({ id: model.id, name: model.name, vendor: model.vendor }));
   }
 
   async update(): Promise<RegistryUpdateResult> {

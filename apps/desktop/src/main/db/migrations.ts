@@ -2,10 +2,14 @@
  * Ordered schema migrations. Append new entries; never edit one that has shipped.
  * Timestamps are ISO-8601 UTC strings; JSON columns are validated with zod when read.
  */
+import type { Database } from "./sql";
+
 export interface Migration {
   id: number;
   name: string;
   sql: string;
+  /** Data changes SQL alone cannot express; runs after `sql`, in the same transaction. */
+  run?: (db: Database) => void;
 }
 
 export const migrations: Migration[] = [
@@ -283,4 +287,150 @@ CREATE TABLE model_registry (
 );
 `,
   },
+  {
+    id: 9,
+    name: "providers_models_custom_agents",
+    // Profiles become a provider (endpoint, key, billing) plus a model with the same id, so role
+    // assignments and the call log keep pointing at the right model. The per-agent model catalog
+    // becomes models of one provider per agent. Agents gain what custom agents need.
+    sql: `
+CREATE TABLE providers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL CHECK (kind IN ('openai', 'anthropic')),
+  base_url TEXT,
+  api_key_encrypted TEXT,
+  api_key_hint TEXT,
+  billing_json TEXT NOT NULL DEFAULT '{"mode":"token"}',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE models (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  provider_id INTEGER NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
+  name TEXT NOT NULL UNIQUE,
+  model_id TEXT NOT NULL,
+  canonical_id TEXT,
+  context_window INTEGER,
+  structured_mode TEXT NOT NULL DEFAULT 'auto' CHECK (structured_mode IN ('auto', 'json_schema', 'tool', 'prompt')),
+  temperature REAL,
+  price_in_per_mtok REAL,
+  price_out_per_mtok REAL,
+  price_cache_read_per_mtok REAL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+INSERT INTO providers (id, name, kind, base_url, api_key_encrypted, api_key_hint, created_at, updated_at)
+  SELECT id, name, provider, base_url, api_key_encrypted, api_key_hint, created_at, updated_at FROM llm_profiles;
+INSERT INTO models (id, provider_id, name, model_id, structured_mode, temperature, price_in_per_mtok,
+    price_out_per_mtok, created_at, updated_at)
+  SELECT id, id, name, model, structured_mode, temperature, price_in_per_mtok, price_out_per_mtok, created_at, updated_at
+  FROM llm_profiles;
+
+CREATE TABLE llm_calls_next (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+  profile_id INTEGER REFERENCES models(id) ON DELETE SET NULL,
+  model TEXT NOT NULL,
+  purpose TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  attempt INTEGER NOT NULL,
+  input_tokens INTEGER NOT NULL,
+  output_tokens INTEGER NOT NULL,
+  cost_usd REAL,
+  latency_ms INTEGER NOT NULL,
+  error_kind TEXT,
+  error_message TEXT,
+  created_at TEXT NOT NULL
+);
+INSERT INTO llm_calls_next SELECT * FROM llm_calls;
+DROP TABLE llm_calls;
+ALTER TABLE llm_calls_next RENAME TO llm_calls;
+CREATE INDEX llm_calls_project ON llm_calls (project_id);
+DROP TABLE llm_profiles;
+
+ALTER TABLE agents ADD COLUMN name TEXT;
+ALTER TABLE agents ADD COLUMN kind TEXT NOT NULL DEFAULT 'preset' CHECK (kind IN ('preset', 'custom'));
+ALTER TABLE agents ADD COLUMN instruction_file TEXT;
+ALTER TABLE agents ADD COLUMN launch_template TEXT;
+ALTER TABLE agents ADD COLUMN native_vendor TEXT;
+ALTER TABLE agents ADD COLUMN api_kinds_json TEXT NOT NULL DEFAULT '[]';
+
+CREATE TABLE agent_models (
+  agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  model_ref INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,
+  tier TEXT CHECK (tier IN ('T1', 'T2', 'T3')),
+  UNIQUE (agent_id, tier)
+);
+`,
+    run: migrateModelCatalog,
+  },
 ];
+
+const PRESET_NAMES: Record<string, string> = {
+  claude_code: "Claude Code",
+  codex: "Codex",
+  cursor: "Cursor",
+  pi: "Pi",
+  dsh: "DSH",
+  zcode: "ZCode",
+  generic: "Generic",
+};
+
+/** The 0.1 catalog typed a model ID and price per agent and tier; each becomes a model of a provider named after the agent. */
+function migrateModelCatalog(db: Database): void {
+  const now = new Date().toISOString();
+  for (const [id, name] of Object.entries(PRESET_NAMES)) {
+    db.prepare("UPDATE agents SET name = ? WHERE id = ?").run(name, id);
+  }
+  const rows = db
+    .prepare("SELECT agent_id, tier, model_id, price_in_per_mtok, price_out_per_mtok FROM model_catalog")
+    .all() as {
+    agent_id: string;
+    tier: string;
+    model_id: string;
+    price_in_per_mtok: number | null;
+    price_out_per_mtok: number | null;
+  }[];
+  const taken = (table: "providers" | "models", name: string) =>
+    Boolean(db.prepare(`SELECT 1 FROM ${table} WHERE name = ?`).get(name));
+  const unique = (table: "providers" | "models", name: string) => {
+    let candidate = name;
+    for (let n = 2; taken(table, candidate); n += 1) candidate = `${name} (${n})`;
+    return candidate;
+  };
+  const providers = new Map<string, number>();
+  for (const row of rows) {
+    let providerId = providers.get(row.agent_id);
+    if (providerId === undefined) {
+      const kind = row.agent_id === "claude_code" ? "anthropic" : "openai";
+      const result = db
+        .prepare("INSERT INTO providers (name, kind, created_at, updated_at) VALUES (?, ?, ?, ?)")
+        .run(unique("providers", PRESET_NAMES[row.agent_id] ?? row.agent_id), kind, now, now);
+      providerId = Number(result.lastInsertRowid);
+      providers.set(row.agent_id, providerId);
+    }
+    const model = db
+      .prepare(
+        `INSERT INTO models (provider_id, name, model_id, price_in_per_mtok, price_out_per_mtok, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        providerId,
+        unique("models", row.model_id),
+        row.model_id,
+        row.price_in_per_mtok,
+        row.price_out_per_mtok,
+        now,
+        now,
+      );
+    db.prepare("INSERT INTO agent_models (agent_id, model_ref, tier) VALUES (?, ?, ?)").run(
+      row.agent_id,
+      Number(model.lastInsertRowid),
+      row.tier,
+    );
+  }
+  db.exec("DROP TABLE model_catalog");
+}

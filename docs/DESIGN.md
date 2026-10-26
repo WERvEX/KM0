@@ -253,8 +253,11 @@ km0/
 | `tasks` | 任务、特征、依赖、人工覆盖、失败记录（档位、Agent、成本读取时计算） |
 | `routing_plans` | 每个项目最近一次拆解所依据的文档版本 |
 | `handoffs` | 生成过的交接包：任务、Agent、文件清单 |
-| `agents`、`model_catalog` | Agent 启用、偏好与擅长的能力；Agent × 档位 → 模型与单价 |
-| `llm_profiles` | KM0 自己调用的模型（密钥加密存储、结构化输出方式） |
+| `providers` | 服务商：接口格式、地址、密钥（加密）、计费方式（按 token / 中转倍率 / 订阅 / 免费） |
+| `models` | 服务商下的模型：模型 ID、显示名称、手动指定的榜单模型、上下文窗口、价格覆盖、结构化输出方式；KM0 的路由 / 规划角色和 Agent 都从这里选 |
+| `agents` | 预设和自定义 Agent：启用、偏好、擅长的能力；自定义 Agent 还有项目说明文件、启动命令模板、能接的接口格式和本家厂商 |
+| `agent_models` | Agent 每个档位用哪个模型 |
+| `model_registry` | 下载或导入的模型注册表（比内置的新时才使用） |
 | `llm_calls` | 调用日志：用途、token、成本、耗时、错误 |
 | `search_services`、`preferences` | 查证搜索服务（密钥加密）；界面偏好与角色分配 |
 
@@ -271,7 +274,8 @@ IPC 通道定义在 `packages/shared/src/ipc.ts`，主进程按 zod schema 校�
 | `routing.*` / `task.override` | 读取路由结果；拆任务并路由；覆盖或恢复某个任务的档位、Agent、模型 |
 | `task.fail` / `task.clearFailures` | 记一次失败（满 2 次升档）；清除失败记录 |
 | `handoff.build` | 按当前路由生成交接包（zip 在界面里打包，用 `files.save` 保存） |
-| `settings.*` | 模型配置与连接测试、角色、Agent 启用与排序和模型目录、搜索服务与测试、偏好、配置导入导出 |
+| `settings.*` | 服务商与模型（含连接测试、按名字搜索榜单模型）、角色、Agent 启用与排序、各档位的模型、自定义 Agent、搜索服务与测试、偏好、配置导入导出（v2 格式，仍能读 0.1 的 v1 文件） |
+| `registry.*` | 模型注册表的信息、更新、导入、恢复内置数据、厂商列表 |
 | `repo.pick` / `repo.scan` | 选择文件夹；只读扫描本地仓库 |
 | `files.*` / `folder.answer` | 桌面版 KM0 自己的文件浏览器：列目录、读取导入的文件、保存导出的文件、在文件夹中显示；回答主进程发来的 `folder.request` |
 

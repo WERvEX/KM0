@@ -5,13 +5,17 @@ import { AgentStore } from "./agent-store";
 import { DocumentService } from "./document-service";
 import { ProjectService } from "./project-service";
 import { RoutingService } from "./routing-service";
+import { PlainSecretStore } from "./secrets";
+import { SettingsStore } from "./settings-store";
 
 function setup() {
   const db = openDatabase(":memory:");
   const llm = createSimulatedLlm();
   const language = () => "zh-CN" as const;
-  const agents = new AgentStore(db);
+  const settings = new SettingsStore(db, new PlainSecretStore());
+  const agents = new AgentStore(db, () => settings.listModels());
   return {
+    settings,
     agents,
     projects: new ProjectService(db, () => llm, language),
     documents: new DocumentService(
@@ -30,7 +34,7 @@ describe("agent catalog", () => {
     const list = agents.list();
     expect(list.map((agent) => agent.id)).toEqual(["claude_code", "codex", "cursor", "pi", "dsh", "zcode", "generic"]);
     expect(list.every((agent) => agent.enabled)).toBe(true);
-    expect(list[0]?.models).toEqual({
+    expect(list[0]?.models).toMatchObject({
       T1: { modelId: "claude-haiku-5-5", priceInPerMTok: null, priceOutPerMTok: null },
       T2: { modelId: "claude-sonnet-5-5", priceInPerMTok: null, priceOutPerMTok: null },
       T3: { modelId: "claude-opus-5-5", priceInPerMTok: null, priceOutPerMTok: null },
@@ -48,20 +52,31 @@ describe("agent catalog", () => {
     });
     const codex = agents.list().find((agent) => agent.id === "codex");
     if (!codex) throw new Error("codex missing");
-    const saved = agents.update("codex", true, codex.models, ["frontend", "frontend", "debugging"]);
+    const refs = { T1: null, T2: null, T3: null };
+    const saved = agents.update("codex", true, refs, ["frontend", "frontend", "debugging"]);
     expect(saved.find((agent) => agent.id === "codex")?.capabilities).toEqual(["frontend", "debugging"]);
     // Leaving them out keeps what is stored.
-    const kept = agents.update("codex", false, codex.models);
+    const kept = agents.update("codex", false, refs);
     expect(kept.find((agent) => agent.id === "codex")?.capabilities).toEqual(["frontend", "debugging"]);
   });
 
   it("saves models and prices, and reorders by swapping neighbours", () => {
-    const { agents } = setup();
-    const models = { T1: null, T2: { modelId: "gpt-x", priceInPerMTok: 2, priceOutPerMTok: 8 }, T3: null };
-    expect(agents.update("codex", false, models).find((agent) => agent.id === "codex")).toMatchObject({
-      enabled: false,
-      models,
+    const { agents, settings } = setup();
+    const provider = settings.createProvider({ name: "OpenAI", kind: "openai" });
+    const gpt = settings.createModel({
+      providerId: provider.id,
+      modelId: "gpt-x",
+      priceInPerMTok: 2,
+      priceOutPerMTok: 8,
     });
+    expect(
+      agents.update("codex", false, { T1: null, T2: gpt.id, T3: null }).find((agent) => agent.id === "codex"),
+    ).toMatchObject({
+      enabled: false,
+      models: { T1: null, T2: { modelRef: gpt.id, modelId: "gpt-x", priceInPerMTok: 2, priceOutPerMTok: 8 }, T3: null },
+    });
+    // Claude Code takes Anthropic-format providers only.
+    expect(() => agents.update("claude_code", true, { T1: gpt.id, T2: null, T3: null })).toThrow(/anthropic/);
     expect(
       agents
         .move("codex", "up")
@@ -87,7 +102,7 @@ describe("routing", () => {
   });
 
   it("breaks the work into tasks, routes them by rules and follows overrides and the catalog", async () => {
-    const { projects, documents, routing, agents } = setup();
+    const { projects, documents, routing, agents, settings } = setup();
     let project = await projects.create("从零做一个团队内部的需求管理平台", null);
     for (let stage = 0; stage < 4; stage += 1) project = await projects.advance(project.id, true);
     await documents.generate(project.id, "prd", false);
@@ -119,11 +134,15 @@ describe("routing", () => {
       ],
     });
 
-    const price = (modelId: string, input: number, output: number) => ({
-      modelId,
-      priceInPerMTok: input,
-      priceOutPerMTok: output,
-    });
+    const provider = settings.createProvider({ name: "Anthropic", kind: "anthropic" });
+    const price = (modelId: string, input: number, output: number) =>
+      settings.createModel({
+        providerId: provider.id,
+        modelId,
+        name: `${modelId} priced`,
+        priceInPerMTok: input,
+        priceOutPerMTok: output,
+      }).id;
     agents.update("claude_code", true, {
       T1: price("claude-haiku-5-5", 1, 5),
       T2: price("claude-sonnet-5-5", 3, 15),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createMatcher, looseKey, nameWords } from "./names";
+import { createMatcher, looseKey, nameWords } from "./model-names";
 
 const catalog = [
   { id: "anthropic/claude-opus-5.5", name: "Anthropic: Claude Opus 5.5" },

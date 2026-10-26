@@ -1,15 +1,25 @@
 import { z } from "zod";
 import { DocumentKind } from "./documents";
+import { ProviderKind } from "./llm";
+import { type BillingMode, EffectivePrice } from "./models";
 
 export const Tier = z.enum(["T1", "T2", "T3"]);
 export type Tier = z.infer<typeof Tier>;
 export const TIERS: readonly Tier[] = ["T1", "T2", "T3"];
 
-/** The coding agents KM0 hands work to. `generic` is a plain Markdown prompt for anything else. */
-export const AgentId = z.enum(["claude_code", "codex", "cursor", "pi", "dsh", "zcode", "generic"]);
+/**
+ * The coding agents KM0 hands work to: the presets below, which KM0 has adapters for, and agents the
+ * user defines. `generic` is a plain Markdown prompt for anything else.
+ */
+export const AgentId = z
+  .string()
+  .regex(/^[a-z][a-z0-9_-]{0,39}$/, "An agent ID is lower-case letters, digits, '-' and '_'.");
 export type AgentId = z.infer<typeof AgentId>;
 
-export const AGENT_NAMES: Record<AgentId, string> = {
+export const PRESET_AGENT_IDS = ["claude_code", "codex", "cursor", "pi", "dsh", "zcode", "generic"] as const;
+export type PresetAgentId = (typeof PRESET_AGENT_IDS)[number];
+
+export const AGENT_NAMES: Record<PresetAgentId, string> = {
   claude_code: "Claude Code",
   codex: "Codex",
   cursor: "Cursor",
@@ -17,6 +27,22 @@ export const AGENT_NAMES: Record<AgentId, string> = {
   dsh: "DSH",
   zcode: "ZCode",
   generic: "Generic",
+};
+
+export const isPresetAgent = (id: string): id is PresetAgentId => (PRESET_AGENT_IDS as readonly string[]).includes(id);
+
+/**
+ * What each preset is: the vendors whose official tool it is (their models run best in it), and the
+ * API formats it can be pointed at (empty: it brings its own models or takes any).
+ */
+export const PRESET_AGENTS: Record<PresetAgentId, { nativeVendors: string[]; apiKinds: ProviderKind[] }> = {
+  claude_code: { nativeVendors: ["anthropic"], apiKinds: ["anthropic"] },
+  codex: { nativeVendors: ["openai"], apiKinds: ["openai"] },
+  cursor: { nativeVendors: ["cursor"], apiKinds: [] },
+  pi: { nativeVendors: [], apiKinds: [] },
+  dsh: { nativeVendors: ["deepseek"], apiKinds: [] },
+  zcode: { nativeVendors: ["z-ai"], apiKinds: [] },
+  generic: { nativeVendors: [], apiKinds: [] },
 };
 
 /** What an agent is good at. A task needs at most one of these; see `taskCapability` in core. */
@@ -68,9 +94,19 @@ export type RoutingRules = z.infer<typeof RoutingRules>;
 export const RoutingRulesState = z.object({ rules: RoutingRules, custom: z.boolean() });
 export type RoutingRulesState = z.infer<typeof RoutingRulesState>;
 
-/** One tier price list entry: model ID and USD per million tokens. */
+/** The model an agent runs on a tier: one of the user's models, with what a run on it costs. */
 export const TierModel = z.object({
-  modelId: z.string().trim().min(1).max(200),
+  /** The model entry (Settings → Models). */
+  modelRef: z.number().int(),
+  /** As passed to the agent. */
+  modelId: z.string(),
+  name: z.string(),
+  canonicalId: z.string().nullable(),
+  vendor: z.string().nullable(),
+  /** The agent is the official tool of the model's vendor. */
+  native: z.boolean(),
+  price: EffectivePrice,
+  /** USD per million tokens, kept for cost estimates; null when unknown. */
   priceInPerMTok: z.number().nonnegative().nullable(),
   priceOutPerMTok: z.number().nonnegative().nullable(),
 });
@@ -78,14 +114,24 @@ export type TierModel = z.infer<typeof TierModel>;
 
 export const AgentConfig = z.object({
   id: AgentId,
+  name: z.string(),
+  kind: z.enum(["preset", "custom"]),
   enabled: z.boolean(),
   /** Lower comes first. */
   preference: z.number().int(),
   models: z.object({ T1: TierModel.nullable(), T2: TierModel.nullable(), T3: TierModel.nullable() }),
   /** Kinds of work the agent is preferred for, among agents that have a model for the tier. */
   capabilities: z.array(Capability),
+  nativeVendors: z.array(z.string()),
+  /** API formats the agent can use; empty means any. */
+  apiKinds: z.array(ProviderKind),
+  /** Custom agents: the project instructions file it reads, and the command that starts it. */
+  instructionFile: z.string().nullable(),
+  launchTemplate: z.string().nullable(),
 });
 export type AgentConfig = z.infer<typeof AgentConfig>;
+
+export type { BillingMode };
 
 export const CostRange = z.object({ low: z.number(), high: z.number() });
 export type CostRange = z.infer<typeof CostRange>;
@@ -193,9 +239,28 @@ export const TaskRef = z.object({ projectId: ProjectId, taskId: z.number().int()
 export const UpdateAgentInput = z.object({
   id: AgentId,
   enabled: z.boolean(),
-  models: AgentConfig.shape.models,
+  /** The model entry for each tier, or null for none. */
+  models: z.object({
+    T1: z.number().int().nullable(),
+    T2: z.number().int().nullable(),
+    T3: z.number().int().nullable(),
+  }),
   /** Left out keeps the stored capabilities. */
   capabilities: z.array(Capability).optional(),
 });
+
+/** An agent the user adds: anything that can be started with a command or pasted into. */
+export const CustomAgentInput = z.object({
+  name: z.string().trim().min(1).max(60),
+  /** Project instructions file it reads, such as AGENTS.md; null when none. */
+  instructionFile: z.string().trim().min(1).max(200).nullable().default(null),
+  /** The command that starts it on a task; {prompt}, {task_file} and {model} are filled in. Null when it is pasted into. */
+  launchTemplate: z.string().trim().min(1).max(1000).nullable().default(null),
+  apiKinds: z.array(ProviderKind).default([]),
+  /** The vendor whose official tool it is, such as "google" for Gemini CLI; null when none. */
+  nativeVendor: z.string().trim().min(1).max(60).nullable().default(null),
+  capabilities: z.array(Capability).default([]),
+});
+export type CustomAgentInput = z.input<typeof CustomAgentInput>;
 
 export const MoveAgentInput = z.object({ id: AgentId, direction: z.enum(["up", "down"]) });

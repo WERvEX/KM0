@@ -1,5 +1,5 @@
+import { type CatalogModel, createMatcher, looseKey, nameWords } from "@km0/shared";
 import type { ColumnSpec, Observation } from "./fit";
-import { type CatalogModel, createMatcher, looseKey, nameWords } from "./names";
 import type { Entry, OpenRouterModel, ParsedSource } from "./sources";
 
 export interface AgentDef {

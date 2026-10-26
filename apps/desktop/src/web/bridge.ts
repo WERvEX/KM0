@@ -49,11 +49,16 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   window.addEventListener("pagehide", () => void db.flush());
 
   const secrets = new PlainSecretStore();
-  const settings = new SettingsStore(db, secrets);
+  const registry = new RegistryService(db, ModelRegistry.parse(bundledRegistry), async (url) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.text();
+  });
+  const settings = new SettingsStore(db, secrets, () => registry.current().registry);
   const gateway = createGateway({
     recordCall: (record) => settings.recordCall(record),
     onModeDetected: (profileId, mode) => {
-      if (settings.getProfile(profileId).structuredMode === "auto") settings.setStructuredMode(profileId, mode);
+      if (settings.getModel(profileId).structuredMode === "auto") settings.setStructuredMode(profileId, mode);
     },
   });
   const fake = simulated ? createSimulatedLlm({ streamDelayMs: 15 }) : null;
@@ -73,13 +78,8 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   const repo = webRepoAccess();
   const projects = new ProjectService(db, llmFor, language, { searchPort: () => search.activePort(), repo });
   const documents = new DocumentService(db, llmFor, language, emit);
-  const agents = new AgentStore(db);
+  const agents = new AgentStore(db, () => settings.listModels());
   const config = new ConfigService(settings, agents, search);
-  const registry = new RegistryService(db, ModelRegistry.parse(bundledRegistry), async (url) => {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.text();
-  });
   const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules);
   const handoff = new HandoffService(db, routing, language);
   const runner = new RunnerService(db, webRunAccess(), routing, llmFor, language, () =>

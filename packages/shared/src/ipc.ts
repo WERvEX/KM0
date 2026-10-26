@@ -31,12 +31,15 @@ import {
   SaveFileResult,
 } from "./files";
 import { HandoffPackage, HandoffTarget } from "./handoff";
-import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
-import { MAX_REGISTRY_BYTES, RegistryInfo, RegistryUpdateResult } from "./registry";
+import { ConnectionTestResult, RoleAssignment } from "./llm";
+import { ModelEntry, ModelInput, Provider, ProviderInput, RegistryChoice } from "./models";
+import { MAX_REGISTRY_BYTES, RegistryInfo, RegistryUpdateResult, RegistryVendor } from "./registry";
 import { RepoScan, ScanRepoInput } from "./repo";
 import { SearchService, SearchServiceInput, SearchTestResult } from "./research";
 import {
   AgentConfig,
+  AgentId,
+  CustomAgentInput,
   MoveAgentInput,
   OverrideTaskInput,
   RoutingPlan,
@@ -66,11 +69,19 @@ const Id = z.object({ id: z.number().int().positive() });
 export const ipcContract = {
   "app.info": channel(z.void(), AppInfo),
 
-  "settings.profiles.list": channel(z.void(), z.array(LlmProfile)),
-  "settings.profiles.create": channel(LlmProfileInput, LlmProfile),
-  "settings.profiles.update": channel(Id.extend({ data: LlmProfileInput }), LlmProfile),
-  "settings.profiles.delete": channel(Id, z.void()),
-  "settings.profiles.test": channel(Id, ConnectionTestResult),
+  "settings.providers.list": channel(z.void(), z.array(Provider)),
+  "settings.providers.create": channel(ProviderInput, Provider),
+  "settings.providers.update": channel(Id.extend({ data: ProviderInput }), Provider),
+  /** Deletes the provider and its models. */
+  "settings.providers.delete": channel(Id, z.void()),
+  "settings.models.list": channel(z.void(), z.array(ModelEntry)),
+  "settings.models.create": channel(ModelInput, ModelEntry),
+  "settings.models.update": channel(Id.extend({ data: ModelInput }), ModelEntry),
+  "settings.models.delete": channel(Id, z.void()),
+  /** Calls the model once through its provider; KM0's roles need a model that passes. */
+  "settings.models.test": channel(Id, ConnectionTestResult),
+  /** Registry models matching a search, to pick by hand which one a model is. */
+  "settings.models.registryChoices": channel(z.object({ query: z.string().max(100) }), z.array(RegistryChoice)),
   "settings.roles.get": channel(z.void(), RoleAssignment),
   "settings.roles.set": channel(RoleAssignment, RoleAssignment),
   "settings.preferences.get": channel(z.void(), Preferences),
@@ -78,6 +89,10 @@ export const ipcContract = {
   "settings.agents.list": channel(z.void(), z.array(AgentConfig)),
   "settings.agents.update": channel(UpdateAgentInput, z.array(AgentConfig)),
   "settings.agents.move": channel(MoveAgentInput, z.array(AgentConfig)),
+  "settings.agents.create": channel(CustomAgentInput, z.array(AgentConfig)),
+  "settings.agents.redefine": channel(z.object({ id: AgentId, data: CustomAgentInput }), z.array(AgentConfig)),
+  /** Custom agents only; presets can be disabled. */
+  "settings.agents.delete": channel(z.object({ id: AgentId }), z.array(AgentConfig)),
   "settings.routingRules.get": channel(z.void(), RoutingRulesState),
   /** null goes back to KM0's default rules. */
   "settings.routingRules.set": channel(RoutingRules.nullable(), RoutingRulesState),
@@ -89,6 +104,8 @@ export const ipcContract = {
   "settings.export": channel(ExportConfigInput, ConfigBundle),
   /** The model registry in use: leaderboard data and ability priors. */
   "registry.info": channel(z.void(), RegistryInfo),
+  /** Model vendors the registry knows, to name a custom agent's own vendor. */
+  "registry.vendors": channel(z.void(), z.array(RegistryVendor)),
   /** Download the newest registry; it is used only when its data is newer than the one in use. */
   "registry.update": channel(z.void(), RegistryUpdateResult),
   "registry.import": channel(z.object({ text: z.string().max(MAX_REGISTRY_BYTES) }), RegistryInfo),

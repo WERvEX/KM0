@@ -12,7 +12,7 @@ import type {
   Tier,
   TierModel,
 } from "@km0/shared";
-import { AGENT_NAMES, TIERS } from "@km0/shared";
+import { TIERS } from "@km0/shared";
 import type { Language } from "../discussion/prompts";
 import { DEFAULT_ROUTING_RULES, decideTier, escalateTier } from "./scoring";
 
@@ -143,9 +143,7 @@ export function chooseAgent(
     const fallback = withModel[0];
     if (fallback) {
       // Name the agents that would take the task once they have a model, so the fix is obvious.
-      const idle = enabled
-        .filter((agent) => agent.capabilities.includes(capability))
-        .map((agent) => AGENT_NAMES[agent.id]);
+      const idle = enabled.filter((agent) => agent.capabilities.includes(capability)).map((agent) => agent.name);
       const reason =
         idle.length > 0
           ? text.idle(idle.join(language === "zh-CN" ? "、" : ", "), skill, tier)

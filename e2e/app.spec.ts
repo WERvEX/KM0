@@ -37,21 +37,27 @@ test("shows the empty workspace and asks for a model first", async () => {
   await page.screenshot({ path: "test-results/screenshots/workspace.png" });
 });
 
-test("adds a model profile and assigns it as the router", async () => {
+test("adds a provider and a model, which becomes the router and is matched to the registry", async () => {
   await page.getByRole("link", { name: /设置|Settings/ }).click();
-  await page
-    .getByRole("button", { name: /添加模型|Add model/ })
-    .first()
-    .click();
+  await page.getByRole("button", { name: /添加服务商|Add provider/ }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await dialog.locator("#apiKey").fill("sk-e2e-test-key-1234");
-  await page.screenshot({ path: "test-results/screenshots/profile-form.png" });
+  await page.screenshot({ path: "test-results/screenshots/provider-form.png" });
   await dialog.getByRole("button", { name: /保存|Save/ }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText("••••1234")).toBeVisible();
+  const provider = page.getByRole("listitem", { name: "DeepSeek" });
+  await expect(provider.getByText(/••••1234/)).toBeVisible();
+
+  await provider.getByRole("button", { name: /添加模型|Add model/ }).click();
+  await dialog.locator("#modelId").fill("deepseek-v4-flash");
+  await dialog.getByRole("button", { name: /保存|Save/ }).click();
+  await expect(dialog).toBeHidden();
+  const model = provider.getByRole("listitem", { name: "deepseek-v4-flash" });
+  await expect(model.getByText("deepseek/deepseek-v4-flash")).toBeVisible();
+  await expect(model.getByText(/官方价格|official price/)).toBeVisible();
   await expect(page.locator("#role-router")).toHaveValue(/\d+/);
-  await page.screenshot({ path: "test-results/screenshots/settings.png" });
+  await page.screenshot({ path: "test-results/screenshots/settings.png", fullPage: true });
 });
 
 test("never exposes Node APIs to the page", async () => {

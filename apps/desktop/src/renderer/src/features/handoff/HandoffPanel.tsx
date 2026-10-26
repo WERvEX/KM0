@@ -10,7 +10,7 @@ import { useFiles } from "@/lib/files";
 import { call, errorMessage } from "@/lib/ipc";
 import { Markdown } from "../documents/Markdown";
 import { projectKey } from "../project/useProject";
-import { agentName } from "../settings/AgentsTab";
+import { useAgentNames } from "../settings/agent-names";
 
 /** What the package was built from; any change to the routing makes it worth rebuilding. */
 const routingSignature = (plan: RoutingPlan) =>
@@ -43,6 +43,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 /** Builds the hand-off package from the current routing, previews it and exports it as a zip. */
 export function HandoffPanel({ projectId, plan }: { projectId: number; plan: RoutingPlan }) {
   const { t } = useTranslation();
+  const agentName = useAgentNames();
   const files = useFiles();
   const queryClient = useQueryClient();
   const [built, setBuilt] = useState<{ pkg: HandoffPackage; signature: string } | null>(null);
@@ -143,7 +144,7 @@ export function HandoffPanel({ projectId, plan }: { projectId: number; plan: Rou
                 >
                   {String(task.seq).padStart(2, "0")} · {task.title}
                   <span className="ml-2 text-xs text-muted">
-                    {task.tier} · {agentName(task.agent, t)}
+                    {task.tier} · {agentName(task.agent)}
                     {task.model ? ` · ${task.model}` : ""}
                   </span>
                 </button>
@@ -200,7 +201,7 @@ export function HandoffPanel({ projectId, plan }: { projectId: number; plan: Rou
               <p key={agent.id} className="flex items-start gap-2 text-muted">
                 <Terminal className="mt-0.5 size-4 shrink-0" />
                 <span>
-                  <span className="font-medium text-fg">{agentName(agent.id, t)}</span>：{agent.howTo}
+                  <span className="font-medium text-fg">{agentName(agent.id)}</span>：{agent.howTo}
                 </span>
               </p>
             ))}

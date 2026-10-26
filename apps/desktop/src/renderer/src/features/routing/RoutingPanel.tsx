@@ -1,6 +1,5 @@
 import {
   type AgentId,
-  AgentId as AgentIds,
   type CostRange,
   DOCUMENT_TEMPLATES,
   ESCALATE_AFTER,
@@ -25,7 +24,7 @@ import { HandoffPanel } from "../handoff/HandoffPanel";
 import { decisionLabel } from "../project/labels";
 import { projectKey } from "../project/useProject";
 import { RunnerPanel } from "../runner/RunnerPanel";
-import { agentName } from "../settings/AgentsTab";
+import { useAgentNames } from "../settings/agent-names";
 
 export const routingKey = (projectId: number) => ["routing.get", projectId] as const;
 
@@ -229,6 +228,7 @@ interface TaskActions {
 
 function TaskTable({ plan, busy, ...actions }: { plan: RoutingPlan; busy: boolean } & TaskActions) {
   const { t } = useTranslation();
+  const agentName = useAgentNames();
   const [open, setOpen] = useState<number | null>(null);
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-panel">
@@ -297,7 +297,7 @@ function TaskTable({ plan, busy, ...actions }: { plan: RoutingPlan; busy: boolea
                   ) : null}
                 </td>
                 <td className="px-3 py-2 align-top">
-                  <div>{agentName(task.agent, t)}</div>
+                  <div>{agentName(task.agent)}</div>
                   <div className={cn("text-xs", task.model ? "text-muted" : "text-warning")}>
                     {task.model ?? t("routing.noModel")}
                   </div>
@@ -340,6 +340,7 @@ function TaskDetail({
   onClearFailures: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const agentName = useAgentNames();
   const agents = useIpcQuery("settings.agents.list");
   const language = i18n.language === "en" ? "en" : "zh-CN";
   const [model, setModel] = useState(task.override?.model ?? "");
@@ -396,7 +397,7 @@ function TaskDetail({
               <li key={reason}>{reason}</li>
             ))}
             <li>
-              {agentName(task.agent, t)}：{task.agentReason}
+              {agentName(task.agent)}：{task.agentReason}
             </li>
             <li>
               {t("routing.detail.tokens", {
@@ -436,9 +437,9 @@ function TaskDetail({
               onChange={(event) => change({ agent: (event.target.value || undefined) as AgentId | undefined })}
             >
               <option value="">{t("routing.detail.automatic")}</option>
-              {AgentIds.options.map((id) => (
+              {(agents.data ?? []).map(({ id }) => (
                 <option key={id} value={id}>
-                  {agentName(id, t)}
+                  {agentName(id)}
                 </option>
               ))}
             </Select>

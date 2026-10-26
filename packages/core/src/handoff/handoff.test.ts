@@ -1,7 +1,8 @@
-import type { AgentConfig, AgentId, Decision, RoutingPlan } from "@km0/shared";
+import type { AgentConfig, Decision, PresetAgentId, RoutingPlan } from "@km0/shared";
 import { describe, expect, it } from "vitest";
 import { planTotals, routeTask, type TaskBasics } from "../routing/route";
-import { ADAPTERS } from "./adapters";
+import { agentConfig, tierModel } from "../testing";
+import { ADAPTERS, adapterFor } from "./adapters";
 import { buildHandoff, EXCERPT_LIMITS, fence, type HandoffInput, REQUEST_LIMIT } from "./build";
 
 const decision = (key: string, text: string, rationale: string | null = null): Decision => ({
@@ -17,24 +18,24 @@ const decision = (key: string, text: string, rationale: string | null = null): D
 });
 
 const agents: AgentConfig[] = [
-  {
+  agentConfig({
     id: "claude_code",
     enabled: true,
     preference: 0,
     models: {
-      T1: { modelId: "claude-haiku-5-5", priceInPerMTok: null, priceOutPerMTok: null },
-      T2: { modelId: "claude-sonnet-5-5", priceInPerMTok: null, priceOutPerMTok: null },
+      T1: tierModel("claude-haiku-5-5"),
+      T2: tierModel("claude-sonnet-5-5"),
       T3: null,
     },
     capabilities: ["backend"],
-  },
-  {
+  }),
+  agentConfig({
     id: "codex",
     enabled: true,
     preference: 1,
-    models: { T1: null, T2: null, T3: { modelId: "gpt-codex-max", priceInPerMTok: null, priceOutPerMTok: null } },
+    models: { T1: null, T2: null, T3: tierModel("gpt-codex-max") },
     capabilities: [],
-  },
+  }),
 ];
 
 const basics = (seq: number, overrides: Partial<TaskBasics>): TaskBasics => ({
@@ -225,7 +226,7 @@ describe("hand-off package", () => {
 });
 
 describe("adapters", () => {
-  const ids = Object.keys(ADAPTERS) as AgentId[];
+  const ids = Object.keys(ADAPTERS) as PresetAgentId[];
 
   it.each(ids)("%s renders its instructions and command consistently", (id) => {
     const adapter = ADAPTERS[id];
@@ -237,9 +238,69 @@ describe("adapters", () => {
             content: adapter.instructions.render("# 项目\n\n概览\n", "zh-CN"),
           }
         : null,
-      command: adapter.command("阅读 km0/tasks/01.md 并完成其中描述的任务。", "model-x"),
-      commandWithoutModel: adapter.command("Do it.", null),
+      command: adapter.command("阅读 km0/tasks/01.md 并完成其中描述的任务。", "model-x", "km0/tasks/01.md"),
+      commandWithoutModel: adapter.command("Do it.", null, "km0/tasks/01.md"),
       howTo: adapter.howTo,
     }).toMatchSnapshot();
+  });
+});
+
+describe("custom agents", () => {
+  const gemini = agentConfig({
+    id: "gemini-cli",
+    name: "Gemini CLI",
+    kind: "custom",
+    instructionFile: "GEMINI.md",
+    launchTemplate: "gemini --model {model} -p {prompt}",
+  });
+
+  it("start from the user's template and read the instructions file they named", () => {
+    const adapter = adapterFor("gemini-cli", [gemini]);
+    expect(adapter.name).toBe("Gemini CLI");
+    expect(adapter.instructions).toMatchObject({ packagedAs: "GEMINI.md", target: "GEMINI.md" });
+    expect(adapter.command("Read km0/tasks/02.md.", "gemini-4-argon", "km0/tasks/02.md")).toBe(
+      'gemini --model gemini-4-argon -p "Read km0/tasks/02.md."',
+    );
+    expect(adapter.command("Read it.", null, "km0/tasks/02.md")).toBe('gemini --model -p "Read it."');
+  });
+
+  it("fill in the task file, and are pasted into when there is no command", () => {
+    const byFile = adapterFor("x", [{ ...gemini, id: "x", launchTemplate: "my-agent run {task_file}" }]);
+    expect(byFile.command("ignored", null, "km0/tasks/03.md")).toBe("my-agent run km0/tasks/03.md");
+    const paste = adapterFor("y", [{ ...gemini, id: "y", launchTemplate: null, instructionFile: null }]);
+    expect(paste.command("p", null, "f")).toBeNull();
+    expect(paste.instructions).toBeNull();
+  });
+
+  it("fall back to the generic prompt when an agent is unknown", () => {
+    expect(adapterFor("removed-agent").id).toBe("generic");
+  });
+});
+
+describe("a custom agent in a package", () => {
+  it("is routed to like a preset and brings its own instructions file and command", () => {
+    const gemini = agentConfig({
+      id: "gemini-cli",
+      name: "Gemini CLI",
+      kind: "custom",
+      preference: -1,
+      models: { T1: tierModel("gemini-4-flash"), T2: null, T3: null },
+      capabilities: ["backend"],
+      instructionFile: "GEMINI.md",
+      launchTemplate: "gemini -m {model} -p {prompt}",
+    });
+    const all = [gemini, ...agents];
+    const task = routeTask(basics(1, { files: ["src/server/api.ts"] }), all, "zh-CN");
+    expect(task).toMatchObject({ tier: "T1", agent: "gemini-cli", model: "gemini-4-flash" });
+
+    const base = input();
+    const plan: RoutingPlan = { ...base.plan, tasks: [task], ...planTotals([task]) };
+    const pkg = buildHandoff({ ...base, plan, agents: all });
+    expect(pkg.tasks[0]?.command).toBe('gemini -m gemini-4-flash -p "阅读 km0/tasks/01.md 并完成其中描述的任务。"');
+    expect(pkg.files.some((file) => file.path === "km0/agents/GEMINI.md")).toBe(true);
+    expect(pkg.agents).toEqual([
+      expect.objectContaining({ id: "gemini-cli", instructionsPath: "km0/agents/GEMINI.md" }),
+    ]);
+    expect(pkg.files.find((file) => file.path === "km0/README.md")?.content).toContain("| Gemini CLI |");
   });
 });

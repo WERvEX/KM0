@@ -1,48 +1,77 @@
-import { DEFAULT_ROUTING_RULES, type LlmCallRecord, type ResolvedProfile } from "@km0/core";
+import {
+  DEFAULT_ROUTING_RULES,
+  effectivePrice,
+  type LlmCallRecord,
+  matchRegistryModel,
+  type ResolvedProfile,
+} from "@km0/core";
 import {
   AppError,
+  Billing,
+  DEFAULT_BILLING,
   DEFAULT_PREFERENCES,
-  type LlmProfile,
-  LlmProfileInput,
   type LlmRole,
+  type ModelEntry,
+  ModelInput,
+  type ModelRegistry,
   Preferences,
+  type Provider,
+  ProviderInput,
+  type ProviderKind,
   type RoleAssignment,
   RoutingRules,
   type RoutingRulesState,
   type StructuredMode,
 } from "@km0/shared";
-import { type Database, nowIso } from "../db/sql";
+import { type Database, nowIso, transaction } from "../db/sql";
 import { keyHint, type SecretStore } from "./secrets";
 
-interface ProfileRow {
+interface ProviderRow {
   id: number;
   name: string;
-  provider: "openai" | "anthropic";
+  kind: ProviderKind;
   base_url: string | null;
-  model: string;
   api_key_encrypted: string | null;
   api_key_hint: string | null;
-  structured_mode: StructuredMode;
-  temperature: number | null;
-  price_in_per_mtok: number | null;
-  price_out_per_mtok: number | null;
+  billing_json: string;
   created_at: string;
   updated_at: string;
 }
 
-function toProfile(row: ProfileRow): LlmProfile {
+interface ModelRow {
+  id: number;
+  provider_id: number;
+  name: string;
+  model_id: string;
+  canonical_id: string | null;
+  context_window: number | null;
+  structured_mode: StructuredMode;
+  temperature: number | null;
+  price_in_per_mtok: number | null;
+  price_out_per_mtok: number | null;
+  price_cache_read_per_mtok: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+function parseBilling(json: string): Billing {
+  try {
+    const parsed = Billing.safeParse(JSON.parse(json));
+    return parsed.success ? parsed.data : DEFAULT_BILLING;
+  } catch {
+    return DEFAULT_BILLING;
+  }
+}
+
+function toProvider(row: ProviderRow): Provider {
   return {
     id: row.id,
     name: row.name,
-    provider: row.provider,
+    kind: row.kind,
     baseUrl: row.base_url,
-    model: row.model,
-    structuredMode: row.structured_mode,
-    temperature: row.temperature,
-    priceInPerMTok: row.price_in_per_mtok,
-    priceOutPerMTok: row.price_out_per_mtok,
     hasApiKey: row.api_key_encrypted !== null,
     apiKeyHint: row.api_key_hint,
+    billing: parseBilling(row.billing_json),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -50,60 +79,70 @@ function toProfile(row: ProfileRow): LlmProfile {
 
 const ROLE_KEYS: Record<LlmRole, string> = { router: "role.router", planner: "role.planner" };
 
-/** Model profiles, role assignment and UI preferences. API keys never leave this class in plain text except via `resolveProfile`. */
+/** A registry with no models, for stores built without one (tests, first start). */
+export const EMPTY_REGISTRY: ModelRegistry = {
+  schemaVersion: 1,
+  generatedAt: "",
+  dataDate: "",
+  sources: [],
+  difficulty: { bands: [] },
+  vendors: [],
+  agents: [],
+  models: [],
+};
+
+/**
+ * Providers, their models, role assignment and UI preferences. A provider holds the endpoint, the
+ * key and the billing; its models serve KM0's own calls and the coding agents. API keys never leave
+ * this class in plain text except via `resolveProfile` and `providerKey`.
+ */
 export class SettingsStore {
   constructor(
     private readonly db: Database,
     private readonly secrets: SecretStore,
+    private readonly registry: () => ModelRegistry = () => EMPTY_REGISTRY,
   ) {}
 
-  listProfiles(): LlmProfile[] {
-    const rows = this.db.prepare("SELECT * FROM llm_profiles ORDER BY id").all() as unknown as ProfileRow[];
-    return rows.map(toProfile);
+  // Providers
+
+  listProviders(): Provider[] {
+    return (this.db.prepare("SELECT * FROM providers ORDER BY name").all() as unknown as ProviderRow[]).map(toProvider);
   }
 
-  getProfile(id: number): LlmProfile {
-    return toProfile(this.row(id));
+  getProvider(id: number): Provider {
+    return toProvider(this.providerRow(id));
   }
 
-  createProfile(input: LlmProfileInput): LlmProfile {
-    const data = LlmProfileInput.parse(input);
+  createProvider(input: ProviderInput): Provider {
+    const data = ProviderInput.parse(input);
     const now = nowIso();
     const key = data.apiKey?.trim() ? data.apiKey.trim() : null;
     try {
       const result = this.db
         .prepare(
-          `INSERT INTO llm_profiles (name, provider, base_url, model, api_key_encrypted, api_key_hint, structured_mode,
-             temperature, price_in_per_mtok, price_out_per_mtok, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO providers (name, kind, base_url, api_key_encrypted, api_key_hint, billing_json, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           data.name,
-          data.provider,
+          data.kind,
           data.baseUrl,
-          data.model,
           key ? this.secrets.encrypt(key) : null,
           key ? keyHint(key) : null,
-          data.structuredMode,
-          data.temperature,
-          data.priceInPerMTok,
-          data.priceOutPerMTok,
+          JSON.stringify(data.billing),
           now,
           now,
         );
-      const id = Number(result.lastInsertRowid);
-      // The first profile becomes the router so a fresh install works with one model.
-      if (this.getRoles().router === null) this.setRoles({ ...this.getRoles(), router: id });
-      return this.getProfile(id);
+      return this.getProvider(Number(result.lastInsertRowid));
     } catch (error) {
-      throw uniqueNameError(error) ?? error;
+      throw uniqueNameError(error, "providers") ?? error;
     }
   }
 
   /** `apiKey` omitted keeps the stored key; an empty string removes it. */
-  updateProfile(id: number, input: LlmProfileInput): LlmProfile {
-    const existing = this.row(id);
-    const data = LlmProfileInput.parse(input);
+  updateProvider(id: number, input: ProviderInput): Provider {
+    const existing = this.providerRow(id);
+    const data = ProviderInput.parse(input);
     let encrypted = existing.api_key_encrypted;
     let hint = existing.api_key_hint;
     if (data.apiKey !== undefined) {
@@ -111,83 +150,157 @@ export class SettingsStore {
       encrypted = key ? this.secrets.encrypt(key) : null;
       hint = key ? keyHint(key) : null;
     }
-    // Changing the endpoint or model invalidates a previously detected mode.
-    const endpointChanged =
-      existing.provider !== data.provider || existing.base_url !== data.baseUrl || existing.model !== data.model;
+    try {
+      transaction(this.db, () => {
+        this.db
+          .prepare(
+            `UPDATE providers SET name = ?, kind = ?, base_url = ?, api_key_encrypted = ?, api_key_hint = ?,
+               billing_json = ?, updated_at = ? WHERE id = ?`,
+          )
+          .run(data.name, data.kind, data.baseUrl, encrypted, hint, JSON.stringify(data.billing), nowIso(), id);
+        // A different endpoint invalidates the structured output mode detected for its models.
+        if (existing.kind !== data.kind || existing.base_url !== data.baseUrl) {
+          this.db.prepare("UPDATE models SET structured_mode = 'auto' WHERE provider_id = ?").run(id);
+        }
+      });
+    } catch (error) {
+      throw uniqueNameError(error, "providers") ?? error;
+    }
+    return this.getProvider(id);
+  }
+
+  /** Deletes the provider with its models; roles that used them are cleared. */
+  deleteProvider(id: number): void {
+    this.providerRow(id);
+    const models = (this.db.prepare("SELECT id FROM models WHERE provider_id = ?").all(id) as { id: number }[]).map(
+      (row) => row.id,
+    );
+    this.db.prepare("DELETE FROM providers WHERE id = ?").run(id);
+    this.clearRoles(models);
+  }
+
+  /** The provider's key in plain text, for handing to a process that needs it (KM0 Runner). */
+  providerKey(id: number): string | null {
+    const row = this.providerRow(id);
+    return row.api_key_encrypted ? this.decrypt(row.api_key_encrypted, row.name) : null;
+  }
+
+  // Models
+
+  listModels(): ModelEntry[] {
+    const providers = new Map(
+      (this.db.prepare("SELECT * FROM providers").all() as unknown as ProviderRow[]).map((row) => [row.id, row]),
+    );
+    const rows = this.db.prepare("SELECT * FROM models ORDER BY name").all() as unknown as ModelRow[];
+    return rows.flatMap((row) => {
+      const provider = providers.get(row.provider_id);
+      return provider ? [this.toEntry(row, provider)] : [];
+    });
+  }
+
+  getModel(id: number): ModelEntry {
+    const row = this.modelRow(id);
+    return this.toEntry(row, this.providerRow(row.provider_id));
+  }
+
+  createModel(input: ModelInput): ModelEntry {
+    const data = ModelInput.parse(input);
+    this.providerRow(data.providerId);
+    const now = nowIso();
+    try {
+      const result = this.db
+        .prepare(
+          `INSERT INTO models (provider_id, name, model_id, canonical_id, context_window, structured_mode, temperature,
+             price_in_per_mtok, price_out_per_mtok, price_cache_read_per_mtok, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          data.providerId,
+          data.name || data.modelId,
+          data.modelId,
+          data.canonicalId,
+          data.contextWindow,
+          data.structuredMode,
+          data.temperature,
+          data.priceInPerMTok,
+          data.priceOutPerMTok,
+          data.priceCacheReadPerMTok,
+          now,
+          now,
+        );
+      const id = Number(result.lastInsertRowid);
+      // The first model becomes the router so a fresh install works with one model.
+      if (this.getRoles().router === null) this.setRoles({ ...this.getRoles(), router: id });
+      return this.getModel(id);
+    } catch (error) {
+      throw uniqueNameError(error, "models") ?? error;
+    }
+  }
+
+  updateModel(id: number, input: ModelInput): ModelEntry {
+    const existing = this.modelRow(id);
+    const data = ModelInput.parse(input);
+    this.providerRow(data.providerId);
+    // A different model or provider invalidates a previously detected mode.
+    const endpointChanged = existing.model_id !== data.modelId || existing.provider_id !== data.providerId;
     const mode = endpointChanged && data.structuredMode === existing.structured_mode ? "auto" : data.structuredMode;
     try {
       this.db
         .prepare(
-          `UPDATE llm_profiles SET name = ?, provider = ?, base_url = ?, model = ?, api_key_encrypted = ?, api_key_hint = ?,
-             structured_mode = ?, temperature = ?, price_in_per_mtok = ?, price_out_per_mtok = ?, updated_at = ?
-           WHERE id = ?`,
+          `UPDATE models SET provider_id = ?, name = ?, model_id = ?, canonical_id = ?, context_window = ?,
+             structured_mode = ?, temperature = ?, price_in_per_mtok = ?, price_out_per_mtok = ?,
+             price_cache_read_per_mtok = ?, updated_at = ? WHERE id = ?`,
         )
         .run(
-          data.name,
-          data.provider,
-          data.baseUrl,
-          data.model,
-          encrypted,
-          hint,
+          data.providerId,
+          data.name || data.modelId,
+          data.modelId,
+          data.canonicalId,
+          data.contextWindow,
           mode,
           data.temperature,
           data.priceInPerMTok,
           data.priceOutPerMTok,
+          data.priceCacheReadPerMTok,
           nowIso(),
           id,
         );
     } catch (error) {
-      throw uniqueNameError(error) ?? error;
+      throw uniqueNameError(error, "models") ?? error;
     }
-    return this.getProfile(id);
+    return this.getModel(id);
   }
 
-  deleteProfile(id: number): void {
-    this.row(id);
-    this.db.prepare("DELETE FROM llm_profiles WHERE id = ?").run(id);
-    const roles = this.getRoles();
-    this.setRoles({
-      router: roles.router === id ? null : roles.router,
-      planner: roles.planner === id ? null : roles.planner,
-    });
+  deleteModel(id: number): void {
+    this.modelRow(id);
+    this.db.prepare("DELETE FROM models WHERE id = ?").run(id);
+    this.clearRoles([id]);
   }
 
   setStructuredMode(id: number, mode: StructuredMode): void {
-    this.db.prepare("UPDATE llm_profiles SET structured_mode = ?, updated_at = ? WHERE id = ?").run(mode, nowIso(), id);
+    this.db.prepare("UPDATE models SET structured_mode = ?, updated_at = ? WHERE id = ?").run(mode, nowIso(), id);
   }
 
-  /** Decrypts the key for an outgoing model call. */
+  /** A model with its provider's endpoint and decrypted key, for an outgoing call. */
   resolveProfile(id: number): ResolvedProfile {
-    const row = this.row(id);
-    let apiKey: string | null = null;
-    if (row.api_key_encrypted) {
-      try {
-        apiKey = this.secrets.decrypt(row.api_key_encrypted);
-      } catch (error) {
-        throw new AppError(
-          "config",
-          `The API key of "${row.name}" cannot be decrypted on this device; enter it again.`,
-          {
-            cause: error,
-          },
-        );
-      }
-    }
+    const row = this.modelRow(id);
+    const provider = this.providerRow(row.provider_id);
+    const entry = this.toEntry(row, provider);
     return {
       id: row.id,
       name: row.name,
-      provider: row.provider,
-      baseUrl: row.base_url,
-      model: row.model,
-      apiKey,
+      provider: provider.kind,
+      baseUrl: provider.base_url,
+      model: row.model_id,
+      apiKey: provider.api_key_encrypted ? this.decrypt(provider.api_key_encrypted, provider.name) : null,
       structuredMode: row.structured_mode,
       temperature: row.temperature,
-      priceInPerMTok: row.price_in_per_mtok,
-      priceOutPerMTok: row.price_out_per_mtok,
+      priceInPerMTok: entry.effective.input,
+      priceOutPerMTok: entry.effective.output,
     };
   }
 
-  /** The profile serving a role; the planner falls back to the router. */
+  /** The model serving a role; the planner falls back to the router. */
   profileForRole(role: LlmRole): ResolvedProfile {
     const roles = this.getRoles();
     const id = role === "planner" ? (roles.planner ?? roles.router) : roles.router;
@@ -202,7 +315,7 @@ export class SettingsStore {
   setRoles(roles: RoleAssignment): RoleAssignment {
     for (const role of ["router", "planner"] as const) {
       const id = roles[role];
-      if (id !== null) this.row(id);
+      if (id !== null) this.modelRow(id);
       this.writePreference(ROLE_KEYS[role], id === null ? null : String(id));
     }
     return this.getRoles();
@@ -257,9 +370,74 @@ export class SettingsStore {
       );
   }
 
-  private row(id: number): ProfileRow {
-    const row = this.db.prepare("SELECT * FROM llm_profiles WHERE id = ?").get(id) as ProfileRow | undefined;
-    if (!row) throw new AppError("not_found", `Model profile ${id} does not exist.`);
+  private toEntry(row: ModelRow, provider: ProviderRow): ModelEntry {
+    const registry = this.registry();
+    const match = row.canonical_id
+      ? { canonicalId: row.canonical_id, problem: null, candidates: [] as string[] }
+      : matchRegistryModel(registry, row.model_id, row.name);
+    const known = match.canonicalId ? registry.models.find((model) => model.id === match.canonicalId) : undefined;
+    return {
+      id: row.id,
+      providerId: provider.id,
+      providerName: provider.name,
+      providerKind: provider.kind,
+      modelId: row.model_id,
+      name: row.name,
+      canonicalId: match.canonicalId,
+      canonicalSource: row.canonical_id ? "manual" : match.canonicalId ? "auto" : null,
+      matchProblem: match.problem,
+      matchCandidates: match.candidates,
+      vendor: known?.vendor ?? match.canonicalId?.split("/")[0] ?? null,
+      contextWindow: row.context_window ?? known?.contextWindow ?? null,
+      contextWindowOverride: row.context_window,
+      structuredMode: row.structured_mode,
+      temperature: row.temperature,
+      priceInPerMTok: row.price_in_per_mtok,
+      priceOutPerMTok: row.price_out_per_mtok,
+      priceCacheReadPerMTok: row.price_cache_read_per_mtok,
+      effective: effectivePrice(
+        parseBilling(provider.billing_json),
+        {
+          priceInPerMTok: row.price_in_per_mtok,
+          priceOutPerMTok: row.price_out_per_mtok,
+          priceCacheReadPerMTok: row.price_cache_read_per_mtok,
+        },
+        known?.pricing ?? null,
+      ),
+      // A local endpoint may need no key; a hosted one without a key cannot be called by KM0.
+      callable: provider.api_key_encrypted !== null || provider.base_url !== null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private decrypt(encrypted: string, owner: string): string {
+    try {
+      return this.secrets.decrypt(encrypted);
+    } catch (error) {
+      throw new AppError("config", `The API key of "${owner}" cannot be decrypted on this device; enter it again.`, {
+        cause: error,
+      });
+    }
+  }
+
+  private clearRoles(modelIds: number[]): void {
+    const roles = this.getRoles();
+    this.setRoles({
+      router: roles.router !== null && modelIds.includes(roles.router) ? null : roles.router,
+      planner: roles.planner !== null && modelIds.includes(roles.planner) ? null : roles.planner,
+    });
+  }
+
+  private providerRow(id: number): ProviderRow {
+    const row = this.db.prepare("SELECT * FROM providers WHERE id = ?").get(id) as ProviderRow | undefined;
+    if (!row) throw new AppError("not_found", `Provider ${id} does not exist.`);
+    return row;
+  }
+
+  private modelRow(id: number): ModelRow {
+    const row = this.db.prepare("SELECT * FROM models WHERE id = ?").get(id) as ModelRow | undefined;
+    if (!row) throw new AppError("not_found", `Model ${id} does not exist.`);
     return row;
   }
 
@@ -288,9 +466,12 @@ export class SettingsStore {
   }
 }
 
-function uniqueNameError(error: unknown): AppError | null {
-  if (error instanceof Error && /UNIQUE constraint failed: llm_profiles\.name/.test(error.message)) {
-    return new AppError("conflict", "A model profile with this name already exists.");
+function uniqueNameError(error: unknown, table: "providers" | "models"): AppError | null {
+  if (error instanceof Error && new RegExp(`UNIQUE constraint failed: ${table}\\.name`).test(error.message)) {
+    return new AppError(
+      "conflict",
+      table === "providers" ? "A provider with this name already exists." : "A model with this name already exists.",
+    );
   }
   return null;
 }

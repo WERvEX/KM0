@@ -1,4 +1,4 @@
-import type { AgentId } from "@km0/shared";
+import type { AgentConfig, AgentId, PresetAgentId } from "@km0/shared";
 import type { Language } from "../discussion/prompts";
 
 type Localized = Record<Language, string>;
@@ -15,7 +15,7 @@ export interface AgentAdapter {
     render(overview: string, language: Language): string;
   } | null;
   /** A shell command that starts the agent on a prompt; null when it is driven from its own UI. */
-  command(prompt: string, model: string | null): string | null;
+  command(prompt: string, model: string | null, taskFile: string): string | null;
   /** How to start it, including anything not yet verified. */
   howTo: Localized;
 }
@@ -24,7 +24,7 @@ export interface AgentAdapter {
 const quote = (value: string) => `"${value.replaceAll('"', "'")}"`;
 const plain = (overview: string) => overview;
 
-export const ADAPTERS: Record<AgentId, AgentAdapter> = {
+export const ADAPTERS: Record<PresetAgentId, AgentAdapter> = {
   claude_code: {
     id: "claude_code",
     name: "Claude Code",
@@ -117,3 +117,43 @@ export const ADAPTERS: Record<AgentId, AgentAdapter> = {
     },
   },
 };
+
+/**
+ * An agent the user defined: its instructions file is the project overview under the name it reads,
+ * and its command is the user's template with {prompt}, {task_file} and {model} filled in.
+ */
+export function customAdapter(
+  agent: Pick<AgentConfig, "id" | "name" | "instructionFile" | "launchTemplate">,
+): AgentAdapter {
+  const file = agent.instructionFile;
+  return {
+    id: agent.id,
+    name: agent.name,
+    instructions: file ? { packagedAs: file.split(/[\\/]/).pop() || file, target: file, render: plain } : null,
+    command: agent.launchTemplate
+      ? (prompt, model, taskFile) =>
+          (agent.launchTemplate as string)
+            .replaceAll("{prompt}", quote(prompt))
+            .replaceAll("{task_file}", taskFile)
+            .replaceAll("{model}", model ?? "")
+            .replace(/\s{2,}/g, " ")
+            .trim()
+      : () => null,
+    howTo: agent.launchTemplate
+      ? {
+          "zh-CN": "这是你在“设置 → Agent”里添加的 Agent：在代码库根目录运行表中的命令，命令按你填写的启动方式生成。",
+          en: "An agent you added under Settings → Agents: run the command at the repository root; it follows the launch command you set.",
+        }
+      : {
+          "zh-CN": "这是你在“设置 → Agent”里添加的 Agent：把任务文件的内容粘贴给它；任务文件是自包含的。",
+          en: "An agent you added under Settings → Agents: paste the task file into it; the file is self-contained.",
+        },
+  };
+}
+
+/** The adapter for an agent: a preset's own, a custom agent's from its definition, or the generic one. */
+export function adapterFor(id: AgentId, custom: AgentConfig[] = []): AgentAdapter {
+  if (id in ADAPTERS) return ADAPTERS[id as PresetAgentId];
+  const definition = custom.find((agent) => agent.id === id);
+  return definition ? customAdapter(definition) : ADAPTERS.generic;
+}

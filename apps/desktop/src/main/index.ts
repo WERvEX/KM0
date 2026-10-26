@@ -135,11 +135,12 @@ void app.whenReady().then(() => {
   const dataDir = app.getPath("userData");
   const db = openDatabase(join(dataDir, "km0.db"));
   const secrets = new ElectronSecretStore();
-  const settings = new SettingsStore(db, secrets);
+  const registry = new RegistryService(db, ModelRegistry.parse(bundledRegistry), downloadText);
+  const settings = new SettingsStore(db, secrets, () => registry.current().registry);
   const gateway = createGateway({
     recordCall: (record) => settings.recordCall(record),
     onModeDetected: (profileId, mode) => {
-      if (settings.getProfile(profileId).structuredMode === "auto") settings.setStructuredMode(profileId, mode);
+      if (settings.getModel(profileId).structuredMode === "auto") settings.setStructuredMode(profileId, mode);
     },
   });
   // KM0_FAKE_LLM=1 swaps in a deterministic model for end-to-end tests and demos without an API key.
@@ -172,9 +173,8 @@ void app.whenReady().then(() => {
   const repo = nodeRepoAccess(() => folders.ask("repo"));
   const projects = new ProjectService(db, llmFor, language, { searchPort: () => search.activePort(), repo });
   const documents = new DocumentService(db, llmFor, language, emit);
-  const agents = new AgentStore(db);
+  const agents = new AgentStore(db, () => settings.listModels());
   const config = new ConfigService(settings, agents, search);
-  const registry = new RegistryService(db, ModelRegistry.parse(bundledRegistry), downloadText);
   const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules);
   const handoff = new HandoffService(db, routing, language);
   const runner = new RunnerService(

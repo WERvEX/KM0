@@ -1,6 +1,7 @@
 import type { AgentConfig, TaskFailure, TaskFeatures, Tier } from "@km0/shared";
 import { describe, expect, it } from "vitest";
 import { createSimulatedLlm } from "../discussion/simulator";
+import { agentConfig, tierModel } from "../testing";
 import { breakDown, breakdownSystem } from "./breakdown";
 import {
   chooseAgent,
@@ -113,34 +114,30 @@ describe("hard rules", () => {
   });
 });
 
-const priced = (modelId: string, input: number, output: number) => ({
-  modelId,
-  priceInPerMTok: input,
-  priceOutPerMTok: output,
-});
+const priced = (modelId: string, input: number | null, output: number | null) => tierModel(modelId, input, output);
 
 const agents: AgentConfig[] = [
-  {
+  agentConfig({
     id: "codex",
     enabled: true,
     preference: 1,
     models: { T1: null, T2: priced("codex-mid", 2, 8), T3: priced("codex-max", 10, 40) },
     capabilities: ["frontend", "testing"],
-  },
-  {
+  }),
+  agentConfig({
     id: "claude_code",
     enabled: true,
     preference: 0,
     models: { T1: priced("claude-haiku-5-5", 1, 5), T2: null, T3: priced("claude-opus-5-5", 5, 25) },
     capabilities: ["backend", "debugging"],
-  },
-  {
+  }),
+  agentConfig({
     id: "cursor",
     enabled: false,
     preference: 2,
     models: { T1: null, T2: priced("x", 1, 1), T3: null },
     capabilities: ["frontend"],
-  },
+  }),
 ];
 
 describe("agents", () => {
@@ -275,7 +272,7 @@ describe("cost", () => {
     const tokens = estimateTokens(base);
     expect(tokens).toEqual({ input: { low: 20_000, high: 80_000 }, output: { low: 1_500, high: 6_000 } });
     expect(estimateCost(priced("m", 1, 5), tokens)).toEqual({ low: 0.0275, high: 0.11 });
-    expect(estimateCost({ modelId: "m", priceInPerMTok: null, priceOutPerMTok: 5 }, tokens)).toBeNull();
+    expect(estimateCost(priced("m", null, 5), tokens)).toBeNull();
     expect(estimateTokens({ ...base, context: "large", ambiguity: "high" }).input.high).toBe(156_000);
   });
 

@@ -8,6 +8,7 @@ import {
   routeTask,
 } from "@km0/core";
 import {
+  type AgentConfig,
   AppError,
   type DocumentKind,
   PATH_DOCUMENTS,
@@ -76,6 +77,11 @@ export class RoutingService {
     private readonly agents: AgentStore,
     private readonly rules: () => RoutingRules = () => DEFAULT_ROUTING_RULES,
   ) {}
+
+  /** The configured agents, as routing sees them. */
+  agentConfigs(): AgentConfig[] {
+    return this.agents.list();
+  }
 
   get(projectId: number): RoutingPlan | null {
     const project = this.project(projectId);

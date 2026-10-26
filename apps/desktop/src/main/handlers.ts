@@ -54,11 +54,15 @@ export function createHandlers({
   return {
     "app.info": () => appInfo(),
 
-    "settings.profiles.list": () => settings.listProfiles(),
-    "settings.profiles.create": (input) => settings.createProfile(input),
-    "settings.profiles.update": ({ id, data }) => settings.updateProfile(id, data),
-    "settings.profiles.delete": ({ id }) => settings.deleteProfile(id),
-    "settings.profiles.test": async ({ id }) => {
+    "settings.providers.list": () => settings.listProviders(),
+    "settings.providers.create": (input) => settings.createProvider(input),
+    "settings.providers.update": ({ id, data }) => settings.updateProvider(id, data),
+    "settings.providers.delete": ({ id }) => settings.deleteProvider(id),
+    "settings.models.list": () => settings.listModels(),
+    "settings.models.create": (input) => settings.createModel(input),
+    "settings.models.update": ({ id, data }) => settings.updateModel(id, data),
+    "settings.models.delete": ({ id }) => settings.deleteModel(id),
+    "settings.models.test": async ({ id }) => {
       const profile = settings.resolveProfile(id);
       const result = await gateway.testConnection(profile);
       // Remember what worked so later calls skip the detection.
@@ -67,6 +71,7 @@ export function createHandlers({
       }
       return result;
     },
+    "settings.models.registryChoices": ({ query }) => registry.choices(query),
     "settings.roles.get": () => settings.getRoles(),
     "settings.roles.set": (roles) => settings.setRoles(roles),
     "settings.preferences.get": () => settings.getPreferences(),
@@ -77,6 +82,9 @@ export function createHandlers({
     "settings.agents.update": ({ id, enabled, models, capabilities }) =>
       agents.update(id, enabled, models, capabilities),
     "settings.agents.move": ({ id, direction }) => agents.move(id, direction),
+    "settings.agents.create": (input) => agents.createCustom(input),
+    "settings.agents.redefine": ({ id, data }) => agents.updateCustom(id, data),
+    "settings.agents.delete": ({ id }) => agents.deleteCustom(id),
     "settings.search.list": () => search.list(),
     "settings.search.create": (input) => search.create(input),
     "settings.search.update": ({ id, data }) => search.update(id, data),
@@ -85,6 +93,7 @@ export function createHandlers({
     "settings.export": ({ includeSecrets }) => config.export(includeSecrets),
     "settings.import": (bundle) => config.import(bundle),
     "registry.info": () => registry.info(),
+    "registry.vendors": () => registry.current().registry.vendors,
     "registry.update": () => registry.update(),
     "registry.import": ({ text }) => registry.import(text),
     "registry.reset": () => registry.reset(),
