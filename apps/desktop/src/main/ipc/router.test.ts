@@ -18,6 +18,7 @@ import { RunnerService } from "../services/runner-service";
 import { SearchStore } from "../services/search-store";
 import { PlainSecretStore } from "../services/secrets";
 import { SettingsStore } from "../services/settings-store";
+import { UpdateService } from "../services/update-service";
 import { createDispatcher } from "./router";
 
 function setup(provider = new FakeProvider([])) {
@@ -66,6 +67,7 @@ function setup(provider = new FakeProvider([])) {
       handoff,
       runner,
       execution: new ExecutionService(db, null, settings, routing, handoff, runner, () => "zh-CN", "runs"),
+      updates: new UpdateService(null, "0.0.0", () => "zh-CN"),
       quit: async () => undefined,
       agents,
       search,

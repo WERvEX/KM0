@@ -1,0 +1,60 @@
+{
+  "id": "rate-limit",
+  "why": "英文需求，条件分散在需求和技术方案里；协议细节（状态码、响应头）常被丢。",
+  "language": "en",
+  "path": "full",
+  "title": "API rate limiting",
+  "description": "Add rate limiting to the public API: 100 requests per minute per API key.",
+  "decisions": [
+    {
+      "key": "backend",
+      "value": {
+        "text": "Express 5 with Redis"
+      }
+    }
+  ],
+  "documents": [
+    {
+      "kind": "tech_design",
+      "sections": [
+        {
+          "id": "api",
+          "title": "API design",
+          "body": "When a key goes over its limit the API answers 429 Too Many Requests with a Retry-After header in seconds. Every response carries X-RateLimit-Remaining. Limits are counted per API key, not per IP. Health checks (/healthz) are never limited."
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "limit",
+      "text": "100 per minute per key",
+      "match": [["100"]]
+    },
+    {
+      "id": "429",
+      "text": "429 when over",
+      "match": [["429"]]
+    },
+    {
+      "id": "retry-after",
+      "text": "Retry-After header",
+      "match": [["retry-after"]]
+    },
+    {
+      "id": "remaining",
+      "text": "X-RateLimit-Remaining",
+      "match": [["x-ratelimit-remaining"], ["remaining"]]
+    },
+    {
+      "id": "per-key",
+      "text": "per key, not IP",
+      "match": [["per api key"], ["per key"], ["api key", "ip"]]
+    },
+    {
+      "id": "healthz",
+      "text": "/healthz never limited",
+      "match": [["healthz"], ["health"]]
+    }
+  ]
+}

@@ -88,7 +88,7 @@ describe("ConfigService", () => {
     const names = (id: number | null) => target.settings.listModels().find((model) => model.id === id)?.name;
     const roles = target.settings.getRoles();
     expect([names(roles.router), names(roles.planner)]).toEqual(["Fast", "Strong"]);
-    expect(target.settings.getPreferences()).toEqual({ language: "en", theme: "dark" });
+    expect(target.settings.getPreferences()).toEqual({ language: "en", theme: "dark", autoUpdate: true });
     expect(target.agents.list().map((agent) => agent.id)).toEqual(source.agents.list().map((agent) => agent.id));
     expect(target.agents.list().find((agent) => agent.id === "codex")).toMatchObject({
       enabled: false,

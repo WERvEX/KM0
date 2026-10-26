@@ -16,6 +16,7 @@ import type { RunRecordStore } from "./services/run-records";
 import type { RunnerService } from "./services/runner-service";
 import type { SearchStore } from "./services/search-store";
 import type { SettingsStore } from "./services/settings-store";
+import type { UpdateService } from "./services/update-service";
 
 export interface HandlerDeps {
   settings: SettingsStore;
@@ -30,6 +31,7 @@ export interface HandlerDeps {
   registry: RegistryService;
   records: RunRecordStore;
   execution: ExecutionService;
+  updates: UpdateService;
   /** Stop the runs still going and close the app. */
   quit: () => Promise<void>;
   repo: RepoAccess;
@@ -53,6 +55,7 @@ export function createHandlers({
   registry,
   records,
   execution,
+  updates,
   quit,
   repo,
   files,
@@ -63,6 +66,10 @@ export function createHandlers({
   return {
     "app.info": () => appInfo(),
     "app.quit": () => quit(),
+    "update.state": () => updates.state(),
+    "update.check": () => updates.check(),
+    "update.download": () => updates.download(),
+    "update.install": () => updates.install(),
 
     "settings.providers.list": () => settings.listProviders(),
     "settings.providers.create": (input) => settings.createProvider(input),

@@ -1,0 +1,52 @@
+import { spawnSync } from "node:child_process";
+import { app } from "electron";
+import log from "electron-log/main";
+import updaterModule from "electron-updater";
+import type { UnsupportedReason, UpdaterPort } from "./services/update-service";
+
+/**
+ * electron-updater against the GitHub Releases named in electron-builder.yml. It never downloads or
+ * restarts by itself and never shows a dialog: KM0's About page drives it. Returns why it cannot run
+ * when it cannot.
+ */
+export function electronUpdater(): UpdaterPort | UnsupportedReason {
+  if (!app.isPackaged) return "development";
+  // On Linux only the AppImage can replace itself.
+  if (process.platform === "linux" && !process.env.APPIMAGE) return "linux";
+  // macOS installs updates only into a signed app.
+  if (process.platform === "darwin" && !signed()) return "unsigned";
+  const { autoUpdater } = updaterModule;
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.logger = log;
+  return {
+    async check() {
+      const result = await autoUpdater.checkForUpdates();
+      if (!result?.isUpdateAvailable) return null;
+      const notes = result.updateInfo.releaseNotes;
+      return {
+        version: result.updateInfo.version,
+        notes: typeof notes === "string" ? notes : (notes?.map((note) => note.note ?? "").join("\n\n") ?? null),
+      };
+    },
+    async download(onProgress) {
+      const listener = (progress: { percent: number }) => onProgress(progress.percent);
+      autoUpdater.on("download-progress", listener);
+      try {
+        await autoUpdater.downloadUpdate();
+      } finally {
+        autoUpdater.off("download-progress", listener);
+      }
+    },
+    install() {
+      // Quits through the normal path, so a run still going is asked about first.
+      autoUpdater.quitAndInstall(false, true);
+    },
+  };
+}
+
+/** Whether the running macOS app carries a valid code signature. */
+function signed(): boolean {
+  const bundle = app.getPath("exe").replace(/\/Contents\/MacOS\/[^/]+$/, "");
+  return spawnSync("codesign", ["--verify", "--deep", bundle]).status === 0;
+}

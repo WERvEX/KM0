@@ -174,6 +174,13 @@ function layoutProblems(): Promise<string[]> {
         problems.push(`${describe(element)} runs off screen (${Math.round(rect.left)}–${Math.round(rect.right)})`);
       }
     }
+    // A table fits its box: sideways scrolling would hide its last columns (costs, verdicts) off to the right.
+    for (const table of document.querySelectorAll("table")) {
+      const box = table.parentElement;
+      if (box && box.scrollWidth > box.clientWidth + 1) {
+        problems.push(`a table needs sideways scrolling (${box.scrollWidth} > ${box.clientWidth})`);
+      }
+    }
     // A box that scrolls by a few pixels shows a stray scrollbar; that is a rendering slip, not content.
     for (const element of document.querySelectorAll("body *")) {
       const { overflowX, overflowY } = getComputedStyle(element);

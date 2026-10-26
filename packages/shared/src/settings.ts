@@ -9,10 +9,31 @@ export type Theme = z.infer<typeof Theme>;
 export const Preferences = z.object({
   language: Language,
   theme: Theme,
+  /** Look for a new version on start; installing always waits for the user. */
+  autoUpdate: z.boolean().default(true),
 });
 export type Preferences = z.infer<typeof Preferences>;
 
-export const DEFAULT_PREFERENCES: Preferences = { language: "system", theme: "system" };
+export const DEFAULT_PREFERENCES: Preferences = { language: "system", theme: "system", autoUpdate: true };
+
+/**
+ * The in-app updater (GitHub Releases). Everything it says is shown inside KM0: no system dialog asks to
+ * download or restart.
+ */
+export const UpdateState = z.object({
+  status: z.enum(["unsupported", "idle", "checking", "available", "current", "downloading", "downloaded", "error"]),
+  currentVersion: z.string(),
+  /** The newer version, once one is found. */
+  version: z.string().nullable(),
+  /** Its release notes, as published. */
+  notes: z.string().nullable(),
+  /** Download progress, 0 to 100. */
+  percent: z.number().nullable(),
+  /** Why updating is unsupported here, or what went wrong. */
+  detail: z.string().nullable(),
+  checkedAt: z.string().nullable(),
+});
+export type UpdateState = z.infer<typeof UpdateState>;
 
 export const AppInfo = z.object({
   name: z.string(),

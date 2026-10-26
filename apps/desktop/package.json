@@ -1,7 +1,7 @@
 {
   "name": "@km0/desktop",
   "productName": "KM0",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "KM0 desktop app",
   "author": "WERvEX",
@@ -44,6 +44,7 @@
     "electron": "44.9.0",
     "electron-builder": "26.15.3",
     "electron-log": "5.4.4",
+    "electron-updater": "6.8.10",
     "electron-vite": "6.0.0",
     "fflate": "0.8.2",
     "i18next": "26.5.2",

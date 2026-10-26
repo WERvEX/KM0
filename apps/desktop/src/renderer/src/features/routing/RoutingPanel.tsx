@@ -365,7 +365,6 @@ function TaskTable({ plan, busy, ...actions }: { plan: RoutingPlan; busy: boolea
           <tr>
             <th className="w-8 px-3 py-2">#</th>
             <th className="px-3 py-2">{t("routing.columns.task")}</th>
-            <th className="px-3 py-2 whitespace-nowrap">{t("routing.columns.difficulty")}</th>
             <th className="px-3 py-2 whitespace-nowrap">{t("routing.columns.combination")}</th>
             <th className="px-3 py-2 text-right whitespace-nowrap">{t("routing.columns.pass")}</th>
             <th className="px-3 py-2 text-right whitespace-nowrap">{t("routing.columns.cost")}</th>
@@ -391,6 +390,9 @@ function TaskTable({ plan, busy, ...actions }: { plan: RoutingPlan; busy: boolea
                     {task.title}
                   </button>
                   <div className="mt-1 ml-5 flex flex-wrap gap-1.5">
+                    <span className="text-[11px] text-muted">
+                      {t("routing.difficultyOf", { band: t(`routing.bands.${task.band}`) })}
+                    </span>
                     {task.dependsOn.length > 0 ? (
                       <span className="text-[11px] text-muted">
                         {t("routing.after", { value: task.dependsOn.join(", ") })}
@@ -419,7 +421,6 @@ function TaskTable({ plan, busy, ...actions }: { plan: RoutingPlan; busy: boolea
                     ) : null}
                   </div>
                 </td>
-                <td className="px-3 py-2 align-top text-xs whitespace-nowrap">{t(`routing.bands.${task.band}`)}</td>
                 <td className="px-3 py-2 align-top whitespace-nowrap">
                   {task.choice ? (
                     <>
@@ -465,7 +466,7 @@ function TaskTable({ plan, busy, ...actions }: { plan: RoutingPlan; busy: boolea
               {open === task.id ? (
                 <tr className="border-b border-border bg-sunken/40 last:border-0">
                   <td />
-                  <td colSpan={5} className="px-3 pt-1 pb-4">
+                  <td colSpan={4} className="px-3 pt-1 pb-4">
                     <TaskDetail
                       task={task}
                       busy={busy}

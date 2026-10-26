@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/field";
 import { ExecutionWatcher } from "@/features/execution/ExecutionWatcher";
+import { UpdateWatcher } from "@/features/settings/UpdateSection";
 import { useIpcMutation, useIpcQuery } from "@/lib/queries";
 
 export function AppShell() {
@@ -18,6 +19,7 @@ export function AppShell() {
   return (
     <div className="flex h-full flex-col">
       <ExecutionWatcher />
+      <UpdateWatcher />
       {info.data?.platform === "web" ? <WebBanner simulated={info.data.simulatedModel} /> : null}
       <div className="flex min-h-0 flex-1">
         <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-panel">

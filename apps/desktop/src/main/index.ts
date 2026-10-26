@@ -8,6 +8,7 @@ import { app, BrowserWindow, ipcMain, session, shell } from "electron";
 import log from "electron-log/main";
 import { openDatabase } from "./db/database";
 import { ElectronSecretStore } from "./electron-secrets";
+import { electronUpdater } from "./electron-updater";
 import { createHandlers } from "./handlers";
 import { createDispatcher } from "./ipc/router";
 import { nodeExec } from "./node-exec";
@@ -28,6 +29,7 @@ import { RunRecordStore } from "./services/run-records";
 import { RunnerService } from "./services/runner-service";
 import { SearchStore } from "./services/search-store";
 import { SettingsStore } from "./services/settings-store";
+import { UpdateService } from "./services/update-service";
 
 const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL;
 
@@ -209,6 +211,16 @@ void app.whenReady().then(() => {
     join(dataDir, "runs"),
     (run) => emit("execution.update", run),
   );
+  const updaterPort = electronUpdater();
+  const updates = new UpdateService(
+    typeof updaterPort === "string" ? null : updaterPort,
+    app.getVersion(),
+    language,
+    (state) => emit("update.state", state),
+    typeof updaterPort === "string" ? updaterPort : "development",
+  );
+  // A quiet check shortly after start, when the preference allows it.
+  setTimeout(() => void updates.checkOnStart(settings.getPreferences().autoUpdate), 8_000);
   // Closing the window while runs are going asks first (in the page); `app.quit` stops them and closes.
   let quitting = false;
   const quit = async () => {
@@ -231,6 +243,7 @@ void app.whenReady().then(() => {
       registry,
       records,
       execution,
+      updates,
       quit,
       repo,
       files,

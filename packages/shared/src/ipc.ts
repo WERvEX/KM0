@@ -60,7 +60,7 @@ import {
   UpdateAgentInput,
 } from "./routing";
 import { RunnerOverrideInput, RunnerRun, RunnerRunRef } from "./runner";
-import { AppInfo, Preferences } from "./settings";
+import { AppInfo, Preferences, UpdateState } from "./settings";
 
 interface ChannelSpec<I extends z.ZodType, O extends z.ZodType> {
   input: I;
@@ -79,6 +79,11 @@ const Id = z.object({ id: z.number().int().positive() });
  */
 export const ipcContract = {
   "app.info": channel(z.void(), AppInfo),
+  "update.state": channel(z.void(), UpdateState),
+  "update.check": channel(z.void(), UpdateState),
+  "update.download": channel(z.void(), UpdateState),
+  /** Restart into the downloaded version; runs still going are asked about first, like closing the window. */
+  "update.install": channel(z.void(), z.void()),
   /** Answer to `app.quitRequest`: stop the runs still going and close the window. */
   "app.quit": channel(z.void(), z.void()),
 
@@ -216,6 +221,7 @@ export const ipcEvents = {
   "app.notice": AppNotice,
   "execution.update": ExecutionRun,
   "app.quitRequest": QuitRequest,
+  "update.state": UpdateState,
 } as const;
 
 export type IpcEvents = typeof ipcEvents;

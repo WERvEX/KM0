@@ -1,0 +1,26 @@
+{
+  "id": "tests-already-upstream",
+  "why": "0.1 校准里 6 次错判中有 5 次是这种：测试已经由上游任务写好，本任务改动为空，被误判为不通过。",
+  "language": "zh-CN",
+  "task": {
+    "title": "为马的走法补测试",
+    "goal": "马的走法有自动测试覆盖",
+    "acceptance": ["当运行测试时，应当有覆盖“日”字走法的用例。", "当运行测试时，应当有覆盖蹩马腿的用例。"]
+  },
+  "diff": null,
+  "upstream": [
+    {
+      "title": "马的走法校验",
+      "diff": "diff --git a/src/rules/horse.ts b/src/rules/horse.ts\nnew file mode 100644\n--- /dev/null\n+++ b/src/rules/horse.ts\n@@ -0,0 +1,16 @@\n+import type { Board, Pos, Verdict } from \"./types\";\n+\n+export function horseMove(board: Board, from: Pos, to: Pos): Verdict {\n+  const dx = to.x - from.x;\n+  const dy = to.y - from.y;\n+  const ok = (Math.abs(dx) === 1 && Math.abs(dy) === 2) || (Math.abs(dx) === 2 && Math.abs(dy) === 1);\n+  if (!ok) return { legal: false, reason: \"马走日\" };\n+  // The leg is the point next to the horse in the direction of the longer step.\n+  const leg = Math.abs(dx) === 2 ? { x: from.x + dx / 2, y: from.y } : { x: from.x, y: from.y + dy / 2 };\n+  if (board.at(leg)) return { legal: false, reason: \"蹩马腿\" };\n+  return { legal: true };\n+}\ndiff --git a/src/rules/horse.test.ts b/src/rules/horse.test.ts\nnew file mode 100644\n--- /dev/null\n+++ b/src/rules/horse.test.ts\n@@ -0,0 +1,12 @@\n+import { expect, it } from \"vitest\";\n+import { emptyBoard, place } from \"./testing\";\n+import { horseMove } from \"./horse\";\n+\n+it(\"moves in an L\", () => {\n+  expect(horseMove(emptyBoard(), { x: 1, y: 0 }, { x: 2, y: 2 }).legal).toBe(true);\n+});\n+it(\"is blocked by a piece on its leg\", () => {\n+  const board = place(emptyBoard(), { x: 1, y: 1 }, \"兵\");\n+  expect(horseMove(board, { x: 1, y: 0 }, { x: 2, y: 2 })).toEqual({ legal: false, reason: \"蹩马腿\" });\n+});\n"
+    }
+  ],
+  "testCommand": "pnpm test rules",
+  "testResult": {
+    "passed": true,
+    "detail": "14 passed"
+  },
+  "hidden": {
+    "passed": true,
+    "detail": "both cases present and passing"
+  }
+}

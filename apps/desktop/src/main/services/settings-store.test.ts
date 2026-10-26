@@ -281,9 +281,13 @@ describe("models", () => {
 
 describe("preferences and logs", () => {
   it("merges preference updates", () => {
-    const { settings } = store();
-    expect(settings.getPreferences()).toEqual({ language: "system", theme: "system" });
-    expect(settings.setPreferences({ language: "en" })).toEqual({ language: "en", theme: "system" });
+    const { db, settings } = store();
+    expect(settings.getPreferences()).toEqual({ language: "system", theme: "system", autoUpdate: true });
+    expect(settings.setPreferences({ language: "en" })).toEqual({ language: "en", theme: "system", autoUpdate: true });
+    expect(settings.setPreferences({ autoUpdate: false }).autoUpdate).toBe(false);
+    // Preferences saved by KM0 0.1, before the update check existed, still read, with it on.
+    db.prepare("UPDATE preferences SET value = ? WHERE key = 'ui'").run('{"language":"en","theme":"dark"}');
+    expect(settings.getPreferences()).toEqual({ language: "en", theme: "dark", autoUpdate: true });
   });
 
   it("records model calls", () => {

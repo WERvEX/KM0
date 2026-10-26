@@ -208,6 +208,13 @@ km0/agents/km0.mdc
 
 网页调试版不能启动本地程序，执行入口显示为不可用并说明原因。
 
+### 更新、备份与评测（正式版 R6）
+
+- **应用内更新**：electron-updater 读 GitHub Releases（`electron-builder.yml` 的 `publish`）。启动 8 秒后按偏好检查一次；下载和重启都由用户在“设置 → 关于”里点，进度和说明都在页面里，有执行没结束时重启前同样先询问。开发版、网页调试版、非 AppImage 的 Linux 安装和未签名的 macOS 版本不更新，并说明原因。
+- **签名**：CI 有证书密钥时签名 Windows 安装包、签名并公证 macOS 应用（hardened runtime，`build/entitlements.mac.plist`），没有时照常发布未签名版并在发布说明末尾写明。
+- **数据库备份**：有待执行的迁移时，先用 `VACUUM INTO` 把数据库复制成 `km0.db.before-<n>-<时间>.bak`，保留最近 3 份。
+- **离线评测**：`packages/eval` 检查拆解是否保留了需求里写明的每条验收条件，以及验收评审和隐藏测试是否一致。模型回答按 prompt 录制，回放不需要 API Key；prompt 改了就要重新录制，所以评测手动运行，不进 CI（CI 只跑它自己的单测）。
+
 ## 系统架构与技术栈
 
 KM0 是桌面应用：Electron + TypeScript 全栈，不起本地 Web 服务，不用 Agent 框架。界面进程和主进程通过类型化 IPC 通信；核心逻辑是不依赖 Electron 的纯 TypeScript 包；每个用户操作对应一次 IPC 调用、最多一次大模型调用。
@@ -294,6 +301,7 @@ IPC 通道定义在 `packages/shared/src/ipc.ts`，主进程按 zod schema 校�
 | `task.record` / `task.clearFailures` | 记一次通过或失败（同一组合失败 2 次沿升级链往上）；清除失败记录 |
 | `handoff.build` | 按当前路由生成交接包（zip 在界面里打包，用 `files.save` 保存） |
 | `execution.*` | 执行方式的设置；检测 Runner 和 pi；执行前检查；开始、停止、列出执行（进度通过 `execution.update` 事件推送） |
+| `update.*` | 应用内更新：状态、检查、下载、重启安装（状态通过 `update.state` 事件推送） |
 | `project.setRepo` / `app.quit` | 给已有项目关联仓库；关闭窗口时停止还在进行的执行并退出 |
 | `settings.*` | 服务商与模型（含连接测试、按名字搜索榜单模型、清除本地记录）、角色、Agent 启用与排序、能用的模型、自定义 Agent、搜索服务与测试、偏好、配置导入导出（v2 格式，仍能读 0.1 的 v1 文件） |
 | `registry.*` | 模型注册表的信息、更新、导入、恢复内置数据、厂商列表 |

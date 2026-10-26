@@ -14,6 +14,7 @@ import { AgentsTab } from "./AgentsTab";
 import { ExecutionTab } from "./ExecutionTab";
 import { ModelsTab } from "./ModelsTab";
 import { SearchTab } from "./SearchTab";
+import { UpdateSection } from "./UpdateSection";
 
 const TABS = ["models", "agents", "execution", "search", "general", "about"] as const;
 type Tab = (typeof TABS)[number];
@@ -204,13 +205,16 @@ function AboutTab() {
     ],
   ];
   return (
-    <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-3 text-sm">
-      {rows.map(([label, value]) => (
-        <div key={label} className="contents">
-          <dt className="text-muted">{label}</dt>
-          <dd className="break-all">{value}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="flex flex-col gap-6">
+      <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-3 text-sm">
+        {rows.map(([label, value]) => (
+          <div key={label} className="contents">
+            <dt className="text-muted">{label}</dt>
+            <dd className="break-all">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <UpdateSection />
+    </div>
   );
 }

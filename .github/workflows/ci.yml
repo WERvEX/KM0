@@ -80,8 +80,14 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     env:
-      # Builds are unsigned for now.
-      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      # Code signing when the repository has the secrets (Settings → Secrets → Actions); unsigned otherwise.
+      # Windows: WIN_CSC_LINK (base64 .pfx) and WIN_CSC_KEY_PASSWORD. macOS: MAC_CSC_LINK (base64 .p12) and
+      # MAC_CSC_KEY_PASSWORD, plus APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID for notarization.
+      CSC_LINK: ${{ runner.os == 'Windows' && secrets.WIN_CSC_LINK || runner.os == 'macOS' && secrets.MAC_CSC_LINK || '' }}
+      CSC_KEY_PASSWORD: ${{ runner.os == 'Windows' && secrets.WIN_CSC_KEY_PASSWORD || runner.os == 'macOS' && secrets.MAC_CSC_KEY_PASSWORD || '' }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -90,14 +96,22 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Build unsigned when there is no certificate
+        if: env.CSC_LINK == ''
+        shell: bash
+        run: echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
       - run: pnpm package
       - uses: actions/upload-artifact@v4
         with:
           name: KM0-${{ runner.os }}
+          # The installers, plus what the in-app updater reads: latest*.yml, block maps and the macOS zips.
           path: |
             apps/desktop/release/*/KM0-*.exe
             apps/desktop/release/*/KM0-*.dmg
+            apps/desktop/release/*/KM0-*.zip
             apps/desktop/release/*/KM0-*.AppImage
+            apps/desktop/release/*/*.blockmap
+            apps/desktop/release/*/latest*.yml
           if-no-files-found: error
 
   release:
@@ -115,11 +129,27 @@ jobs:
           pattern: KM0-*
           path: dist
           merge-multiple: true
+      - name: Release notes, saying which installers are unsigned
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+          WIN_SIGNED: ${{ secrets.WIN_CSC_LINK != '' }}
+          MAC_SIGNED: ${{ secrets.MAC_CSC_LINK != '' && secrets.APPLE_ID != '' }}
+        run: |
+          cp "docs/releases/$TAG.md" dist/notes.md
+          if [ "$WIN_SIGNED" != "true" ] || [ "$MAC_SIGNED" != "true" ]; then
+            {
+              echo
+              echo "> 本次发布的安装包签名情况：Windows $([ "$WIN_SIGNED" = true ] && echo 已签名 || echo 未签名)，macOS $([ "$MAC_SIGNED" = true ] && echo 已签名并公证 || echo 未签名)。未签名的安装包首次打开时系统会提示，见上面的“注意”。macOS 未签名时应用内更新不可用，请从本页下载新版本。"
+            } >> dist/notes.md
+          fi
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           target_commitish: ${{ github.sha }}
           name: KM0 ${{ inputs.tag || github.ref_name }}
-          body_path: docs/releases/${{ inputs.tag || github.ref_name }}.md
-          files: dist/**/KM0-*
+          body_path: dist/notes.md
+          files: |
+            dist/**/KM0-*
+            dist/**/*.blockmap
+            dist/**/latest*.yml
           fail_on_unmatched_files: true

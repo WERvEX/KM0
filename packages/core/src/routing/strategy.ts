@@ -99,12 +99,20 @@ export interface TaskShape {
 }
 
 /** Every agent and model that could take the task, before any choice, with the constraints that rule some out. */
-export function candidates(task: TaskShape, agents: AgentConfig[], context: StrategyContext): Candidate[] {
+export function candidates(
+  task: TaskShape,
+  agents: AgentConfig[],
+  context: StrategyContext,
+  /** An agent chosen by hand for the task: a candidate even when disabled, as in KM0 0.1, but only for that. */
+  forced?: AgentId,
+): Candidate[] {
   const difficulty = bandFor(context.registry, task.tier, task.score).difficulty;
   const need = CONTEXT_NEED[task.features.context];
   const result: Candidate[] = [];
-  const enabled = agents.filter((agent) => agent.enabled).sort((a, b) => a.preference - b.preference);
-  enabled.forEach((agent, preference) => {
+  const usable = agents
+    .filter((agent) => agent.enabled || agent.id === forced)
+    .sort((a, b) => a.preference - b.preference);
+  usable.forEach((agent, preference) => {
     for (const model of agent.models) {
       // An agent cannot be pointed at a model of another API format at all.
       if (agent.apiKinds.length > 0 && !agent.apiKinds.includes(model.providerKind)) continue;
@@ -121,7 +129,8 @@ export function candidates(task: TaskShape, agents: AgentConfig[], context: Stra
       const chance: Chance = { ability, offset: agentOffset(context.registry, agent.id, model.native), difficulty };
       const cost = costOf(price, task.tokens);
       let excluded: OptionExclusion | null = null;
-      if (past === "unavailable") excluded = "quota";
+      if (!agent.enabled) excluded = "disabled";
+      else if (past === "unavailable") excluded = "quota";
       else if (model.contextWindow !== null && model.contextWindow < need) excluded = "context";
       result.push({
         agent: agent.id,
@@ -381,6 +390,7 @@ const TEXT = {
       failed: (model: string, agent: string) => `${model}（${agent}）在这个任务上已经失败`,
       weaker: (model: string, agent: string) => `${model}（${agent}）不比已失败的组合强`,
       native: (model: string, agent: string) => `${model} 改由本家 Agent 运行，而不是 ${agent}`,
+      disabled: (agent: string) => `${agent} 已停用`,
     },
     evidence: {
       measured: (count: number, names: string, date: string) => `能力数据：${count} 个榜单（${names}），截至 ${date}`,
@@ -416,6 +426,7 @@ const TEXT = {
       failed: (model: string, agent: string) => `${model} (${agent}) already failed this task`,
       weaker: (model: string, agent: string) => `${model} (${agent}) is no stronger than a combination that failed`,
       native: (model: string, agent: string) => `${model} runs in its vendor's own agent rather than ${agent}`,
+      disabled: (agent: string) => `${agent} is disabled`,
     },
     evidence: {
       measured: (count: number, names: string, date: string) =>
@@ -486,6 +497,9 @@ export function passedOver(
         break;
       case "native":
         lines.push(text.native(option.modelName, option.agentName));
+        break;
+      case "disabled":
+        lines.push(text.disabled(option.agentName));
         break;
       default:
         lines.push(

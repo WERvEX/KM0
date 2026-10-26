@@ -1,0 +1,24 @@
+{
+  "id": "csv-no-bom",
+  "why": "漏了 BOM，现有测试没查文件开头，评审要对照第一条拒绝。",
+  "language": "zh-CN",
+  "task": {
+    "title": "订单导出 CSV",
+    "goal": "按格式导出当前筛选的订单",
+    "acceptance": [
+      "当点击“导出 CSV”时，文件应当以 UTF-8 BOM 开头。",
+      "表头应当依次为 订单号,下单时间,金额,状态。",
+      "下单时间应当是 ISO 8601 格式，金额保留两位小数。"
+    ]
+  },
+  "diff": "diff --git a/server/export.ts b/server/export.ts\nnew file mode 100644\n--- /dev/null\n+++ b/server/export.ts\n@@ -0,0 +1,10 @@\n+import type { Order } from \"./orders\";\n+\n+const HEADER = [\"订单号\", \"下单时间\", \"金额\", \"状态\"];\n+const cell = (value: string) => (/[\",\\n]/.test(value) ? `\"${value.replaceAll('\"', '\"\"')}\"` : value);\n+\n+export function ordersCsv(orders: Order[]): string {\n+  const rows = orders.map((o) => [o.id, o.createdAt.toISOString(), o.amount.toFixed(2), o.status].map(cell).join(\",\"));\n+  return `${[HEADER.join(\",\"), ...rows].join(\"\\r\\n\")}\\r\\n`;\n+}\n",
+  "testCommand": "pnpm test export",
+  "testResult": {
+    "passed": true,
+    "detail": "4 passed"
+  },
+  "hidden": {
+    "passed": false,
+    "detail": "file does not start with EF BB BF"
+  }
+}

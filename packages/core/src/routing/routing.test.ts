@@ -405,6 +405,14 @@ describe("agents", () => {
     expect(route(task({ override: { tier: "T3" } }), [pi([cheap, mid, strong])], { level: 1 }).model).toBe("strong");
     expect(route(task({ override: { model: "mid" } }), [pi([cheap, mid, strong])]).model).toBe("mid");
   });
+
+  it("keeps an agent chosen by hand even when it has been disabled, as KM0 0.1 did", () => {
+    const disabled = agentConfig({ id: "claude_code", preference: 1, enabled: false, models: [strong] });
+    const routed = route(task({ override: { agent: "claude_code" } }), [pi([cheap]), disabled]);
+    expect(routed).toMatchObject({ agent: "claude_code", model: "strong", agentReason: "手动指定" });
+    // Without the override a disabled agent is never chosen.
+    expect(route(task(), [pi([cheap]), disabled]).agent).toBe("pi");
+  });
 });
 
 describe("escalation", () => {

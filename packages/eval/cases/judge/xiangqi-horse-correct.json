@@ -1,0 +1,24 @@
+{
+  "id": "xiangqi-horse-correct",
+  "why": "正确的马走法，应当通过。",
+  "language": "zh-CN",
+  "task": {
+    "title": "马的走法校验",
+    "goal": "马走日，蹩马腿时拒绝",
+    "acceptance": [
+      "当马按“日”字移动且马腿上没有棋子时，系统应当允许这一步。",
+      "当马腿上有棋子时，系统应当拒绝这一步并提示“蹩马腿”。",
+      "当马的目标格不是“日”字的另一角时，系统应当拒绝这一步。"
+    ]
+  },
+  "diff": "diff --git a/src/rules/horse.ts b/src/rules/horse.ts\nnew file mode 100644\n--- /dev/null\n+++ b/src/rules/horse.ts\n@@ -0,0 +1,16 @@\n+import type { Board, Pos, Verdict } from \"./types\";\n+\n+export function horseMove(board: Board, from: Pos, to: Pos): Verdict {\n+  const dx = to.x - from.x;\n+  const dy = to.y - from.y;\n+  const ok = (Math.abs(dx) === 1 && Math.abs(dy) === 2) || (Math.abs(dx) === 2 && Math.abs(dy) === 1);\n+  if (!ok) return { legal: false, reason: \"马走日\" };\n+  // The leg is the point next to the horse in the direction of the longer step.\n+  const leg = Math.abs(dx) === 2 ? { x: from.x + dx / 2, y: from.y } : { x: from.x, y: from.y + dy / 2 };\n+  if (board.at(leg)) return { legal: false, reason: \"蹩马腿\" };\n+  return { legal: true };\n+}\n",
+  "testCommand": "pnpm test rules",
+  "testResult": {
+    "passed": true,
+    "detail": "12 passed"
+  },
+  "hidden": {
+    "passed": true,
+    "detail": "8 passed"
+  }
+}

@@ -200,7 +200,7 @@ export const SectionRef = z.object({ kind: DocumentKind, sectionId: z.string() }
 export type SectionRef = z.infer<typeof SectionRef>;
 
 /** Why a combination cannot take a task at all. */
-export const OptionExclusion = z.enum(["context", "quota", "risk_floor", "failed", "weaker", "native"]);
+export const OptionExclusion = z.enum(["context", "quota", "risk_floor", "failed", "weaker", "native", "disabled"]);
 export type OptionExclusion = z.infer<typeof OptionExclusion>;
 
 /** One agent and model that could take a task, with its chances and cost. */

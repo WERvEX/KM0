@@ -134,6 +134,7 @@ export function routeTask(
     { features: task.features, tier: decision.tier, score: decision.score, abilityKind, capability, tokens },
     agents,
     { registry, records: options.records ?? [], pastQuota: options.pastQuota },
+    task.override?.agent,
   );
   const settings = { risky, failures: task.failures, override: task.override };
   const selection = select(all, level, settings);

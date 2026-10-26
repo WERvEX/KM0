@@ -16,6 +16,7 @@ win:
     - target: nsis
       arch: [x64]
   artifactName: KM0-${version}-setup-${arch}.${ext}
+  # Signed when CI provides CSC_LINK / CSC_KEY_PASSWORD (a code-signing certificate); unsigned otherwise.
 nsis:
   oneClick: false
   perMachine: false
@@ -25,8 +26,16 @@ mac:
   target:
     - target: dmg
       arch: [x64, arm64]
+    # The in-app updater on macOS installs from the zip.
+    - target: zip
+      arch: [x64, arm64]
   category: public.app-category.developer-tools
   artifactName: KM0-${version}-${arch}.${ext}
+  # Signing uses CSC_LINK / CSC_KEY_PASSWORD when CI has them; notarization runs when APPLE_ID,
+  # APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID are set. Without them the build is unsigned.
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
 linux:
   target:
     - target: AppImage
@@ -34,4 +43,10 @@ linux:
   category: Development
   executableName: km0
   artifactName: KM0-${version}-${arch}.${ext}
-publish: null
+# Where the in-app updater looks: the app carries app-update.yml, and each build writes latest*.yml, which
+# the release job uploads next to the installers. Packaging itself never publishes (--publish never).
+publish:
+  provider: github
+  owner: WERvEX
+  repo: KM0
+  releaseType: release

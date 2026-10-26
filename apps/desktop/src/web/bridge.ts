@@ -22,6 +22,7 @@ import { RunnerService } from "../main/services/runner-service";
 import { SearchStore } from "../main/services/search-store";
 import { PlainSecretStore } from "../main/services/secrets";
 import { SettingsStore } from "../main/services/settings-store";
+import { UpdateService } from "../main/services/update-service";
 import { webRepoAccess } from "./repo-access";
 import { webRunAccess } from "./run-access";
 import { indexedDbStore, SqlJsAdapter } from "./sqljs-database";
@@ -113,6 +114,7 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
       registry,
       records,
       execution,
+      updates: new UpdateService(null, version, language, undefined, "web"),
       quit: async () => undefined,
       repo,
       files: noFilePort,
