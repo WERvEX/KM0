@@ -96,11 +96,15 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Build unsigned when there is no certificate
-        if: env.CSC_LINK == ''
+      - name: Package
         shell: bash
-        run: echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
-      - run: pnpm package
+        run: |
+          # electron-builder reads an empty CSC_LINK as a path, so a secret that is not set must not be passed at all.
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            [ -n "${!name}" ] || unset "$name"
+          done
+          if [ -z "${CSC_LINK:-}" ]; then export CSC_IDENTITY_AUTO_DISCOVERY=false; fi
+          pnpm package
       - uses: actions/upload-artifact@v4
         with:
           name: KM0-${{ runner.os }}
