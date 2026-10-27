@@ -6,6 +6,43 @@ KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断�
 
 > 当前版本 1.0（[发布说明](docs/releases/v1.0.0.md)）。设置环境变量 `KM0_FAKE_LLM=1` 可以用模拟模型体验流程，不需要 API Key。设计见 [docs/DESIGN.md](docs/DESIGN.md)，1.0 的规划见 [docs/ROADMAP-1.0.md](docs/ROADMAP-1.0.md)。
 
+## 下载
+
+从 [GitHub Releases](https://github.com/WERvEX/KM0/releases/latest) 下载最新版本：
+
+| 平台 | 文件 |
+| --- | --- |
+| Windows (x64) | `KM0-1.0.0-setup-x64.exe` |
+| macOS (Apple 芯片) | `KM0-1.0.0-arm64.dmg` |
+| macOS (Intel) | `KM0-1.0.0-x64.dmg` |
+| Linux (x64) | `KM0-1.0.0-x86_64.AppImage`（先 `chmod +x`） |
+
+1.0.0 的安装包没有签名：Windows 首次运行会出现 SmartScreen 提示，点“更多信息 → 仍要运行”；macOS 会提示“无法验证开发者”，在“系统设置 → 隐私与安全性”里点“仍要打开”。装好后在“设置 → 关于”里检查和安装新版本（未签名的 macOS 版本和非 AppImage 的 Linux 安装需要重新下载）。
+
+## 截图
+
+截图用模拟模型（`KM0_FAKE_LLM=1`）生成，问题和文档内容是固定的示例。
+
+**讨论**：按阶段提问，每题都有推荐答案，回答写进右侧的决策账本。
+
+![讨论](docs/screenshots/discussion.png)
+
+**文档**：生成《产品需求文档》和《技术实现方案》，可以按小节编辑、AI 修订和恢复版本。
+
+![产品需求文档](docs/screenshots/prd.png)
+
+**任务路由**：选一个分发策略，每个任务显示选中的 Agent 和模型、预计首次通过率和期望成本。
+
+![任务路由](docs/screenshots/routing.png)
+
+**执行**：交给 KM0 Runner 执行，实时看每个任务的进度和花费，结束后自动导入并验收。
+
+![执行](docs/screenshots/execution.png)
+
+**模型设置**：服务商、计费方式和模型，模型自动匹配榜单数据，显示价格和典型通过率。
+
+![模型设置](docs/screenshots/models.png)
+
 ## 形态
 
 - 桌面应用（Windows / macOS / Linux），数据全部保存在本地。
