@@ -152,8 +152,8 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: KM0 ${{ inputs.tag || github.ref_name }}
           body_path: dist/notes.md
+          # KM0-* already takes the block maps; listing them again uploads them twice at once, which fails.
           files: |
             dist/**/KM0-*
-            dist/**/*.blockmap
             dist/**/latest*.yml
           fail_on_unmatched_files: true
