@@ -1,23 +1,29 @@
 import { ConfigBundle, type ImportSummary, type Language, type Theme } from "@km0/shared";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSearch } from "@tanstack/react-router";
 import { Download, Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
+import { useFiles } from "@/lib/files";
 import { call, errorMessage } from "@/lib/ipc";
 import { useIpcMutation, useIpcQuery } from "@/lib/queries";
 import { AgentsTab } from "./AgentsTab";
+import { ExecutionTab } from "./ExecutionTab";
 import { ModelsTab } from "./ModelsTab";
 import { SearchTab } from "./SearchTab";
+import { UpdateSection } from "./UpdateSection";
 
-type Tab = "models" | "agents" | "search" | "general" | "about";
+const TABS = ["models", "agents", "execution", "search", "general", "about"] as const;
+type Tab = (typeof TABS)[number];
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<Tab>("models");
-  const tabs: Tab[] = ["models", "agents", "search", "general", "about"];
+  const search = useSearch({ strict: false }) as { tab?: string };
+  const [tab, setTab] = useState<Tab>(() => TABS.find((item) => item === search.tab) ?? "models");
+  const tabs = TABS;
 
   return (
     <div className="mx-auto max-w-3xl px-8 py-10">
@@ -43,6 +49,8 @@ export function SettingsPage() {
         <ModelsTab />
       ) : tab === "agents" ? (
         <AgentsTab />
+      ) : tab === "execution" ? (
+        <ExecutionTab />
       ) : tab === "search" ? (
         <SearchTab />
       ) : tab === "general" ? (
@@ -95,7 +103,7 @@ function GeneralTab() {
 function ConfigSection() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const fileInput = useRef<HTMLInputElement>(null);
+  const files = useFiles();
   const [includeSecrets, setIncludeSecrets] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -105,12 +113,13 @@ function ConfigSection() {
     setMessage(null);
     try {
       const bundle = await call("settings.export", { includeSecrets });
-      const blob = new Blob([`${JSON.stringify(bundle, null, 2)}\n`], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `km0-config-${bundle.exportedAt.slice(0, 10)}.json`;
-      link.click();
-      URL.revokeObjectURL(link.href);
+      await files.saveFile({
+        title: t("settings.general.config.export"),
+        defaultName: `km0-config-${bundle.exportedAt.slice(0, 10)}.json`,
+        content: `${JSON.stringify(bundle, null, 2)}\n`,
+        mimeType: "application/json",
+        memoryKey: "config",
+      });
     } catch (error) {
       setMessage({ ok: false, text: errorMessage(error) });
     } finally {
@@ -118,13 +127,19 @@ function ConfigSection() {
     }
   };
 
-  const importConfig = async (file: File) => {
+  const importConfig = async () => {
     setBusy(true);
     setMessage(null);
     try {
+      const file = await files.openFile({
+        title: t("settings.general.config.import"),
+        extensions: ["json"],
+        memoryKey: "config",
+      });
+      if (!file) return;
       let parsed: unknown;
       try {
-        parsed = JSON.parse(await file.text());
+        parsed = JSON.parse(file.text);
       } catch {
         parsed = null;
       }
@@ -144,7 +159,6 @@ function ConfigSection() {
       setMessage({ ok: false, text: errorMessage(error) });
     } finally {
       setBusy(false);
-      if (fileInput.current) fileInput.current.value = "";
     }
   };
 
@@ -164,21 +178,10 @@ function ConfigSection() {
           <Download />
           {t("settings.general.config.export")}
         </Button>
-        <Button size="sm" onClick={() => fileInput.current?.click()} disabled={busy}>
+        <Button size="sm" onClick={() => void importConfig()} disabled={busy}>
           <Upload />
           {t("settings.general.config.import")}
         </Button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          aria-label={t("settings.general.config.import")}
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void importConfig(file);
-          }}
-        />
       </div>
       {message ? (
         <p role="status" className={`text-sm ${message.ok ? "text-success" : "text-danger"}`}>
@@ -202,13 +205,16 @@ function AboutTab() {
     ],
   ];
   return (
-    <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-3 text-sm">
-      {rows.map(([label, value]) => (
-        <div key={label} className="contents">
-          <dt className="text-muted">{label}</dt>
-          <dd className="break-all">{value}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="flex flex-col gap-6">
+      <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-3 text-sm">
+        {rows.map(([label, value]) => (
+          <div key={label} className="contents">
+            <dt className="text-muted">{label}</dt>
+            <dd className="break-all">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <UpdateSection />
+    </div>
   );
 }

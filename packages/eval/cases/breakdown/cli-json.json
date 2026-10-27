@@ -1,0 +1,35 @@
+{
+  "id": "cli-json",
+  "why": "命令行工具的输出格式和退出码是外部可观察的契约，应当逐条成为验收条件。",
+  "language": "en",
+  "path": "light",
+  "title": "--json output for the CLI",
+  "description": "Add a --json flag to `km status`. With it the command prints one JSON object with exactly the keys name, version, healthy (boolean) and checked_at (ISO 8601), and nothing else on stdout. Unknown flags exit with code 2 and print usage to stderr. Without --json the human-readable output stays as it is.",
+  "criteria": [
+    {
+      "id": "flag",
+      "text": "--json flag",
+      "match": [["--json"], ["json"]]
+    },
+    {
+      "id": "keys",
+      "text": "exact keys",
+      "match": [["name", "version", "healthy"], ["checked_at"]]
+    },
+    {
+      "id": "stdout-only",
+      "text": "nothing else on stdout",
+      "match": [["stdout"]]
+    },
+    {
+      "id": "exit2",
+      "text": "exit code 2 on unknown flags",
+      "match": [["exit", "2"], ["code 2"]]
+    },
+    {
+      "id": "unchanged",
+      "text": "human output unchanged",
+      "match": [["unchanged"], ["stays"], ["human-readable"]]
+    }
+  ]
+}

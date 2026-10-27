@@ -5,6 +5,8 @@ import { createRoot } from "react-dom/client";
 import "./i18n";
 import "./styles.css";
 import { PreferenceSync } from "./components/PreferenceSync";
+import { ToastProvider } from "./components/ui/toast";
+import { FileDialogProvider } from "./lib/files";
 import { router } from "./router";
 
 const queryClient = new QueryClient({
@@ -17,8 +19,12 @@ if (!root) throw new Error("Missing #root element");
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <PreferenceSync />
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <FileDialogProvider>
+          <PreferenceSync />
+          <RouterProvider router={router} />
+        </FileDialogProvider>
+      </ToastProvider>
     </QueryClientProvider>
   </StrictMode>,
 );

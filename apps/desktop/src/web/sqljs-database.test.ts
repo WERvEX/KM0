@@ -18,7 +18,7 @@ function memoryStore(): BlobStore & { saves: number } {
   };
 }
 
-const profile = { name: "DeepSeek", provider: "openai" as const, baseUrl: "https://api.deepseek.com", model: "x" };
+const profile = { name: "DeepSeek", kind: "openai" as const, baseUrl: "https://api.deepseek.com" };
 
 describe("SqlJsAdapter", () => {
   it("runs the desktop migrations and services, and survives a reload", async () => {
@@ -27,16 +27,16 @@ describe("SqlJsAdapter", () => {
     const db = await SqlJsAdapter.open(SQL, store);
     migrate(db, migrations);
     const settings = new SettingsStore(db, new PlainSecretStore());
-    const created = settings.createProfile({ ...profile, apiKey: "sk-测试-1234" });
-    expect(created.id).toBe(1);
+    const provider = settings.createProvider({ ...profile, apiKey: "sk-测试-1234" });
+    const created = settings.createModel({ providerId: provider.id, modelId: "deepseek-v4-flash", name: "DeepSeek" });
     await db.flush();
     expect(store.saves).toBe(1);
 
     const reopened = await SqlJsAdapter.open(SQL, store);
     migrate(reopened, migrations);
     const again = new SettingsStore(reopened, new PlainSecretStore());
-    expect(again.listProfiles().map((item) => item.name)).toEqual(["DeepSeek"]);
-    expect(again.resolveProfile(1).apiKey).toBe("sk-测试-1234");
+    expect(again.listModels().find((item) => item.id === created.id)?.name).toBe("DeepSeek");
+    expect(again.resolveProfile(created.id).apiKey).toBe("sk-测试-1234");
   });
 
   it("keeps foreign keys on after saving, and reports changes like node:sqlite", async () => {

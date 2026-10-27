@@ -1,0 +1,12 @@
+{
+  "_comment": "Leaderboard spellings that the normalization rules cannot match, mapped to canonical IDs. Keys can be written in any spelling.",
+  "minimax-2.5": "minimax/minimax-m2.5",
+  "gemini-3-flash": "google/gemini-3-flash-preview",
+  "deepseek-v3.2-reasoner": "deepseek/deepseek-v3.2",
+  "DeepSeek R1 (0528)": "deepseek/deepseek-r1-0528",
+  "DeepSeek R1": "deepseek/deepseek-r1",
+  "Qwen3-Coder-480B-A35B-Instruct": "qwen/qwen3-coder",
+  "Qwen3 235B A22B": "qwen/qwen3-235b-a22b",
+  "Qwen3-235B-A22B": "qwen/qwen3-235b-a22b",
+  "Muse Wonder 1.0": "meta/muse-wonder"
+}

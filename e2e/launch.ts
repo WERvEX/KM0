@@ -2,12 +2,15 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type ElectronApplication, _electron as electron, expect, type Page } from "@playwright/test";
+import { guardNativeDialogs } from "./guards";
 
 const appDir = join(import.meta.dirname, "../apps/desktop");
 
 export interface LaunchedApp {
   app: ElectronApplication;
   page: Page;
+  dataDir: string;
+  /** Closes the app; fails if it opened a system dialog at any point. */
   close: () => Promise<void>;
 }
 
@@ -25,11 +28,17 @@ export async function launchApp(env: Record<string, string> = {}): Promise<Launc
     .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible() ?? false))
     .toBe(true);
   await page.setViewportSize({ width: 1360, height: 860 });
+  const checkDialogs = await guardNativeDialogs(app, page);
   return {
     app,
     page,
+    dataDir,
     close: async () => {
-      await app.close();
+      try {
+        await checkDialogs();
+      } finally {
+        await app.close();
+      }
       rmSync(dataDir, { recursive: true, force: true });
     },
   };

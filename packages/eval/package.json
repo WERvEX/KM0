@@ -1,0 +1,24 @@
+{
+  "name": "@km0/eval",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KM0's offline eval set: does the breakdown keep every stated acceptance criterion, and does acceptance agree with hidden tests.",
+  "type": "module",
+  "scripts": {
+    "replay": "tsx src/cli.ts replay",
+    "record": "tsx src/cli.ts record",
+    "smoke": "tsx src/cli.ts smoke",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@km0/core": "workspace:*",
+    "@km0/shared": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "tsx": "4.23.13",
+    "vitest": "5.0.5"
+  }
+}

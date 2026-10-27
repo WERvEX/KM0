@@ -36,6 +36,7 @@ export function migrate(db: Database, migrations: Migration[]): void {
     if (applied.has(migration.id)) continue;
     transaction(db, () => {
       db.exec(migration.sql);
+      migration.run?.(db);
       db.prepare("INSERT INTO schema_migrations (id, name, applied_at) VALUES (?, ?, ?)").run(
         migration.id,
         migration.name,

@@ -1,0 +1,49 @@
+{
+  "id": "strip-think",
+  "why": "0.1 的校准中，规划模型把一条验收条件只留在引用的决策里，验收没有检查它，放过了没通过隐藏测试的改动。",
+  "language": "zh-CN",
+  "path": "light",
+  "title": "统计回复字数",
+  "description": "给聊天记录导出工具加一个字数统计：\n- 当导出一条模型回复时，系统应当统计它的字数并写进 word_count 字段。\n- 统计前应当去掉 <think>…</think> 块。\n- 统计前应当去掉以 > 开头的引用行。\n- 统计前应当去掉“助手：”“Assistant:”这类前缀。\n- 当回复为空或只剩空白时，word_count 应当为 0。",
+  "decisions": [
+    {
+      "key": "scope",
+      "value": {
+        "text": "只改导出模块 export/，不动聊天界面"
+      }
+    },
+    {
+      "key": "done_when",
+      "value": {
+        "text": "去掉 think 块、引用行和前缀之后再计数；空回复计 0"
+      }
+    }
+  ],
+  "criteria": [
+    {
+      "id": "count",
+      "text": "导出时写入 word_count",
+      "match": [["word_count"]]
+    },
+    {
+      "id": "think",
+      "text": "去掉 <think> 块",
+      "match": [["think"]]
+    },
+    {
+      "id": "quote",
+      "text": "去掉引用行",
+      "match": [["引用"], [">", "开头"]]
+    },
+    {
+      "id": "prefix",
+      "text": "去掉“助手：”等前缀",
+      "match": [["前缀"], ["助手"], ["assistant"]]
+    },
+    {
+      "id": "empty",
+      "text": "空回复计 0",
+      "match": [["空", "0"]]
+    }
+  ]
+}

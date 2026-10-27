@@ -1,4 +1,6 @@
 import { createSimulatedLlm } from "@km0/core";
+import bundledRegistry from "@km0/registry/model-registry.json";
+import { ModelRegistry } from "@km0/shared";
 import { describe, expect, it } from "vitest";
 import { openDatabase } from "../db/database";
 import { AgentStore } from "./agent-store";
@@ -7,7 +9,10 @@ import { HandoffService } from "./handoff-service";
 import { ProjectService } from "./project-service";
 import { RoutingService } from "./routing-service";
 import type { RunAccess } from "./run-access";
+import { RunRecordStore } from "./run-records";
 import { RunnerService } from "./runner-service";
+import { PlainSecretStore } from "./secrets";
+import { SettingsStore } from "./settings-store";
 
 /** A run folder in memory; `gone` makes it unreachable, like a web folder after a reload. */
 function memoryRun(files: Record<string, string>) {
@@ -71,7 +76,17 @@ async function setup() {
     },
   };
   const language = () => "zh-CN" as const;
-  const routing = new RoutingService(db, () => llm, language, new AgentStore(db));
+  const registry = ModelRegistry.parse(bundledRegistry);
+  const records = new RunRecordStore(db);
+  const settings = new SettingsStore(db, new PlainSecretStore(), () => registry);
+  const routing = new RoutingService(
+    db,
+    () => llm,
+    language,
+    new AgentStore(db, () => settings.listModels()),
+    undefined,
+    { registry: () => registry, records, pastQuota: () => undefined },
+  );
   const projects = new ProjectService(db, () => llm, language);
   const documents = new DocumentService(
     db,

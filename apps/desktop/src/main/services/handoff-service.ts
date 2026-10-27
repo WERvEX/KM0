@@ -52,6 +52,7 @@ export class HandoffService {
       plan,
       target,
       testCommand: scan?.success ? scan.data.testCommand : null,
+      agents: this.routing.agentConfigs(),
     });
     transaction(this.db, () => {
       this.db

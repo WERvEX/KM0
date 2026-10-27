@@ -31,7 +31,8 @@ import { HandoffService } from "../src/main/services/handoff-service";
 import { llmPort } from "../src/main/services/llm-port";
 import { ProjectService } from "../src/main/services/project-service";
 import { RoutingService } from "../src/main/services/routing-service";
-import type { SettingsStore } from "../src/main/services/settings-store";
+import { PlainSecretStore } from "../src/main/services/secrets";
+import { SettingsStore as RealSettingsStore, type SettingsStore } from "../src/main/services/settings-store";
 
 const CASES: Record<string, string> = {
   fast: "修复登录页“忘记密码”链接点了没反应的问题",
@@ -129,7 +130,9 @@ async function runCase(name: string, description: string, calls: LlmCallRecord[]
   const fake = simulated ? createSimulatedLlm() : null;
   const llmFor = (projectId: number | null) => fake ?? llmPort(gateway, settings, projectId);
   const language = () => "zh-CN" as const;
-  const agents = new AgentStore(db);
+  // The seeded Claude Code models live in the models table; agents read them through a real store.
+  const modelStore = new RealSettingsStore(db, new PlainSecretStore());
+  const agents = new AgentStore(db, () => modelStore.listModels());
   const projects = new ProjectService(db, llmFor, language);
   const documents = new DocumentService(db, llmFor, language, () => undefined);
   const routing = new RoutingService(db, llmFor, language, agents);

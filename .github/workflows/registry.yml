@@ -1,0 +1,45 @@
+name: Model registry
+
+# Weekly: download the leaderboards again, rebuild the registry and its report, and open a pull
+# request when anything changed. A person reviews the report (new names to match, evaluation
+# numbers) before the data reaches users; merged, it is what KM0's "Check for updates" downloads.
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Fetch leaderboards
+        # A source that fails keeps its previous snapshot; the job goes on and the PR says so.
+        run: pnpm registry:fetch || echo "FETCH_FAILED=1" >> "$GITHUB_ENV"
+      - run: pnpm registry:build
+      - run: pnpm --filter @km0/registry test
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: registry/refresh
+          commit-message: Refresh the model registry from the leaderboards
+          title: Refresh the model registry from the leaderboards
+          body: |
+            Weekly refresh of `packages/registry/data/raw/` and the generated registry.
+
+            Before merging, read `packages/registry/generated/report.md`:
+            - **待处理的名字**: new model or agent names that did not match; add them to `data/aliases.json` or `data/agents.json` if they are the same model or agent.
+            - **先验的评估**: held-out coverage should stay near 90%.
+            ${{ env.FETCH_FAILED == '1' && '- One or more sources failed to download and kept their previous snapshot; see the job log.' || '' }}
+          add-paths: |
+            packages/registry/data/raw/*.json
+            packages/registry/generated/*

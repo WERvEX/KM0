@@ -1,0 +1,24 @@
+{
+  "id": "rate-limit-correct",
+  "why": "All criteria met; should pass.",
+  "language": "en",
+  "task": {
+    "title": "Rate limiting middleware",
+    "goal": "Limit each API key to 100 requests per minute",
+    "acceptance": [
+      "WHEN a key exceeds 100 requests in a minute THEN the API SHALL answer 429 with a Retry-After header in seconds.",
+      "Every response SHALL carry X-RateLimit-Remaining.",
+      "Requests to /healthz SHALL never be limited."
+    ]
+  },
+  "diff": "diff --git a/src/rate-limit.ts b/src/rate-limit.ts\nnew file mode 100644\n--- /dev/null\n+++ b/src/rate-limit.ts\n@@ -0,0 +1,19 @@\n+import type { RequestHandler } from \"express\";\n+import type { Redis } from \"ioredis\";\n+\n+const LIMIT = 100;\n+\n+export const rateLimit = (redis: Redis): RequestHandler => async (req, res, next) => {\n+  if (req.path === \"/healthz\") return next();\n+  const key = `rl:${req.header(\"x-api-key\") ?? \"anonymous\"}:${Math.floor(Date.now() / 60_000)}`;\n+  const count = await redis.incr(key);\n+  if (count === 1) await redis.expire(key, 60);\n+  res.setHeader(\"X-RateLimit-Remaining\", String(Math.max(0, LIMIT - count)));\n+  if (count > LIMIT) {\n+    const ttl = await redis.ttl(key);\n+    res.setHeader(\"Retry-After\", String(ttl > 0 ? ttl : 60));\n+    return res.status(429).json({ error: \"Too Many Requests\" });\n+  }\n+  next();\n+};\n",
+  "testCommand": "npm test",
+  "testResult": {
+    "passed": true,
+    "detail": "7 passing"
+  },
+  "hidden": {
+    "passed": true,
+    "detail": "9 passing"
+  }
+}

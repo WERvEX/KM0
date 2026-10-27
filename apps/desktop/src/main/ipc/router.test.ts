@@ -1,17 +1,24 @@
 import { createGateway, createSimulatedLlm, FakeProvider, ProviderError, toolReply } from "@km0/core";
+import bundledRegistry from "@km0/registry/model-registry.json";
+import { ModelRegistry } from "@km0/shared";
 import { describe, expect, it } from "vitest";
 import { openDatabase } from "../db/database";
 import { createHandlers } from "../handlers";
 import { AgentStore } from "../services/agent-store";
 import { ConfigService } from "../services/config-service";
 import { DocumentService } from "../services/document-service";
+import { ExecutionService } from "../services/execution-service";
+import { noFilePort } from "../services/file-port";
 import { HandoffService } from "../services/handoff-service";
 import { ProjectService } from "../services/project-service";
+import { RegistryService } from "../services/registry-service";
 import { RoutingService } from "../services/routing-service";
+import { RunRecordStore } from "../services/run-records";
 import { RunnerService } from "../services/runner-service";
 import { SearchStore } from "../services/search-store";
 import { PlainSecretStore } from "../services/secrets";
 import { SettingsStore } from "../services/settings-store";
+import { UpdateService } from "../services/update-service";
 import { createDispatcher } from "./router";
 
 function setup(provider = new FakeProvider([])) {
@@ -26,9 +33,25 @@ function setup(provider = new FakeProvider([])) {
   );
   const agents = new AgentStore(db);
   const search = new SearchStore(db, new PlainSecretStore(), {});
+  const records = new RunRecordStore(db);
+  const handoff = new HandoffService(db, routing, () => "zh-CN");
+  const runner = new RunnerService(
+    db,
+    {
+      pick: async () => null,
+      open: async () => {
+        throw new Error("no run folders in this test");
+      },
+    },
+    routing,
+    () => createSimulatedLlm(),
+    () => "zh-CN",
+    () => "simulated",
+  );
   const dispatch = createDispatcher(
     createHandlers({
       settings,
+      records,
       projects: new ProjectService(
         db,
         () => createSimulatedLlm(),
@@ -41,29 +64,23 @@ function setup(provider = new FakeProvider([])) {
         () => undefined,
       ),
       routing,
-      handoff: new HandoffService(db, routing, () => "zh-CN"),
-      runner: new RunnerService(
-        db,
-        {
-          pick: async () => null,
-          open: async () => {
-            throw new Error("no run folders in this test");
-          },
-        },
-        routing,
-        () => createSimulatedLlm(),
-        () => "zh-CN",
-        () => "simulated",
-      ),
+      handoff,
+      runner,
+      execution: new ExecutionService(db, null, settings, routing, handoff, runner, () => "zh-CN", "runs"),
+      updates: new UpdateService(null, "0.0.0", () => "zh-CN"),
+      quit: async () => undefined,
       agents,
       search,
       config: new ConfigService(settings, agents, search),
+      registry: new RegistryService(db, ModelRegistry.parse(bundledRegistry), async () => ""),
       repo: {
         pick: async () => null,
         open: async () => {
           throw new Error("no repositories in this test");
         },
       },
+      files: noFilePort,
+      folders: null,
       gateway,
       appInfo: () => ({
         name: "KM0",
@@ -78,13 +95,13 @@ function setup(provider = new FakeProvider([])) {
   return { dispatch, settings, provider };
 }
 
-const profileInput = { name: "Local", provider: "openai", baseUrl: "http://localhost:8080/v1", model: "m" };
+const providerInput = { name: "Local", kind: "openai", baseUrl: "http://localhost:8080/v1" };
 
 describe("IPC dispatcher", () => {
   it("rejects unknown channels and invalid input without calling a handler", async () => {
     const { dispatch } = setup();
     await expect(dispatch("fs.readFile", {})).resolves.toMatchObject({ ok: false, error: { kind: "validation" } });
-    await expect(dispatch("settings.profiles.create", { name: "" })).resolves.toMatchObject({
+    await expect(dispatch("settings.providers.create", { name: "" })).resolves.toMatchObject({
       ok: false,
       error: { kind: "validation" },
     });
@@ -92,9 +109,9 @@ describe("IPC dispatcher", () => {
 
   it("returns handler data and serializes domain errors", async () => {
     const { dispatch } = setup();
-    const created = await dispatch("settings.profiles.create", profileInput);
+    const created = await dispatch("settings.providers.create", providerInput);
     expect(created).toMatchObject({ ok: true, data: { name: "Local", hasApiKey: false } });
-    await expect(dispatch("settings.profiles.delete", { id: 999 })).resolves.toMatchObject({
+    await expect(dispatch("settings.models.delete", { id: 999 })).resolves.toMatchObject({
       ok: false,
       error: { kind: "not_found" },
     });
@@ -107,9 +124,13 @@ describe("IPC dispatcher", () => {
       toolReply({ ok: true }),
     ]);
     const { dispatch, settings } = setup(provider);
-    const created = (await dispatch("settings.profiles.create", profileInput)) as { ok: true; data: { id: number } };
-    const result = await dispatch("settings.profiles.test", { id: created.data.id });
+    const local = (await dispatch("settings.providers.create", providerInput)) as { ok: true; data: { id: number } };
+    const created = (await dispatch("settings.models.create", { providerId: local.data.id, modelId: "m" })) as {
+      ok: true;
+      data: { id: number };
+    };
+    const result = await dispatch("settings.models.test", { id: created.data.id });
     expect(result).toMatchObject({ ok: true, data: { ok: true, detectedMode: "tool" } });
-    expect(settings.getProfile(created.data.id).structuredMode).toBe("tool");
+    expect(settings.getModel(created.data.id).structuredMode).toBe("tool");
   });
 });

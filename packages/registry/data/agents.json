@@ -1,0 +1,63 @@
+[
+  {
+    "id": "reference",
+    "name": "Reference harness (mini-SWE-agent and model-only runs)",
+    "labels": ["mini-SWE-agent", "mini-swe-agent"],
+    "nativeVendors": [],
+    "reference": true
+  },
+  {
+    "id": "claude_code",
+    "name": "Claude Code",
+    "labels": ["Claude Code"],
+    "nativeVendors": ["anthropic"]
+  },
+  {
+    "id": "codex",
+    "name": "Codex",
+    "labels": ["Codex", "Codex CLI"],
+    "nativeVendors": ["openai"]
+  },
+  {
+    "id": "cursor",
+    "name": "Cursor",
+    "labels": ["Cursor", "Cursor Agent"],
+    "nativeVendors": ["cursor"]
+  },
+  {
+    "id": "pi",
+    "name": "Pi",
+    "labels": ["pi", "Pi"],
+    "nativeVendors": []
+  },
+  {
+    "id": "dsh",
+    "name": "DSH",
+    "labels": ["DSH", "DeepSeek Harness"],
+    "nativeVendors": ["deepseek"]
+  },
+  {
+    "id": "zcode",
+    "name": "ZCode",
+    "labels": ["ZCode"],
+    "nativeVendors": ["z-ai"]
+  },
+  {
+    "id": "generic",
+    "name": "Generic",
+    "labels": [],
+    "nativeVendors": []
+  },
+  {
+    "id": "grok_build",
+    "name": "Grok Build",
+    "labels": ["Grok Build"],
+    "nativeVendors": ["x-ai"]
+  },
+  {
+    "id": "muse_code",
+    "name": "Muse Code",
+    "labels": ["Muse Code"],
+    "nativeVendors": ["meta"]
+  }
+]

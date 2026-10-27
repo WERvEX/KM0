@@ -1,4 +1,5 @@
 import {
+  type AgentConfig,
   type AgentId,
   type Decision,
   DOCUMENT_TEMPLATES,
@@ -16,7 +17,7 @@ import {
 } from "@km0/shared";
 import { keyDef } from "../discussion/catalog";
 import type { Language } from "../discussion/prompts";
-import { ADAPTERS } from "./adapters";
+import { adapterFor } from "./adapters";
 
 /** Every file of a package lives under this folder of the target repository. */
 export const HANDOFF_ROOT = "km0";
@@ -60,6 +61,8 @@ export interface HandoffInput {
   target?: HandoffTarget;
   /** The repository's test command, for tasks the planner gave none. */
   testCommand?: string | null;
+  /** The configured agents, so custom ones get their own name, instructions file and command. */
+  agents?: AgentConfig[];
 }
 
 const TEXT = {
@@ -105,7 +108,7 @@ const TEXT = {
     escalate: "失败升级",
     escalateBody: (tier: string, next: string | null) =>
       next
-        ? `如果多次尝试后仍不能满足验收标准，就停下来说明卡在哪里，不要在中途换模型。这一档（${tier}）记满 ${ESCALATE_AFTER} 次失败后，KM0 会把整个任务升到 ${next} 重做。`
+        ? `如果多次尝试后仍不能满足验收标准，就停下来说明卡在哪里，不要在中途换模型。当前组合（${tier}）记满 ${ESCALATE_AFTER} 次失败后，KM0 会把整个任务交给 ${next} 重做。`
         : "如果多次尝试后仍不能满足验收标准，就停下来说明卡在哪里，交给人来决定。",
     escalated: (from: string, tier: string) =>
       `这个任务在 ${from} 上没有通过，已整体升到 ${tier} 重做。代码库里可能留有上次尝试的改动：先检查它们，再决定沿用还是撤掉。`,
@@ -173,7 +176,7 @@ const TEXT = {
     escalate: "If it fails",
     escalateBody: (tier: string, next: string | null) =>
       next
-        ? `If repeated attempts cannot meet the acceptance criteria, stop and explain where you are stuck; do not switch models halfway. After ${ESCALATE_AFTER} failures on this tier (${tier}), KM0 moves the whole task to ${next} to be redone.`
+        ? `If repeated attempts cannot meet the acceptance criteria, stop and explain where you are stuck; do not switch models halfway. After ${ESCALATE_AFTER} failures with this combination (${tier}), KM0 hands the whole task to ${next} to be redone.`
         : "If repeated attempts cannot meet the acceptance criteria, stop and explain where you are stuck so a person can decide.",
     escalated: (from: string, tier: string) =>
       `This task did not pass on ${from} and is being redone on ${tier}. The codebase may still hold changes from the earlier attempt: check them first, then keep or revert them.`,
@@ -200,7 +203,11 @@ const TEXT = {
   },
 } as const;
 
-const NEXT_TIER: Record<string, string | null> = { T1: "T2", T2: "T3", T3: null };
+/** The next step of the task's escalation chain, as the prompt names it. */
+const nextStep = (task: RoutedTask) => {
+  const next = task.chain[0];
+  return next ? `${next.modelName} (${next.agentName}, ${next.tier})` : null;
+};
 const pad = (seq: number) => String(seq).padStart(2, "0");
 export const taskPath = (seq: number) => `${HANDOFF_ROOT}/tasks/${pad(seq)}.md`;
 export const documentPath = (kind: DocumentKind) => `${HANDOFF_ROOT}/docs/${DOCUMENT_TEMPLATES[kind].fileName}`;
@@ -291,7 +298,9 @@ export function taskPrompt(task: RoutedTask, input: HandoffInput): string {
     `## ${text.rules}\n\n${list(rules)}`,
     `## ${text.done}\n\n${list([...(testCommand ? [text.doneTests(testCommand)] : []), text.doneCheck, text.doneSummary])}`,
     // KM0 Runner escalates by itself, so its tasks leave out the advice not to switch models.
-    runner ? "" : `## ${text.escalate}\n\n${text.escalateBody(task.tier, NEXT_TIER[task.tier] ?? null)}`,
+    runner
+      ? ""
+      : `## ${text.escalate}\n\n${text.escalateBody(`${task.model ?? text.noModel}, ${task.tier}`, nextStep(task))}`,
   ];
   return `${sections.filter(Boolean).join("\n\n")}\n`;
 }
@@ -332,6 +341,7 @@ export function buildHandoff(input: HandoffInput): HandoffPackage {
   const text = TEXT[input.language];
   const overview = projectOverview(input);
   const used = [...new Set(input.plan.tasks.map((task) => task.agent))] as AgentId[];
+  const adapter = (id: AgentId) => adapterFor(id, input.agents ?? []);
 
   const tasks: HandoffTask[] = input.plan.tasks.map((task) => {
     const path = taskPath(task.seq);
@@ -344,22 +354,22 @@ export function buildHandoff(input: HandoffInput): HandoffPackage {
       model: task.model,
       promptPath: path,
       prompt: taskPrompt(task, input),
-      command: ADAPTERS[task.agent].command(text.taskPrompt(path), task.model),
+      command: adapter(task.agent).command(text.taskPrompt(path), task.model, path),
     };
   });
 
   const agents: HandoffAgent[] = used.map((id) => {
-    const adapter = ADAPTERS[id];
+    const found = adapter(id);
     return {
       id,
-      instructionsPath: adapter.instructions ? `${HANDOFF_ROOT}/agents/${adapter.instructions.packagedAs}` : null,
-      howTo: adapter.howTo[input.language],
+      instructionsPath: found.instructions ? `${HANDOFF_ROOT}/agents/${found.instructions.packagedAs}` : null,
+      howTo: found.howTo[input.language],
     };
   });
 
   const instructionFiles: HandoffFile[] = [];
   for (const id of used) {
-    const instructions = ADAPTERS[id].instructions;
+    const instructions = adapter(id).instructions;
     const path = instructions ? `${HANDOFF_ROOT}/agents/${instructions.packagedAs}` : null;
     if (!instructions || !path || instructionFiles.some((file) => file.path === path)) continue;
     instructionFiles.push({ path, content: instructions.render(overview, input.language) });
@@ -396,7 +406,7 @@ export function buildHandoff(input: HandoffInput): HandoffPackage {
           pad(task.seq),
           `[${task.title}](tasks/${pad(task.seq)}.md)`,
           task.tier,
-          ADAPTERS[task.agent].name,
+          adapter(task.agent).name,
           task.model ?? "—",
           task.command ? `\`${task.command}\`` : text.paste,
         ]),
@@ -404,8 +414,8 @@ export function buildHandoff(input: HandoffInput): HandoffPackage {
     ].join("\n"),
     `## ${text.agentsTitle}\n\n${agents
       .map((agent) => {
-        const instructions = ADAPTERS[agent.id].instructions;
-        const lines = [`### ${ADAPTERS[agent.id].name}`, agent.howTo];
+        const instructions = adapter(agent.id).instructions;
+        const lines = [`### ${adapter(agent.id).name}`, agent.howTo];
         if (instructions && agent.instructionsPath) {
           lines.push(text.instructionsAt(agent.instructionsPath, instructions.target));
         }

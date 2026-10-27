@@ -19,22 +19,48 @@ import {
 } from "./documents";
 import { ProjectPath, ProjectSummary } from "./domain";
 import type { AppErrorShape } from "./errors";
+import {
+  ExecutionRef,
+  ExecutionRun,
+  ExecutorSettings,
+  ExecutorStatus,
+  Precheck,
+  QuitRequest,
+  StartExecutionInput,
+} from "./execution";
+import {
+  AppNotice,
+  BrowseInput,
+  FolderAnswer,
+  FolderListing,
+  FolderRequest,
+  ReadFileInput,
+  ReadFileResult,
+  SaveFileInput,
+  SaveFileResult,
+} from "./files";
 import { HandoffPackage, HandoffTarget } from "./handoff";
-import { ConnectionTestResult, LlmProfile, LlmProfileInput, RoleAssignment } from "./llm";
+import { ConnectionTestResult, RoleAssignment } from "./llm";
+import { ModelEntry, ModelInput, Provider, ProviderInput, RegistryChoice } from "./models";
+import { MAX_REGISTRY_BYTES, RegistryInfo, RegistryUpdateResult, RegistryVendor } from "./registry";
 import { RepoScan, ScanRepoInput } from "./repo";
 import { SearchService, SearchServiceInput, SearchTestResult } from "./research";
 import {
   AgentConfig,
+  AgentId,
+  CustomAgentInput,
   MoveAgentInput,
   OverrideTaskInput,
+  RecordRunInput,
   RoutingPlan,
   RoutingRules,
   RoutingRulesState,
+  StrategyInput,
   TaskRef,
   UpdateAgentInput,
 } from "./routing";
 import { RunnerOverrideInput, RunnerRun, RunnerRunRef } from "./runner";
-import { AppInfo, Preferences } from "./settings";
+import { AppInfo, Preferences, UpdateState } from "./settings";
 
 interface ChannelSpec<I extends z.ZodType, O extends z.ZodType> {
   input: I;
@@ -53,12 +79,29 @@ const Id = z.object({ id: z.number().int().positive() });
  */
 export const ipcContract = {
   "app.info": channel(z.void(), AppInfo),
+  "update.state": channel(z.void(), UpdateState),
+  "update.check": channel(z.void(), UpdateState),
+  "update.download": channel(z.void(), UpdateState),
+  /** Restart into the downloaded version; runs still going are asked about first, like closing the window. */
+  "update.install": channel(z.void(), z.void()),
+  /** Answer to `app.quitRequest`: stop the runs still going and close the window. */
+  "app.quit": channel(z.void(), z.void()),
 
-  "settings.profiles.list": channel(z.void(), z.array(LlmProfile)),
-  "settings.profiles.create": channel(LlmProfileInput, LlmProfile),
-  "settings.profiles.update": channel(Id.extend({ data: LlmProfileInput }), LlmProfile),
-  "settings.profiles.delete": channel(Id, z.void()),
-  "settings.profiles.test": channel(Id, ConnectionTestResult),
+  "settings.providers.list": channel(z.void(), z.array(Provider)),
+  "settings.providers.create": channel(ProviderInput, Provider),
+  "settings.providers.update": channel(Id.extend({ data: ProviderInput }), Provider),
+  /** Deletes the provider and its models. */
+  "settings.providers.delete": channel(Id, z.void()),
+  "settings.models.list": channel(z.void(), z.array(ModelEntry)),
+  "settings.models.create": channel(ModelInput, ModelEntry),
+  "settings.models.update": channel(Id.extend({ data: ModelInput }), ModelEntry),
+  "settings.models.delete": channel(Id, z.void()),
+  /** Calls the model once through its provider; KM0's roles need a model that passes. */
+  "settings.models.test": channel(Id, ConnectionTestResult),
+  /** Registry models matching a search, to pick by hand which one a model is. */
+  /** Forget this install's records of the model's runs, so its ability goes back to the registry's. */
+  "settings.models.clearRecords": channel(Id, ModelEntry),
+  "settings.models.registryChoices": channel(z.object({ query: z.string().max(100) }), z.array(RegistryChoice)),
   "settings.roles.get": channel(z.void(), RoleAssignment),
   "settings.roles.set": channel(RoleAssignment, RoleAssignment),
   "settings.preferences.get": channel(z.void(), Preferences),
@@ -66,6 +109,10 @@ export const ipcContract = {
   "settings.agents.list": channel(z.void(), z.array(AgentConfig)),
   "settings.agents.update": channel(UpdateAgentInput, z.array(AgentConfig)),
   "settings.agents.move": channel(MoveAgentInput, z.array(AgentConfig)),
+  "settings.agents.create": channel(CustomAgentInput, z.array(AgentConfig)),
+  "settings.agents.redefine": channel(z.object({ id: AgentId, data: CustomAgentInput }), z.array(AgentConfig)),
+  /** Custom agents only; presets can be disabled. */
+  "settings.agents.delete": channel(z.object({ id: AgentId }), z.array(AgentConfig)),
   "settings.routingRules.get": channel(z.void(), RoutingRulesState),
   /** null goes back to KM0's default rules. */
   "settings.routingRules.set": channel(RoutingRules.nullable(), RoutingRulesState),
@@ -75,10 +122,28 @@ export const ipcContract = {
   "settings.search.delete": channel(Id, z.void()),
   "settings.search.test": channel(Id.extend({ query: z.string().trim().min(1).max(200) }), SearchTestResult),
   "settings.export": channel(ExportConfigInput, ConfigBundle),
+  /** The model registry in use: leaderboard data and ability priors. */
+  "registry.info": channel(z.void(), RegistryInfo),
+  /** Model vendors the registry knows, to name a custom agent's own vendor. */
+  "registry.vendors": channel(z.void(), z.array(RegistryVendor)),
+  /** Download the newest registry; it is used only when its data is newer than the one in use. */
+  "registry.update": channel(z.void(), RegistryUpdateResult),
+  "registry.import": channel(z.object({ text: z.string().max(MAX_REGISTRY_BYTES) }), RegistryInfo),
+  /** Go back to the registry shipped with this version of KM0. */
+  "registry.reset": channel(z.void(), RegistryInfo),
   "settings.import": channel(ConfigBundle, ImportSummary),
 
   /** Ask the user for a folder; null when they cancel. Desktop: a path. Web: a label for the picked folder. */
   "repo.pick": channel(z.void(), z.string().nullable()),
+
+  // Desktop only: KM0 draws its own file browser instead of opening the system's dialogs.
+  "files.browse": channel(BrowseInput, FolderListing),
+  "files.read": channel(ReadFileInput, ReadFileResult),
+  "files.save": channel(SaveFileInput, SaveFileResult),
+  /** Show a saved file in the system's file manager. */
+  "files.reveal": channel(ReadFileInput, z.void()),
+  /** The user's answer to a `folder.request` event. */
+  "folder.answer": channel(FolderAnswer, z.void()),
   "repo.scan": channel(ScanRepoInput, RepoScan),
 
   "project.list": channel(z.void(), z.array(ProjectSummary)),
@@ -87,6 +152,8 @@ export const ipcContract = {
   "project.rename": channel(Id.extend({ title: z.string().trim().min(1).max(120) }), ProjectSummary),
   "project.delete": channel(Id, z.void()),
   "project.setPath": channel(Id.extend({ path: ProjectPath }), ProjectDetail),
+  /** Link a local repository to an existing project, so its tasks can be run there. */
+  "project.setRepo": channel(Id.extend({ path: z.string().trim().min(1).max(1000) }), ProjectDetail),
   "project.retry": channel(Id, ProjectDetail),
 
   "round.answer": channel(AnswerRoundInput, ProjectDetail),
@@ -103,9 +170,15 @@ export const ipcContract = {
 
   "routing.get": channel(z.object({ projectId: z.number().int().positive() }), RoutingPlan.nullable()),
   "routing.plan": channel(z.object({ projectId: z.number().int().positive() }), RoutingPlan),
+  /** The project's strategy level and budget. */
+  "routing.strategy": channel(StrategyInput, RoutingPlan.nullable()),
   "task.override": channel(OverrideTaskInput, RoutingPlan),
-  /** Record one run of the task that did not pass its tests or acceptance criteria. */
-  "task.fail": channel(TaskRef, RoutingPlan),
+  /**
+   * Record one run of the task by hand: passed, or did not pass its tests or acceptance criteria. Both teach the
+   * model's ability; enough failures move the task up its escalation chain.
+   */
+  "task.record": channel(RecordRunInput, RoutingPlan),
+  /** Forget the task's failed runs and the records made by hand for it. */
   "task.clearFailures": channel(TaskRef, RoutingPlan),
 
   "handoff.build": channel(
@@ -121,6 +194,17 @@ export const ipcContract = {
   "runner.override": channel(RunnerOverrideInput, RunnerRun),
   /** Write acceptance.jsonl to the run directory again, after choosing the folder anew. */
   "runner.writeBack": channel(RunnerRunRef, RunnerRun),
+
+  /** How hand-off packages are run from KM0, and whether KM0 Runner and pi are installed. */
+  "execution.settings.get": channel(z.void(), ExecutorSettings),
+  "execution.settings.set": channel(ExecutorSettings, ExecutorSettings),
+  "execution.status": channel(z.void(), ExecutorStatus),
+  /** What must hold before a run starts, item by item, with where to fix each. */
+  "execution.precheck": channel(z.object({ projectId: z.number().int().positive() }), Precheck),
+  /** Write the package, start the executor and follow it; progress comes as `execution.update` events. */
+  "execution.start": channel(StartExecutionInput, ExecutionRun),
+  "execution.stop": channel(ExecutionRef, ExecutionRun),
+  "execution.list": channel(z.object({ projectId: z.number().int().positive() }), z.array(ExecutionRun)),
 } as const;
 
 export type IpcContract = typeof ipcContract;
@@ -133,6 +217,11 @@ export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: AppErrorS
 /** main → renderer push events. */
 export const ipcEvents = {
   "document.progress": DocumentProgress,
+  "folder.request": FolderRequest,
+  "app.notice": AppNotice,
+  "execution.update": ExecutionRun,
+  "app.quitRequest": QuitRequest,
+  "update.state": UpdateState,
 } as const;
 
 export type IpcEvents = typeof ipcEvents;

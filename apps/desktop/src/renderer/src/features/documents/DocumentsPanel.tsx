@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
+import { useFiles } from "@/lib/files";
 import { RoutingPanel } from "../routing/RoutingPanel";
 import { Markdown } from "./Markdown";
 import { SectionCard } from "./SectionCard";
@@ -41,7 +42,11 @@ export function DocumentsPanel({ projectId, summaries, actions, streams }: Panel
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3 border-b border-border">
-        <div role="tablist" aria-label={t("documents.title")} className="flex gap-1">
+        <div
+          role="tablist"
+          aria-label={t("documents.title")}
+          className="flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden pb-px"
+        >
           {summaries.map((summary) => (
             <button
               key={summary.kind}
@@ -49,7 +54,7 @@ export function DocumentsPanel({ projectId, summaries, actions, streams }: Panel
               role="tab"
               aria-selected={active === summary.kind}
               className={cn(
-                "-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm",
+                "-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm",
                 active === summary.kind ? "border-accent font-medium" : "border-transparent text-muted hover:text-fg",
               )}
               onClick={() => setActive(summary.kind)}
@@ -69,7 +74,7 @@ export function DocumentsPanel({ projectId, summaries, actions, streams }: Panel
             role="tab"
             aria-selected={active === "routing"}
             className={cn(
-              "-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm",
+              "-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm",
               active === "routing" ? "border-accent font-medium" : "border-transparent text-muted hover:text-fg",
             )}
             onClick={() => setActive("routing")}
@@ -127,6 +132,7 @@ interface PaneProps {
 
 function DocumentPane({ projectId, kind, actions, streamText }: PaneProps) {
   const { t, i18n } = useTranslation();
+  const files = useFiles();
   const docTitle = useDocTitle();
   const [viewVersion, setViewVersion] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
@@ -250,7 +256,19 @@ function DocumentPane({ projectId, kind, actions, streamText }: PaneProps) {
             <Copy />
             {copied ? t("documents.copied") : t("documents.copy")}
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => downloadMarkdown(doc.fileName, doc.markdown)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() =>
+              void files.saveFile({
+                title: t("files.saveFile"),
+                defaultName: doc.fileName,
+                content: doc.markdown,
+                mimeType: "text/markdown;charset=utf-8",
+                memoryKey: "documents",
+              })
+            }
+          >
             <Download />
             {t("documents.download", { file: doc.fileName })}
           </Button>
@@ -464,13 +482,4 @@ function StreamingPreview({ kind, name, text }: { kind: DocumentKind; name: stri
       ))}
     </div>
   );
-}
-
-function downloadMarkdown(fileName: string, markdown: string) {
-  const url = URL.createObjectURL(new Blob([markdown], { type: "text/markdown;charset=utf-8" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

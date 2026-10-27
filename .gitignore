@@ -28,4 +28,6 @@ Desktop.ini
 *.db
 *.db-shm
 *.db-wal
+# The 0.1.0 database the upgrade test starts from
+!apps/desktop/src/main/db/fixtures/*.db
 apps/desktop/live-run-output/

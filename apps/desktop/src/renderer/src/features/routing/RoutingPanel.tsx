@@ -1,49 +1,54 @@
 import {
-  type AgentId,
-  AgentId as AgentIds,
   type CostRange,
   DOCUMENT_TEMPLATES,
   ESCALATE_AFTER,
+  LEVEL_SETTINGS,
   type RoutedTask,
+  type RouteOption,
   type RoutingPlan,
+  STRATEGY_LEVELS,
+  type StrategyLevel,
   type TaskOverride,
   TIERS,
-  type Tier,
 } from "@km0/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ArrowUp, ChevronDown, ChevronRight, Loader2, RefreshCw, Scissors } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  RefreshCw,
+  Scissors,
+  X,
+} from "lucide-react";
 import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Badge, TierBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Select } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { call, errorMessage } from "@/lib/ipc";
-import { useIpcQuery } from "@/lib/queries";
+import { ExecutionPanel } from "../execution/ExecutionPanel";
 import { HandoffPanel } from "../handoff/HandoffPanel";
 import { decisionLabel } from "../project/labels";
 import { projectKey } from "../project/useProject";
 import { RunnerPanel } from "../runner/RunnerPanel";
-import { agentName } from "../settings/AgentsTab";
 
 export const routingKey = (projectId: number) => ["routing.get", projectId] as const;
 
+const usd = (value: number) => (value < 0.01 ? "<$0.01" : `$${value.toFixed(value < 1 ? 3 : 2)}`);
+
 export function formatCost(range: CostRange | null): string {
   if (!range) return "—";
-  const one = (value: number) => (value < 0.01 ? "<$0.01" : `$${value.toFixed(value < 1 ? 3 : 2)}`);
-  return `${one(range.low)}–${one(range.high)}`;
+  return `${usd(range.low)}–${usd(range.high)}`;
 }
 
-const TIER_STYLE: Record<Tier, string> = {
-  T1: "bg-success/15 text-success",
-  T2: "bg-accent/15 text-accent",
-  T3: "bg-warning/15 text-warning",
-};
-
-function TierBadge({ tier }: { tier: Tier }) {
-  return <span className={cn("rounded px-1.5 py-0.5 text-xs font-semibold", TIER_STYLE[tier])}>{tier}</span>;
-}
+const formatUsd = (value: number | null) => (value === null ? "—" : value === 0 ? "$0" : usd(value));
+const percent = (value: number) => `${Math.round(value * 100)}%`;
 
 interface Props {
   projectId: number;
@@ -53,32 +58,39 @@ interface Props {
   openQuestions?: number;
 }
 
-/** Tasks with their tier, agent, model and estimated cost; every choice can be overridden. */
+/** Tasks with the agent and model the strategy picked, their chances and cost; every choice can be overridden. */
 export function RoutingPanel({ projectId, blockedReason, openQuestions = 0 }: Props) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const plan = useQuery({ queryKey: routingKey(projectId), queryFn: () => call("routing.get", { projectId }) });
   const [confirmReplan, setConfirmReplan] = useState(false);
-  const onPlan = (next: RoutingPlan) => {
+  const onPlan = (next: RoutingPlan | null) => {
     queryClient.setQueryData(routingKey(projectId), next);
     void queryClient.invalidateQueries({ queryKey: projectKey(projectId) });
     void queryClient.invalidateQueries({ queryKey: ["project.list"] });
+    // Recorded runs change what the models page shows.
+    void queryClient.invalidateQueries({ queryKey: ["settings.models.list"] });
   };
   const replan = useMutation({ mutationFn: () => call("routing.plan", { projectId }), onSuccess: onPlan });
+  const strategy = useMutation({
+    mutationFn: (input: { level: StrategyLevel; budget: number | null }) =>
+      call("routing.strategy", { projectId, ...input }),
+    onSuccess: onPlan,
+  });
   const override = useMutation({
     mutationFn: (input: { taskId: number; override: TaskOverride | null }) =>
       call("task.override", { projectId, ...input }),
     onSuccess: onPlan,
   });
-  const fail = useMutation({
-    mutationFn: (taskId: number) => call("task.fail", { projectId, taskId }),
+  const record = useMutation({
+    mutationFn: (input: { taskId: number; passed: boolean }) => call("task.record", { projectId, ...input }),
     onSuccess: onPlan,
   });
   const clearFailures = useMutation({
     mutationFn: (taskId: number) => call("task.clearFailures", { projectId, taskId }),
     onSuccess: onPlan,
   });
-  const error = replan.error ?? override.error ?? fail.error ?? clearFailures.error;
+  const error = replan.error ?? strategy.error ?? override.error ?? record.error ?? clearFailures.error;
 
   if (plan.isLoading) return null;
   const data = plan.data;
@@ -123,7 +135,11 @@ export function RoutingPanel({ projectId, blockedReason, openQuestions = 0 }: Pr
         </div>
       ) : null}
 
-      <Summary plan={data} />
+      <Summary
+        plan={data}
+        busy={strategy.isPending}
+        onStrategy={(level, budget) => strategy.mutate({ level, budget })}
+      />
 
       <div className="flex justify-end">
         <Button
@@ -139,13 +155,15 @@ export function RoutingPanel({ projectId, blockedReason, openQuestions = 0 }: Pr
 
       <TaskTable
         plan={data}
-        busy={override.isPending || fail.isPending || clearFailures.isPending}
+        busy={override.isPending || record.isPending || clearFailures.isPending}
         onOverride={(taskId, value) => override.mutate({ taskId, override: value })}
-        onFail={(taskId) => fail.mutate(taskId)}
+        onRecord={(taskId, passed) => record.mutate({ taskId, passed })}
         onClearFailures={(taskId) => clearFailures.mutate(taskId)}
       />
 
       <HandoffPanel projectId={projectId} plan={data} />
+
+      <ExecutionPanel projectId={projectId} />
 
       <RunnerPanel projectId={projectId} />
 
@@ -182,12 +200,91 @@ function ErrorBox({ message }: { message: string }) {
   );
 }
 
-function Summary({ plan }: { plan: RoutingPlan }) {
+/** A level as a choice, and what it asks of the first run. */
+function useLevelText() {
   const { t } = useTranslation();
-  const { totals, tierCounts } = plan;
+  return {
+    label: (level: StrategyLevel) => t("routing.level.option", { level, name: t(`routing.level.names.${level}`) }),
+    rule: (level: StrategyLevel) => {
+      const { target, quantile } = LEVEL_SETTINGS[level];
+      return t("routing.level.rule", {
+        target: percent(target),
+        basis:
+          quantile >= 0.5 ? t("routing.level.onMean") : t("routing.level.onQuantile", { value: percent(quantile) }),
+      });
+    },
+  };
+}
+
+function Summary({
+  plan,
+  busy,
+  onStrategy,
+}: {
+  plan: RoutingPlan;
+  busy: boolean;
+  onStrategy: (level: StrategyLevel, budget: number | null) => void;
+}) {
+  const { t } = useTranslation();
+  const level = useLevelText();
+  const { totals, tierCounts, budgetAdvice } = plan;
+  const [budget, setBudget] = useState(plan.budget === null ? "" : String(plan.budget));
+  const parsed = budget.trim() === "" ? null : Number(budget);
+  const budgetValid = parsed === null || (Number.isFinite(parsed) && parsed > 0);
+  const seq = (taskId: number) => plan.tasks.find((task) => task.id === taskId)?.seq ?? taskId;
+
   return (
     <section aria-label={t("routing.summary")} className="rounded-lg border border-border bg-panel p-4 text-sm">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <label htmlFor="strategy-level" className="text-xs font-medium text-muted">
+            {t("routing.level.label")}
+          </label>
+          <Select
+            id="strategy-level"
+            className="h-8 w-40"
+            value={plan.level}
+            disabled={busy}
+            onChange={(event) => onStrategy(Number(event.target.value) as StrategyLevel, plan.budget)}
+          >
+            {STRATEGY_LEVELS.map((value) => (
+              <option key={value} value={value}>
+                {level.label(value)}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <p className="pb-1.5 text-xs">{level.rule(plan.level)}</p>
+        <form
+          className="flex items-end gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (budgetValid) onStrategy(plan.level, parsed);
+          }}
+        >
+          <div className="flex flex-col gap-1">
+            <label htmlFor="strategy-budget" className="text-xs font-medium text-muted">
+              {t("routing.budget.label")}
+            </label>
+            <Input
+              id="strategy-budget"
+              className="h-8 w-28"
+              inputMode="decimal"
+              placeholder={t("routing.budget.none")}
+              aria-invalid={!budgetValid}
+              value={budget}
+              disabled={busy}
+              onChange={(event) => setBudget(event.target.value)}
+            />
+          </div>
+          <Button size="sm" type="submit" disabled={busy || !budgetValid || parsed === plan.budget}>
+            {t("routing.budget.apply")}
+          </Button>
+        </form>
+      </div>
+      <p className="mt-2 text-xs text-muted">{t("routing.level.hint")}</p>
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-3">
         <span>{t("routing.taskCount", { count: plan.tasks.length })}</span>
         <span className="flex items-center gap-2">
           {TIERS.map((tier) => (
@@ -196,10 +293,14 @@ function Summary({ plan }: { plan: RoutingPlan }) {
             </span>
           ))}
         </span>
+        {totals.expectedCost !== null ? (
+          <span>{t("routing.expected", { value: formatUsd(totals.expectedCost) })}</span>
+        ) : null}
         {totals.cost ? (
-          <span>
+          <span className="text-muted">
             {t("routing.cost", { value: formatCost(totals.cost) })}
-            <span className="text-muted"> · {t("routing.costAllT3", { value: formatCost(totals.costAllT3) })}</span>
+            {" · "}
+            {t("routing.costStrongest", { value: formatCost(totals.costStrongest) })}
             {totals.saving !== null ? (
               <span className="ml-2 font-medium text-success">
                 {t("routing.saving", { value: Math.round(totals.saving * 100) })}
@@ -208,6 +309,33 @@ function Summary({ plan }: { plan: RoutingPlan }) {
           </span>
         ) : null}
       </div>
+      {totals.belowTarget > 0 ? (
+        <p className="mt-2 flex items-center gap-2 text-xs text-warning">
+          <AlertTriangle className="size-3.5 shrink-0" />
+          {t("routing.belowTarget", { count: totals.belowTarget })}
+        </p>
+      ) : null}
+      {budgetAdvice ? (
+        <div role="status" className="mt-2 rounded-md border border-warning/40 bg-warning/5 p-2.5 text-xs">
+          <p className="font-medium">
+            {t("routing.budget.over", { value: formatUsd(budgetAdvice.over), budget: formatUsd(plan.budget) })}
+          </p>
+          {budgetAdvice.moves.length > 0 ? (
+            <ul className="mt-1 list-disc pl-5">
+              {budgetAdvice.moves.map((move) => (
+                <li key={move.taskId}>
+                  {t("routing.budget.move", {
+                    seq: seq(move.taskId),
+                    level: t(`routing.level.names.${move.level}`),
+                    saving: formatUsd(move.saving),
+                  })}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="mt-1 text-muted">{t(budgetAdvice.fits ? "routing.budget.fits" : "routing.budget.noFit")}</p>
+        </div>
+      ) : null}
       {totals.unpriced > 0 ? (
         <p className="mt-2 text-xs text-muted">
           {t("routing.unpriced", { count: totals.unpriced })}{" "}
@@ -223,7 +351,7 @@ function Summary({ plan }: { plan: RoutingPlan }) {
 
 interface TaskActions {
   onOverride: (taskId: number, override: TaskOverride | null) => void;
-  onFail: (taskId: number) => void;
+  onRecord: (taskId: number, passed: boolean) => void;
   onClearFailures: (taskId: number) => void;
 }
 
@@ -237,9 +365,9 @@ function TaskTable({ plan, busy, ...actions }: { plan: RoutingPlan; busy: boolea
           <tr>
             <th className="w-8 px-3 py-2">#</th>
             <th className="px-3 py-2">{t("routing.columns.task")}</th>
-            <th className="px-3 py-2">{t("routing.columns.tier")}</th>
-            <th className="px-3 py-2">{t("routing.columns.agent")}</th>
-            <th className="px-3 py-2 text-right">{t("routing.columns.cost")}</th>
+            <th className="px-3 py-2 whitespace-nowrap">{t("routing.columns.combination")}</th>
+            <th className="px-3 py-2 text-right whitespace-nowrap">{t("routing.columns.pass")}</th>
+            <th className="px-3 py-2 text-right whitespace-nowrap">{t("routing.columns.cost")}</th>
           </tr>
         </thead>
         <tbody>
@@ -261,48 +389,79 @@ function TaskTable({ plan, busy, ...actions }: { plan: RoutingPlan; busy: boolea
                     )}
                     {task.title}
                   </button>
-                  <div className="mt-1 ml-5 flex flex-wrap gap-1.5 text-[11px]">
+                  <div className="mt-1 ml-5 flex flex-wrap gap-1.5">
+                    <span className="text-[11px] text-muted">
+                      {t("routing.difficultyOf", { band: t(`routing.bands.${task.band}`) })}
+                    </span>
                     {task.dependsOn.length > 0 ? (
-                      <span className="text-muted">{t("routing.after", { value: task.dependsOn.join(", ") })}</span>
+                      <span className="text-[11px] text-muted">
+                        {t("routing.after", { value: task.dependsOn.join(", ") })}
+                      </span>
                     ) : null}
                     {task.splitSuggested ? (
-                      <span className="flex items-center gap-1 rounded bg-warning/15 px-1.5 text-warning">
+                      <Badge tone="warning">
                         <Scissors className="size-3" />
                         {t("routing.split")}
-                      </span>
+                      </Badge>
                     ) : null}
-                    {task.override ? (
-                      <span className="rounded bg-sunken px-1.5 text-muted">{t("routing.overridden")}</span>
+                    {task.levelSource !== "project" ? (
+                      <Badge>
+                        {t(`routing.levelSource.${task.levelSource}`, { name: t(`routing.level.names.${task.level}`) })}
+                      </Badge>
                     ) : null}
+                    {task.override ? <Badge>{t("routing.overridden")}</Badge> : null}
                     {task.failures.length > 0 ? (
-                      <span className="rounded bg-danger/10 px-1.5 text-danger">
-                        {t("routing.failures", { count: task.failures.length })}
-                      </span>
+                      <Badge tone="danger">{t("routing.failures", { count: task.failures.length })}</Badge>
                     ) : null}
                     {task.needsHuman ? (
-                      <span className="flex items-center gap-1 rounded bg-danger/15 px-1.5 text-danger">
+                      <Badge tone="danger">
                         <AlertTriangle className="size-3" />
                         {t("routing.needsHuman")}
-                      </span>
+                      </Badge>
                     ) : null}
                   </div>
                 </td>
-                <td className="px-3 py-2 align-top">
-                  <TierBadge tier={task.tier} />
-                  {task.escalatedFrom ? (
-                    <div className="mt-1 flex items-center gap-0.5 text-[11px] whitespace-nowrap text-muted">
-                      <ArrowUp className="size-3" />
-                      {t("routing.escalated", { from: task.escalatedFrom })}
-                    </div>
-                  ) : null}
+                <td className="px-3 py-2 align-top whitespace-nowrap">
+                  {task.choice ? (
+                    <>
+                      <div className="flex items-center gap-1.5">
+                        {task.choice.agentName}
+                        {task.choice.native ? <Badge tone="success">{t("settings.agents.native")}</Badge> : null}
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+                        {task.choice.modelName}
+                        <TierBadge tier={task.choice.tier} />
+                        {task.escalatedFrom ? (
+                          <span className="flex items-center gap-0.5 whitespace-nowrap">
+                            <ArrowUp className="size-3" />
+                            {t("routing.escalated", { from: task.escalatedFrom })}
+                          </span>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>{task.agent}</div>
+                      <div className="text-xs text-warning">{t("routing.noModel")}</div>
+                    </>
+                  )}
                 </td>
-                <td className="px-3 py-2 align-top">
-                  <div>{agentName(task.agent, t)}</div>
-                  <div className={cn("text-xs", task.model ? "text-muted" : "text-warning")}>
-                    {task.model ?? t("routing.noModel")}
-                  </div>
+                <td className="px-3 py-2 text-right align-top whitespace-nowrap">
+                  {task.choice ? (
+                    <>
+                      <div className={cn(task.meetsTarget ? "" : "text-warning")}>{percent(task.choice.pass.mean)}</div>
+                      <div className="text-[11px] text-muted">
+                        {percent(task.choice.pass.low)}–{percent(task.choice.pass.high)}
+                      </div>
+                    </>
+                  ) : (
+                    "—"
+                  )}
                 </td>
-                <td className="px-3 py-2 text-right align-top whitespace-nowrap">{formatCost(task.cost)}</td>
+                <td className="px-3 py-2 text-right align-top whitespace-nowrap">
+                  <div>{formatUsd(task.expectedCost)}</div>
+                  <div className="text-[11px] text-muted">{t("routing.perRun", { value: formatCost(task.cost) })}</div>
+                </td>
               </tr>
               {open === task.id ? (
                 <tr className="border-b border-border bg-sunken/40 last:border-0">
@@ -312,7 +471,7 @@ function TaskTable({ plan, busy, ...actions }: { plan: RoutingPlan; busy: boolea
                       task={task}
                       busy={busy}
                       onOverride={(value) => actions.onOverride(task.id, value)}
-                      onFail={() => actions.onFail(task.id)}
+                      onRecord={(passed) => actions.onRecord(task.id, passed)}
                       onClearFailures={() => actions.onClearFailures(task.id)}
                     />
                   </td>
@@ -326,32 +485,48 @@ function TaskTable({ plan, busy, ...actions }: { plan: RoutingPlan; busy: boolea
   );
 }
 
+const optionKey = (option: Pick<RouteOption, "agent" | "modelRef">) => `${option.agent}|${option.modelRef}`;
+
 function TaskDetail({
   task,
   busy,
   onOverride,
-  onFail,
+  onRecord,
   onClearFailures,
 }: {
   task: RoutedTask;
   busy: boolean;
   onOverride: (override: TaskOverride | null) => void;
-  onFail: () => void;
+  onRecord: (passed: boolean) => void;
   onClearFailures: () => void;
 }) {
   const { t, i18n } = useTranslation();
-  const agents = useIpcQuery("settings.agents.list");
+  const level = useLevelText();
   const language = i18n.language === "en" ? "en" : "zh-CN";
-  const [model, setModel] = useState(task.override?.model ?? "");
-  const catalog = agents.data?.find((agent) => agent.id === task.agent);
-  const suggestions = TIERS.flatMap((tier) => (catalog?.models[tier] ? [catalog.models[tier].modelId] : []));
-  const change = (patch: TaskOverride) => {
-    const next = { ...task.override, ...patch };
-    for (const key of Object.keys(next) as (keyof TaskOverride)[]) if (next[key] === undefined) delete next[key];
-    onOverride(Object.keys(next).length > 0 ? next : null);
-  };
   const sectionTitle = (kind: keyof typeof DOCUMENT_TEMPLATES, id: string) =>
     DOCUMENT_TEMPLATES[kind].sections.find((section) => section.id === id)?.title[language] ?? id;
+  const forced =
+    task.override?.agent && task.override.modelRef !== undefined
+      ? optionKey({ agent: task.override.agent, modelRef: task.override.modelRef })
+      : "";
+  // A combination is chosen as a pair; KM0 0.1's tier and typed model give way to it.
+  const setCombination = (key: string) => {
+    const { level } = task.override ?? {};
+    const option = task.options.find((item) => optionKey(item) === key);
+    const next: TaskOverride = { ...(level ? { level } : {}) };
+    if (option) Object.assign(next, { agent: option.agent, modelRef: option.modelRef });
+    onOverride(Object.keys(next).length > 0 ? next : null);
+  };
+  const setLevel = (value: string) => {
+    const next: TaskOverride = { ...task.override };
+    if (value) next.level = Number(value) as StrategyLevel;
+    else delete next.level;
+    onOverride(Object.keys(next).length > 0 ? next : null);
+  };
+  const failureCount = task.choice
+    ? task.failures.filter((failure) => failure.modelRef === task.choice?.modelRef).length
+    : 0;
+  const [colon, comma] = language === "en" ? [": ", ", "] : ["：", "，"];
 
   return (
     <div className="grid gap-4 text-sm lg:grid-cols-2">
@@ -396,8 +571,22 @@ function TaskDetail({
               <li key={reason}>{reason}</li>
             ))}
             <li>
-              {agentName(task.agent, t)}：{task.agentReason}
+              {t("routing.detail.band", {
+                band: t(`routing.bands.${task.band}`),
+                level: level.label(task.level),
+                rule: level.rule(task.level),
+              })}
             </li>
+            {task.choice ? (
+              <li>
+                {task.choice.agentName} · {task.choice.modelName}
+                {colon}
+                {task.agentReason}
+              </li>
+            ) : (
+              <li>{task.agentReason}</li>
+            )}
+            {task.evidence ? <li>{task.evidence}</li> : null}
             <li>
               {t("routing.detail.tokens", {
                 input: `${Math.round(task.tokens.input.low / 1000)}k–${Math.round(task.tokens.input.high / 1000)}k`,
@@ -406,82 +595,76 @@ function TaskDetail({
             </li>
           </ul>
         </Block>
+        {task.passedOver.length > 0 ? (
+          <Block title={t("routing.detail.passedOver")}>
+            <ul className="list-disc pl-5 text-muted">
+              {task.passedOver.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </Block>
+        ) : null}
+        {task.choice ? (
+          <Block title={t("routing.detail.chain")}>
+            <p className="text-muted">
+              {task.chain.length > 0
+                ? task.chain
+                    .map((step) =>
+                      t("routing.detail.step", {
+                        model: step.modelName,
+                        agent: step.agentName,
+                        pass: percent(step.pass.mean),
+                      }),
+                    )
+                    .join(" → ")
+                : t("routing.detail.chainEnd")}
+            </p>
+            {task.costStrongest ? (
+              <p className="mt-1 text-xs text-muted">
+                {t("routing.detail.strongest", { value: formatCost(task.costStrongest) })}
+              </p>
+            ) : null}
+          </Block>
+        ) : null}
         <Block title={t("routing.detail.override")}>
-          <div className="grid grid-cols-[5rem_1fr] items-center gap-2">
-            <label htmlFor={`tier-${task.id}`} className="text-xs text-muted">
-              {t("routing.columns.tier")}
+          <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-2">
+            <label htmlFor={`level-${task.id}`} className="text-xs text-muted">
+              {t("routing.detail.level")}
             </label>
             <Select
-              id={`tier-${task.id}`}
+              id={`level-${task.id}`}
               className="h-8"
               disabled={busy}
-              value={task.override?.tier ?? ""}
-              onChange={(event) => change({ tier: (event.target.value || undefined) as Tier | undefined })}
+              value={task.override?.level ?? ""}
+              onChange={(event) => setLevel(event.target.value)}
             >
-              <option value="">{t("routing.detail.byRules", { tier: task.ruleTier })}</option>
-              {TIERS.map((tier) => (
-                <option key={tier} value={tier}>
-                  {tier}
+              <option value="">{t("routing.detail.projectLevel")}</option>
+              {STRATEGY_LEVELS.map((value) => (
+                <option key={value} value={value}>
+                  {t("routing.level.optionRule", { label: level.label(value), rule: level.rule(value) })}
                 </option>
               ))}
             </Select>
-            <label htmlFor={`agent-${task.id}`} className="text-xs text-muted">
-              {t("routing.columns.agent")}
+            <label htmlFor={`combo-${task.id}`} className="text-xs text-muted">
+              {t("routing.detail.combination")}
             </label>
             <Select
-              id={`agent-${task.id}`}
+              id={`combo-${task.id}`}
               className="h-8"
-              disabled={busy}
-              value={task.override?.agent ?? ""}
-              onChange={(event) => change({ agent: (event.target.value || undefined) as AgentId | undefined })}
+              disabled={busy || task.options.length === 0}
+              value={forced}
+              onChange={(event) => setCombination(event.target.value)}
             >
               <option value="">{t("routing.detail.automatic")}</option>
-              {AgentIds.options.map((id) => (
-                <option key={id} value={id}>
-                  {agentName(id, t)}
+              {task.options.map((option) => (
+                <option key={optionKey(option)} value={optionKey(option)}>
+                  {`${option.agentName} · ${option.modelName}${comma}${percent(option.pass.mean)}${comma}${formatUsd(option.expectedCost)}`}
                 </option>
               ))}
             </Select>
-            <label htmlFor={`model-${task.id}`} className="text-xs text-muted">
-              {t("routing.detail.model")}
-            </label>
-            <form
-              className="flex gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                change({ model: model.trim() || undefined });
-              }}
-            >
-              <Input
-                id={`model-${task.id}`}
-                className="h-8"
-                list={`models-${task.id}`}
-                placeholder={task.model ?? ""}
-                value={model}
-                disabled={busy}
-                onChange={(event) => setModel(event.target.value)}
-              />
-              <datalist id={`models-${task.id}`}>
-                {suggestions.map((id) => (
-                  <option key={id} value={id} />
-                ))}
-              </datalist>
-              <Button size="sm" type="submit" disabled={busy}>
-                {t("routing.detail.apply")}
-              </Button>
-            </form>
           </div>
           {task.override ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="mt-2"
-              disabled={busy}
-              onClick={() => {
-                setModel("");
-                onOverride(null);
-              }}
-            >
+            <Button size="sm" variant="ghost" className="mt-2" disabled={busy} onClick={() => onOverride(null)}>
               {t("routing.detail.reset")}
             </Button>
           ) : null}
@@ -490,16 +673,16 @@ function TaskDetail({
           <p className="text-xs text-muted">{t("routing.detail.runsHint", { count: ESCALATE_AFTER })}</p>
           {task.failures.length > 0 ? (
             <p className="mt-1 text-xs">
-              {t("routing.detail.failureLog", {
-                value: TIERS.flatMap((tier) => {
-                  const count = task.failures.filter((failure) => failure.tier === tier).length;
-                  return count > 0 ? [`${tier} × ${count}`] : [];
-                }).join(", "),
-              })}
+              {t("routing.detail.failureLog", { count: task.failures.length, current: failureCount })}
             </p>
           ) : null}
-          <div className="mt-2 flex gap-2">
-            <Button size="sm" disabled={busy || task.needsHuman} onClick={onFail}>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button size="sm" disabled={busy || !task.choice} onClick={() => onRecord(true)}>
+              <Check />
+              {t("routing.detail.recordPass")}
+            </Button>
+            <Button size="sm" disabled={busy || !task.choice} onClick={() => onRecord(false)}>
+              <X />
               {t("routing.detail.recordFailure")}
             </Button>
             {task.failures.length > 0 ? (

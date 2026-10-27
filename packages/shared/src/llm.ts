@@ -15,43 +15,7 @@ export type StructuredMode = z.infer<typeof StructuredMode>;
 export const LlmRole = z.enum(["router", "planner"]);
 export type LlmRole = z.infer<typeof LlmRole>;
 
-const optionalPrice = z.number().nonnegative().nullable().default(null);
-
-export const LlmProfileInput = z.object({
-  name: z.string().trim().min(1).max(80),
-  provider: ProviderKind,
-  baseUrl: z.url().nullable().default(null),
-  model: z.string().trim().min(1).max(200),
-  /** Plain text key; only ever sent from the renderer when the user types a new one. */
-  apiKey: z.string().max(4096).optional(),
-  structuredMode: StructuredMode.default("auto"),
-  temperature: z.number().min(0).max(2).nullable().default(null),
-  /** USD per million input / output tokens, filled in by the user. */
-  priceInPerMTok: optionalPrice,
-  priceOutPerMTok: optionalPrice,
-});
-export type LlmProfileInput = z.input<typeof LlmProfileInput>;
-export type LlmProfileFields = z.output<typeof LlmProfileInput>;
-
-/** A profile as the renderer sees it: never the key itself. */
-export const LlmProfile = z.object({
-  id: z.number().int(),
-  name: z.string(),
-  provider: ProviderKind,
-  baseUrl: z.string().nullable(),
-  model: z.string(),
-  structuredMode: StructuredMode,
-  temperature: z.number().nullable(),
-  priceInPerMTok: z.number().nullable(),
-  priceOutPerMTok: z.number().nullable(),
-  hasApiKey: z.boolean(),
-  apiKeyHint: z.string().nullable(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-export type LlmProfile = z.infer<typeof LlmProfile>;
-
-/** Which profile serves each role. A null planner falls back to the router profile. */
+/** Which model serves each role. A null planner falls back to the router model. */
 export const RoleAssignment = z.object({
   router: z.number().int().nullable(),
   planner: z.number().int().nullable(),

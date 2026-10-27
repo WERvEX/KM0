@@ -1,0 +1,24 @@
+{
+  "id": "xiangqi-horse-no-leg",
+  "why": "没有检查马腿；测试只覆盖了“日”字，评审要对照第二条验收条件拒绝。",
+  "language": "zh-CN",
+  "task": {
+    "title": "马的走法校验",
+    "goal": "马走日，蹩马腿时拒绝",
+    "acceptance": [
+      "当马按“日”字移动且马腿上没有棋子时，系统应当允许这一步。",
+      "当马腿上有棋子时，系统应当拒绝这一步并提示“蹩马腿”。",
+      "当马的目标格不是“日”字的另一角时，系统应当拒绝这一步。"
+    ]
+  },
+  "diff": "diff --git a/src/rules/horse.ts b/src/rules/horse.ts\nnew file mode 100644\n--- /dev/null\n+++ b/src/rules/horse.ts\n@@ -0,0 +1,12 @@\n+import type { Board, Pos, Verdict } from \"./types\";\n+\n+export function horseMove(board: Board, from: Pos, to: Pos): Verdict {\n+  const dx = Math.abs(to.x - from.x);\n+  const dy = Math.abs(to.y - from.y);\n+  if ((dx === 1 && dy === 2) || (dx === 2 && dy === 1)) return { legal: true };\n+  return { legal: false, reason: \"马走日\" };\n+}\n",
+  "testCommand": "pnpm test rules",
+  "testResult": {
+    "passed": true,
+    "detail": "12 passed"
+  },
+  "hidden": {
+    "passed": false,
+    "detail": "blocked leg: expected illegal, got legal"
+  }
+}

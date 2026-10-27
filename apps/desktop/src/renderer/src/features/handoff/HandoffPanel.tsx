@@ -6,23 +6,18 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { useFiles } from "@/lib/files";
 import { call, errorMessage } from "@/lib/ipc";
 import { Markdown } from "../documents/Markdown";
 import { projectKey } from "../project/useProject";
-import { agentName } from "../settings/AgentsTab";
+import { useAgentNames } from "../settings/agent-names";
 
 /** What the package was built from; any change to the routing makes it worth rebuilding. */
 const routingSignature = (plan: RoutingPlan) =>
   JSON.stringify([plan.createdAt, plan.tasks.map((task) => [task.id, task.tier, task.agent, task.model])]);
 
-export function downloadZip(pkg: HandoffPackage, name: string) {
-  const zipped = zipSync(Object.fromEntries(pkg.files.map((file) => [file.path, strToU8(file.content)])));
-  const url = URL.createObjectURL(new Blob([zipped as BlobPart], { type: "application/zip" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${name}.zip`;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+function zipPackage(pkg: HandoffPackage): Uint8Array {
+  return zipSync(Object.fromEntries(pkg.files.map((file) => [file.path, strToU8(file.content)])));
 }
 
 function CopyButton({ text, label }: { text: string; label: string }) {
@@ -48,6 +43,8 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 /** Builds the hand-off package from the current routing, previews it and exports it as a zip. */
 export function HandoffPanel({ projectId, plan }: { projectId: number; plan: RoutingPlan }) {
   const { t } = useTranslation();
+  const agentName = useAgentNames();
+  const files = useFiles();
   const queryClient = useQueryClient();
   const [built, setBuilt] = useState<{ pkg: HandoffPackage; signature: string } | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -106,7 +103,19 @@ export function HandoffPanel({ projectId, plan }: { projectId: number; plan: Rou
             {pkg ? t("handoff.rebuild") : t("handoff.build")}
           </Button>
           {pkg ? (
-            <Button variant="primary" disabled={outdated} onClick={() => downloadZip(pkg, `km0-handoff-${projectId}`)}>
+            <Button
+              variant="primary"
+              disabled={outdated}
+              onClick={() =>
+                void files.saveFile({
+                  title: t("files.saveFile"),
+                  defaultName: `km0-handoff-${projectId}.zip`,
+                  content: zipPackage(pkg),
+                  mimeType: "application/zip",
+                  memoryKey: "handoff",
+                })
+              }
+            >
               <FileArchive />
               {t("handoff.download")}
             </Button>
@@ -135,7 +144,7 @@ export function HandoffPanel({ projectId, plan }: { projectId: number; plan: Rou
                 >
                   {String(task.seq).padStart(2, "0")} · {task.title}
                   <span className="ml-2 text-xs text-muted">
-                    {task.tier} · {agentName(task.agent, t)}
+                    {task.tier} · {agentName(task.agent)}
                     {task.model ? ` · ${task.model}` : ""}
                   </span>
                 </button>
@@ -192,7 +201,7 @@ export function HandoffPanel({ projectId, plan }: { projectId: number; plan: Rou
               <p key={agent.id} className="flex items-start gap-2 text-muted">
                 <Terminal className="mt-0.5 size-4 shrink-0" />
                 <span>
-                  <span className="font-medium text-fg">{agentName(agent.id, t)}</span>：{agent.howTo}
+                  <span className="font-medium text-fg">{agentName(agent.id)}</span>：{agent.howTo}
                 </span>
               </p>
             ))}

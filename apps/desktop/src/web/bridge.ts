@@ -1,5 +1,6 @@
 import { createGateway, createSimulatedLlm } from "@km0/core";
-import type { EmitEvent, Km0Bridge } from "@km0/shared";
+import bundledRegistry from "@km0/registry/model-registry.json";
+import { type EmitEvent, type Km0Bridge, ModelRegistry } from "@km0/shared";
 import initSqlJs from "sql.js";
 import sqlWasmUrl from "sql.js/dist/sql-wasm-browser.wasm?url";
 import { migrations } from "../main/db/migrations";
@@ -9,14 +10,19 @@ import { createDispatcher } from "../main/ipc/router";
 import { AgentStore } from "../main/services/agent-store";
 import { ConfigService } from "../main/services/config-service";
 import { DocumentService } from "../main/services/document-service";
+import { ExecutionService } from "../main/services/execution-service";
+import { noFilePort } from "../main/services/file-port";
 import { HandoffService } from "../main/services/handoff-service";
 import { llmPort } from "../main/services/llm-port";
 import { ProjectService } from "../main/services/project-service";
+import { RegistryService } from "../main/services/registry-service";
 import { RoutingService } from "../main/services/routing-service";
+import { RunRecordStore } from "../main/services/run-records";
 import { RunnerService } from "../main/services/runner-service";
 import { SearchStore } from "../main/services/search-store";
 import { PlainSecretStore } from "../main/services/secrets";
 import { SettingsStore } from "../main/services/settings-store";
+import { UpdateService } from "../main/services/update-service";
 import { webRepoAccess } from "./repo-access";
 import { webRunAccess } from "./run-access";
 import { indexedDbStore, SqlJsAdapter } from "./sqljs-database";
@@ -46,11 +52,22 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   window.addEventListener("pagehide", () => void db.flush());
 
   const secrets = new PlainSecretStore();
-  const settings = new SettingsStore(db, secrets);
+  const registry = new RegistryService(db, ModelRegistry.parse(bundledRegistry), async (url) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.text();
+  });
+  const records = new RunRecordStore(db);
+  const settings = new SettingsStore(
+    db,
+    secrets,
+    () => registry.current().registry,
+    () => records.all(),
+  );
   const gateway = createGateway({
     recordCall: (record) => settings.recordCall(record),
     onModeDetected: (profileId, mode) => {
-      if (settings.getProfile(profileId).structuredMode === "auto") settings.setStructuredMode(profileId, mode);
+      if (settings.getModel(profileId).structuredMode === "auto") settings.setStructuredMode(profileId, mode);
     },
   });
   const fake = simulated ? createSimulatedLlm({ streamDelayMs: 15 }) : null;
@@ -70,13 +87,19 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   const repo = webRepoAccess();
   const projects = new ProjectService(db, llmFor, language, { searchPort: () => search.activePort(), repo });
   const documents = new DocumentService(db, llmFor, language, emit);
-  const agents = new AgentStore(db);
+  const agents = new AgentStore(db, () => settings.listModels());
   const config = new ConfigService(settings, agents, search);
-  const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules);
+  const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules, {
+    registry: () => registry.current().registry,
+    records,
+    pastQuota: () => settings.pastQuota(),
+  });
   const handoff = new HandoffService(db, routing, language);
   const runner = new RunnerService(db, webRunAccess(), routing, llmFor, language, () =>
     simulated ? "simulated" : settings.profileForRole("planner").model,
   );
+  // A browser cannot start local programs; the execution service says so instead of running anything.
+  const execution = new ExecutionService(db, null, settings, routing, handoff, runner, language, "runs");
   const dispatch = createDispatcher(
     createHandlers({
       settings,
@@ -88,7 +111,14 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
       agents,
       search,
       config,
+      registry,
+      records,
+      execution,
+      updates: new UpdateService(null, version, language, undefined, "web"),
+      quit: async () => undefined,
       repo,
+      files: noFilePort,
+      folders: null,
       gateway,
       appInfo: () => ({
         name: "KM0",

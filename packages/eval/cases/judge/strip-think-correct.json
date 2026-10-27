@@ -1,0 +1,26 @@
+{
+  "id": "strip-think-correct",
+  "why": "满足全部条件的改动，应当通过。",
+  "language": "zh-CN",
+  "request": "给聊天记录导出工具加一个字数统计，统计前去掉 think 块、引用行和“助手：”前缀，空回复计 0。",
+  "task": {
+    "title": "统计回复字数",
+    "goal": "导出时写入去掉 think 块、引用行和前缀之后的字数",
+    "acceptance": [
+      "当导出一条模型回复时，系统应当写入 word_count 字段。",
+      "统计前应当去掉 <think>…</think> 块、以 > 开头的引用行和“助手：”“Assistant:”前缀。",
+      "当回复为空或只剩空白时，word_count 应当为 0。"
+    ],
+    "decisions": ["完成标准：去掉 think 块、引用行和前缀之后再计数；空回复计 0"]
+  },
+  "diff": "diff --git a/export/count.py b/export/count.py\nnew file mode 100644\n--- /dev/null\n+++ b/export/count.py\n@@ -0,0 +1,14 @@\n+import re\n+\n+THINK = re.compile(r\"<think>.*?</think>\", re.S)\n+PREFIX = re.compile(r\"^(助手：|Assistant:)\\s*\", re.M)\n+\n+\n+def word_count(reply: str) -> int:\n+    text = THINK.sub(\"\", reply)\n+    text = \"\\n\".join(line for line in text.splitlines() if not line.lstrip().startswith(\">\"))\n+    text = PREFIX.sub(\"\", text)\n+    words = re.findall(r\"[\\u4e00-\\u9fff]|[A-Za-z0-9']+\", text)\n+    return len(words)\ndiff --git a/export/writer.py b/export/writer.py\n--- a/export/writer.py\n+++ b/export/writer.py\n@@ -12,6 +12,7 @@ def export_message(message):\n     row = {\"role\": message.role, \"text\": message.text}\n+    row[\"word_count\"] = word_count(message.text) if message.role == \"assistant\" else None\n     return row\n",
+  "testCommand": "pytest -q tests/test_export.py",
+  "testResult": {
+    "passed": true,
+    "detail": "3 passed"
+  },
+  "hidden": {
+    "passed": true,
+    "detail": "5 passed"
+  }
+}

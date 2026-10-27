@@ -1,0 +1,80 @@
+[
+  {
+    "id": "anthropic",
+    "name": "Anthropic",
+    "families": ["claude", "opus", "sonnet", "haiku", "fable"],
+    "nativeAgents": ["claude_code"]
+  },
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "families": ["gpt", "o1", "o3", "o4", "codex"],
+    "nativeAgents": ["codex"]
+  },
+  {
+    "id": "deepseek",
+    "name": "DeepSeek",
+    "families": ["deepseek"],
+    "nativeAgents": ["dsh"]
+  },
+  {
+    "id": "z-ai",
+    "name": "Z.ai (智谱)",
+    "families": ["glm"],
+    "nativeAgents": ["zcode"]
+  },
+  {
+    "id": "cursor",
+    "name": "Cursor",
+    "families": ["composer", "cursor"],
+    "nativeAgents": ["cursor"]
+  },
+  {
+    "id": "google",
+    "name": "Google",
+    "families": ["gemini", "gemma"],
+    "nativeAgents": []
+  },
+  {
+    "id": "x-ai",
+    "name": "xAI",
+    "families": ["grok"],
+    "nativeAgents": ["grok_build"]
+  },
+  {
+    "id": "meta",
+    "name": "Meta",
+    "families": ["muse", "llama"],
+    "nativeAgents": ["muse_code"]
+  },
+  {
+    "id": "moonshotai",
+    "name": "Moonshot AI",
+    "families": ["kimi"],
+    "nativeAgents": []
+  },
+  {
+    "id": "qwen",
+    "name": "Qwen (Alibaba)",
+    "families": ["qwen", "qwq"],
+    "nativeAgents": []
+  },
+  {
+    "id": "minimax",
+    "name": "MiniMax",
+    "families": ["minimax"],
+    "nativeAgents": []
+  },
+  {
+    "id": "xiaomi",
+    "name": "Xiaomi",
+    "families": ["mimo"],
+    "nativeAgents": []
+  },
+  {
+    "id": "mistralai",
+    "name": "Mistral AI",
+    "families": ["mistral", "devstral", "codestral"],
+    "nativeAgents": []
+  }
+]

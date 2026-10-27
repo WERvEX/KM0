@@ -1,0 +1,321 @@
+{
+ "fetchedAt": "2026-10-26T06:09:08.588Z",
+ "title": "Terminal-Bench 4.0",
+ "rows": [
+  {
+   "date": "2026-09-22",
+   "agent": "Claude Code",
+   "model": "Opus 5.5",
+   "effort": "max",
+   "accuracy": 64.85,
+   "ci95": 3.11,
+   "costUsd": 4718.65
+  },
+  {
+   "date": "2026-09-28",
+   "agent": "Claude Code",
+   "model": "Sonnet 5.5",
+   "effort": "max",
+   "accuracy": 61.82,
+   "ci95": 2.94,
+   "costUsd": 7333.64
+  },
+  {
+   "date": "2026-09-03",
+   "agent": "Codex",
+   "model": "GPT-6 Astra",
+   "effort": "max",
+   "accuracy": 58.18,
+   "ci95": 2.79,
+   "costUsd": 3267.18
+  },
+  {
+   "date": "2026-09-29",
+   "agent": "Codex",
+   "model": "GPT-6.1 Sol",
+   "effort": "max",
+   "accuracy": 58.18,
+   "ci95": 3.11,
+   "costUsd": 634.24
+  },
+  {
+   "date": "2026-09-01",
+   "agent": "Claude Code",
+   "model": "Fable 5.1",
+   "effort": "max",
+   "accuracy": 57.88,
+   "ci95": 3.76,
+   "costUsd": 6243.5
+  },
+  {
+   "date": "2026-09-03",
+   "agent": "Codex",
+   "model": "GPT-6 Astra",
+   "effort": "xhigh",
+   "accuracy": 57.88,
+   "ci95": 2.72,
+   "costUsd": 2350.51
+  },
+  {
+   "date": "2026-09-03",
+   "agent": "Codex",
+   "model": "GPT-6 Astra",
+   "effort": "high",
+   "accuracy": 57.88,
+   "ci95": 2.97,
+   "costUsd": 2269.42
+  },
+  {
+   "date": "2026-09-01",
+   "agent": "Claude Code",
+   "model": "Fable 5.1",
+   "effort": "xhigh",
+   "accuracy": 57.88,
+   "ci95": 3.36,
+   "costUsd": 4872.04
+  },
+  {
+   "date": "2026-09-01",
+   "agent": "Claude Code",
+   "model": "Fable 5.1",
+   "effort": "high",
+   "accuracy": 54.55,
+   "ci95": 3.44,
+   "costUsd": 3985.38
+  },
+  {
+   "date": "2026-09-03",
+   "agent": "Codex",
+   "model": "GPT-6 Astra",
+   "effort": "medium",
+   "accuracy": 54.24,
+   "ci95": 2.66,
+   "costUsd": 1914.8
+  },
+  {
+   "date": "2026-09-01",
+   "agent": "Claude Code",
+   "model": "Fable 5.1",
+   "effort": "medium",
+   "accuracy": 53.94,
+   "ci95": 3.39,
+   "costUsd": 2832.9
+  },
+  {
+   "date": "2026-07-24",
+   "agent": "Claude Code",
+   "model": "Opus 5",
+   "effort": "xhigh",
+   "accuracy": 53.94,
+   "ci95": 3.17,
+   "costUsd": 6086.22
+  },
+  {
+   "date": "2026-07-24",
+   "agent": "Claude Code",
+   "model": "Opus 5",
+   "effort": "max",
+   "accuracy": 51.82,
+   "ci95": 3.39,
+   "costUsd": 5969.11
+  },
+  {
+   "date": "2026-09-03",
+   "agent": "Codex",
+   "model": "GPT-6 Astra",
+   "effort": "low",
+   "accuracy": 50.61,
+   "ci95": 2.75,
+   "costUsd": 1557.3
+  },
+  {
+   "date": "2026-07-24",
+   "agent": "Claude Code",
+   "model": "Opus 5",
+   "effort": "high",
+   "accuracy": 50.3,
+   "ci95": 3.73,
+   "costUsd": 4662.27
+  },
+  {
+   "date": "2026-09-22",
+   "agent": "Codex",
+   "model": "GPT-6 Sol",
+   "effort": "max",
+   "accuracy": 49.39,
+   "ci95": 3.23,
+   "costUsd": 1451.32
+  },
+  {
+   "date": "2026-07-24",
+   "agent": "Claude Code",
+   "model": "Opus 5",
+   "effort": "medium",
+   "accuracy": 44.85,
+   "ci95": 3.83,
+   "costUsd": 3191.59
+  },
+  {
+   "date": "2026-06-09",
+   "agent": "Claude Code",
+   "model": "Fable 5",
+   "effort": "max",
+   "accuracy": 44.55,
+   "ci95": 3.85,
+   "costUsd": 7265.01
+  },
+  {
+   "date": "2026-09-01",
+   "agent": "Claude Code",
+   "model": "Fable 5.1",
+   "effort": "low",
+   "accuracy": 43.33,
+   "ci95": 3.61,
+   "costUsd": 2358.72
+  },
+  {
+   "date": "2026-08-14",
+   "agent": "Claude Code",
+   "model": "GLM-5.3",
+   "effort": "max",
+   "accuracy": 41.82,
+   "ci95": 3.23,
+   "costUsd": 2727.63
+  },
+  {
+   "date": "2026-09-21",
+   "agent": "Grok Build",
+   "model": "Grok 4.7",
+   "effort": "xhigh",
+   "accuracy": 37.58,
+   "ci95": 3.54,
+   "costUsd": 3683.287146
+  },
+  {
+   "date": "2026-06-26",
+   "agent": "Codex",
+   "model": "GPT-5.6 Sol",
+   "effort": "max",
+   "accuracy": 37.27,
+   "ci95": 3.78,
+   "costUsd": 2541.7
+  },
+  {
+   "date": "2026-08-26",
+   "agent": "Claude Code",
+   "model": "GLM-5.3-Flash",
+   "effort": "none",
+   "accuracy": 35.76,
+   "ci95": 3.54,
+   "costUsd": 118.73752448
+  },
+  {
+   "date": "2026-07-24",
+   "agent": "Claude Code",
+   "model": "Opus 5",
+   "effort": "low",
+   "accuracy": 34.85,
+   "ci95": 3.94,
+   "costUsd": 2393.88
+  },
+  {
+   "date": "2026-09-02",
+   "agent": "Claude Code",
+   "model": "Qwen3.8-Max-0902",
+   "effort": "max",
+   "accuracy": 26.97,
+   "ci95": 3.78,
+   "costUsd": 4635.67
+  },
+  {
+   "date": "2026-05-28",
+   "agent": "Claude Code",
+   "model": "Opus 4.8",
+   "effort": "max",
+   "accuracy": 23.64,
+   "ci95": 3.56,
+   "costUsd": 6481.26
+  },
+  {
+   "date": "2026-06-26",
+   "agent": "Codex",
+   "model": "GPT-5.6 Terra",
+   "effort": "max",
+   "accuracy": 21.52,
+   "ci95": 3.25,
+   "costUsd": 1733.52
+  },
+  {
+   "date": "2026-08-12",
+   "agent": "Grok Build",
+   "model": "Grok 4.6",
+   "effort": "high",
+   "accuracy": 20.3,
+   "ci95": 3.09,
+   "costUsd": 3591.58
+  },
+  {
+   "date": "2026-09-02",
+   "agent": "mini-SWE-agent",
+   "model": "Gemini 3.8 Flash",
+   "effort": "high",
+   "accuracy": 19.09,
+   "ci95": 3.36,
+   "costUsd": 1828.77
+  },
+  {
+   "date": "2026-06-26",
+   "agent": "Codex",
+   "model": "GPT-5.6 Luna",
+   "effort": "max",
+   "accuracy": 17.27,
+   "ci95": 2.85,
+   "costUsd": 346.67
+  },
+  {
+   "date": "2026-09-22",
+   "agent": "Codex",
+   "model": "GPT-6 Luna",
+   "effort": "max",
+   "accuracy": 16.36,
+   "ci95": 2.72,
+   "costUsd": 72.14
+  },
+  {
+   "date": "2026-09-02",
+   "agent": "Muse Code",
+   "model": "Muse Spark 1.3",
+   "effort": "xhigh",
+   "accuracy": 14.55,
+   "ci95": 2.94,
+   "costUsd": 0
+  },
+  {
+   "date": "2026-07-16",
+   "agent": "Grok Build",
+   "model": "Grok 4.5",
+   "effort": "high",
+   "accuracy": 12.42,
+   "ci95": 2.62,
+   "costUsd": 2094.11
+  },
+  {
+   "date": "2026-06-30",
+   "agent": "Claude Code",
+   "model": "Sonnet 5",
+   "effort": "max",
+   "accuracy": 12.42,
+   "ci95": 3.06,
+   "costUsd": 9603.86
+  },
+  {
+   "date": "2026-08-13",
+   "agent": "mini-SWE-agent",
+   "model": "Gemini 3.7 Flash",
+   "effort": "high",
+   "accuracy": 11.21,
+   "ci95": 2.45,
+   "costUsd": 1261.87
+  }
+ ]
+}

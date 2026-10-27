@@ -1,0 +1,27 @@
+{
+  "name": "@km0/registry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Builds KM0's model registry: leaderboard data, name alignment and the ability priors.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./model-registry.json": "./generated/model-registry.json"
+  },
+  "scripts": {
+    "fetch": "tsx src/cli.ts fetch",
+    "build": "tsx src/cli.ts build",
+    "check": "tsx src/cli.ts build --check",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@km0/shared": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "tsx": "4.23.13",
+    "vitest": "5.0.5"
+  }
+}

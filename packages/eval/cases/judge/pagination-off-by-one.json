@@ -1,0 +1,23 @@
+{
+  "id": "pagination-off-by-one",
+  "why": "分页最后一页少一条，现有测试只查第一页；评审要从代码里看出边界错误。",
+  "language": "zh-CN",
+  "task": {
+    "title": "订单列表分页",
+    "goal": "每页 20 条，返回总页数",
+    "acceptance": [
+      "当请求第 n 页时，系统应当返回第 (n-1)*20+1 到第 n*20 条订单。",
+      "响应应当包含总页数 total_pages，等于订单总数除以 20 向上取整。"
+    ]
+  },
+  "diff": "diff --git a/api/orders.py b/api/orders.py\n--- a/api/orders.py\n+++ b/api/orders.py\n@@ -8,4 +8,9 @@ def list_orders(request):\n-    return {\"orders\": Order.all()}\n+    page = int(request.args.get(\"page\", 1))\n+    start = (page - 1) * 20\n+    orders = Order.all()\n+    total_pages = len(orders) // 20\n+    return {\"orders\": orders[start : start + 20], \"total_pages\": total_pages}\n",
+  "testCommand": "pytest -q",
+  "testResult": {
+    "passed": true,
+    "detail": "2 passed"
+  },
+  "hidden": {
+    "passed": false,
+    "detail": "41 orders: expected total_pages 3, got 2"
+  }
+}

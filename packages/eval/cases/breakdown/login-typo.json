@@ -1,0 +1,25 @@
+{
+  "id": "login-typo",
+  "why": "快速通道的小改动：唯一的附加条件（不改 aria-label）也要留下来。",
+  "language": "zh-CN",
+  "path": "fast",
+  "title": "修复登录按钮错别字",
+  "description": "登录页按钮上写的是“登陆”，改成“登录”。按钮的 aria-label 和 data-testid 不要改，自动化测试依赖它们。",
+  "criteria": [
+    {
+      "id": "text",
+      "text": "按钮文字为登录",
+      "match": [["登录"]]
+    },
+    {
+      "id": "aria",
+      "text": "aria-label 不变",
+      "match": [["aria-label"], ["aria"]]
+    },
+    {
+      "id": "testid",
+      "text": "data-testid 不变",
+      "match": [["data-testid"], ["testid"]]
+    }
+  ]
+}

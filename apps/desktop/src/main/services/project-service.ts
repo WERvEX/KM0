@@ -164,6 +164,19 @@ export class ProjectService {
     return this.withLock(id, () => this.advanceDiscussion(id));
   }
 
+  /**
+   * Link the repository the work happens in, after the discussion started: for running the tasks. The
+   * scan is kept for the hand-off (its test command); decisions already made are left as they are.
+   */
+  async setRepo(id: number, repoPath: string): Promise<ProjectDetail> {
+    this.row(id);
+    const scan = await this.scanRepo(repoPath);
+    this.db
+      .prepare("UPDATE projects SET repo_path = ?, repo_scan_json = ?, updated_at = ? WHERE id = ?")
+      .run(repoPath, JSON.stringify(scan), nowIso(), id);
+    return this.get(id);
+  }
+
   rename(id: number, title: string): ProjectSummary {
     this.row(id);
     this.db.prepare("UPDATE projects SET title = ?, updated_at = ? WHERE id = ?").run(title, nowIso(), id);

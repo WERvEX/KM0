@@ -17,13 +17,19 @@
     "web:build": "pnpm --filter @km0/desktop web:build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "lint": "biome check .",
+    "lint": "biome check . && pnpm ui:rules",
+    "ui:rules": "node scripts/check-ui-rules.mjs --self-test && node scripts/check-ui-rules.mjs",
     "format": "biome format --write .",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "registry:fetch": "pnpm --filter @km0/registry fetch",
+    "registry:build": "pnpm --filter @km0/registry build",
+    "eval:replay": "pnpm --filter @km0/eval replay",
+    "eval:record": "pnpm --filter @km0/eval record"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "typescript": "7.0.2",
-    "@playwright/test": "1.64.1"
+    "@playwright/test": "1.64.1",
+    "axe-core": "4.13.0",
+    "typescript": "7.0.2"
   }
 }
