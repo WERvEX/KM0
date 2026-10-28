@@ -50,7 +50,7 @@ test("a run is checked, started, followed, stopped and redone, and its results a
   await expect(page.getByText("KM0 Runner（默认）")).toBeVisible();
   await page.getByRole("textbox", { name: "Runner 启动方式（可选）" }).fill(runner);
   await page.getByRole("button", { name: "保存" }).click();
-  await expect(page.getByText("0.2.0")).toBeVisible();
+  await expect(page.getByText("0.3.0")).toBeVisible();
   await expect(page.getByText("1.3.0")).toBeVisible();
   await page.screenshot({ path: "test-results/screenshots/settings-execution.png", fullPage: true });
 

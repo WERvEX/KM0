@@ -4,13 +4,13 @@ import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { createSimulatedLlm } from "@km0/core";
 import bundledRegistry from "@km0/registry/model-registry.json";
-import { type ExecutionRun, ModelRegistry } from "@km0/shared";
+import { type ExecutionRun, type ModelEntry, ModelRegistry, type RoutingPlan } from "@km0/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { openDatabase } from "../db/database";
 import { nodeExec } from "../node-exec";
 import { nodeRunAccess } from "../node-run-access";
 import { AgentStore } from "./agent-store";
-import { applyProgress, ExecutionService, splitCommand } from "./execution-service";
+import { applyProgress, ExecutionService, splitCommand, taskLadder } from "./execution-service";
 import { HandoffService } from "./handoff-service";
 import { ProjectService } from "./project-service";
 import { RoutingService } from "./routing-service";
@@ -107,9 +107,10 @@ describe("execution", () => {
   it("finds KM0 Runner and pi, and says why the browser build cannot run anything", async () => {
     const { execution } = await setup();
     const status = await execution.status();
-    expect(status.runner).toMatchObject({ found: true, version: "0.2.0", ok: true });
+    expect(status.runner).toMatchObject({ found: true, version: "0.3.0", ok: true });
     expect(status.pi).toMatchObject({ found: true, version: "1.3.0", ok: true });
-    process.env.FAKE_RUNNER_VERSION = "0.1.0";
+    // 0.2 follows progress and stops, but runs every task on the run's one ladder.
+    process.env.FAKE_RUNNER_VERSION = "0.2.1";
     try {
       expect((await execution.status()).runner).toMatchObject({
         found: true,
@@ -148,7 +149,7 @@ describe("execution", () => {
   });
 
   it("starts KM0 Runner with a generated config, follows its progress, then imports and judges the results", async () => {
-    const { db, settings, execution, runner, updates, runsDir, projectId } = await setup();
+    const { db, settings, execution, runner, routing, updates, runsDir, projectId } = await setup();
     const repo = linkRepo(db, projectId);
     const providerId = giveKey(settings);
     const started = await execution.start(projectId);
@@ -171,6 +172,15 @@ describe("execution", () => {
     expect(models).toContain(`"apiKey": "$KM0_KEY_${providerId}"`);
     expect(models).not.toContain("sk-test");
     expect(seen.config.ladder[0].model).toMatch(new RegExp(`^km0-${providerId}/claude-`));
+    // The task climbs its own escalation chain, from the combination it was routed to.
+    const [task] = (routing.get(projectId) as RoutingPlan).tasks;
+    const own = seen.config.task_ladders["01"] as { name: string; model: string }[];
+    expect(own[0]).toEqual({ name: task?.choice?.tier, model: `km0-${providerId}/${task?.choice?.modelId}` });
+    expect(own.map((rung) => rung.model.split("/")[1])).toEqual(
+      [task?.choice, ...(task?.chain ?? [])].map((step) => step?.modelId),
+    );
+    for (const rung of own) expect(models).toContain(`"id": "${rung.model.split("/")[1]}"`);
+    expect(done.tasks[0]?.model).toBe(own[0]?.model);
 
     // The simulated judge accepts it, and the verdict is recorded.
     const [imported] = runner.list(projectId);
@@ -313,6 +323,21 @@ describe("progress", () => {
       { seq: 2, status: "waiting" },
     ]);
     expect(state.cost).toBe(0.5);
+  });
+
+  it("names a task's rungs by tier label and skips a model already on its ladder", () => {
+    const model = (id: number) => ({ id, modelId: `m${id}` }) as ModelEntry;
+    const byRef = new Map([1, 2, 3].map((id) => [id, model(id)]));
+    const step = (tier: string, modelRef: number) =>
+      ({ tier, modelRef }) as RoutingPlan["tasks"][number]["chain"][number];
+    // The same model through another agent, and a model no longer in Settings, add no rung.
+    const chain = [step("T2", 2), step("T2", 1), step("T3", 9), step("T3", 3)];
+    expect(taskLadder({ choice: step("T2", 1), chain }, byRef)).toEqual([
+      { name: "T2", model: model(1) },
+      { name: "T2-2", model: model(2) },
+      { name: "T3", model: model(3) },
+    ]);
+    expect(taskLadder({ choice: null, chain: [] }, byRef)).toEqual([]);
   });
 
   it("splits a command with quoted parts", () => {

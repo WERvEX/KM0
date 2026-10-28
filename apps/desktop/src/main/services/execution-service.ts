@@ -169,7 +169,7 @@ const TEXT = {
     repo: (path: string) => path,
     runnerMissing: "没有找到 KM0 Runner：安装后放进 PATH，或者在“设置 → 执行”里填写启动方式。",
     runnerOld: (version: string) =>
-      `KM0 Runner ${version} 太旧，需要 ${RUNNER_MIN_VERSION} 或更新的版本（能写进度和停止）。`,
+      `KM0 Runner ${version} 太旧，需要 ${RUNNER_MIN_VERSION} 或更新的版本（能写进度、停止，并让每个任务沿自己的升级链执行）。`,
     runnerOk: (version: string, command: string) => `${version}（${command}）`,
     piMissing: `没有找到 pi：npm install -g @earendil-works/pi-coding-agent@${PI_VERSION}`,
     piWrong: (version: string) =>
@@ -180,9 +180,9 @@ const TEXT = {
     noTask: "还没有拆解任务。",
     unknownSeq: (seqs: string) => `计划里没有这些任务：${seqs}`,
     keys: (names: string) => `这些服务商没有密钥，也没有地址：${names}`,
-    keysOk: "阶梯上的服务商都有密钥或地址；密钥只通过环境变量交给 Runner。",
+    keysOk: "阶梯和升级链上的服务商都有密钥或地址；密钥只通过环境变量交给 Runner。",
     ladder: (rungs: string) => rungs,
-    ladderMoved: (count: number) => `；${count} 个任务的模型与所在档位不同，会改用阶梯上的模型`,
+    ownLadders: (count: number) => `；${count} 个任务沿各自的升级链执行`,
     ownConfig: (path: string) => `使用自己的 Runner 配置：${path}`,
     over: (expected: string, budget: string) => `期望总成本 ${expected} 超出预算 ${budget}。`,
     withinBudget: (expected: string) => `期望总成本 ${expected}。`,
@@ -200,7 +200,7 @@ const TEXT = {
     repo: (path: string) => path,
     runnerMissing: "KM0 Runner was not found: install it on PATH, or set how to start it under Settings → Execution.",
     runnerOld: (version: string) =>
-      `KM0 Runner ${version} is too old; ${RUNNER_MIN_VERSION} or newer is needed (progress and stopping).`,
+      `KM0 Runner ${version} is too old; ${RUNNER_MIN_VERSION} or newer is needed (progress, stopping and a ladder per task).`,
     runnerOk: (version: string, command: string) => `${version} (${command})`,
     piMissing: `pi was not found: npm install -g @earendil-works/pi-coding-agent@${PI_VERSION}`,
     piWrong: (version: string) =>
@@ -212,10 +212,10 @@ const TEXT = {
     unknownSeq: (seqs: string) => `The plan has no such tasks: ${seqs}`,
     keys: (names: string) => `These providers have neither a key nor an address: ${names}`,
     keysOk:
-      "Every provider on the ladder has a key or an address; keys reach the Runner only as environment variables.",
+      "Every provider on the ladders has a key or an address; keys reach the Runner only as environment variables.",
     ladder: (rungs: string) => rungs,
-    ladderMoved: (count: number) =>
-      `; ${count} tasks use another model than their tier's rung and will run on the rung`,
+    ownLadders: (count: number) =>
+      `; ${count} ${count === 1 ? "task climbs its" : "tasks climb their"} own escalation chain`,
     ownConfig: (path: string) => `Using your own Runner config: ${path}`,
     over: (expected: string, budget: string) => `The expected total ${expected} is over the ${budget} budget.`,
     withinBudget: (expected: string) => `Expected total ${expected}.`,
@@ -230,16 +230,37 @@ const TEXT = {
 
 const usd = (value: number) => `$${value.toFixed(value < 1 ? 3 : 2)}`;
 
-/** The Runner config KM0 writes from the plan: one rung per tier label, models from Settings → Models. */
+/**
+ * The Runner config KM0 writes from the plan, models from Settings → Models: one rung per tier label for the
+ * run, and for each routed task its own ladder up its escalation chain (`task_ladders`, KM0 Runner 0.3.0).
+ */
 export interface GeneratedConfig {
   config: Record<string, unknown>;
   modelsJson: Record<string, unknown>;
   env: Record<string, string>;
   rungs: { name: string; model: ModelEntry }[];
-  /** Tasks whose own model is not the rung's. */
-  moved: number;
-  /** Providers on the ladder with neither a key nor an address. */
+  /** Task seq (`NN`) → the rungs it climbs: the combination it was routed to, then each step of its chain. */
+  taskLadders: Record<string, { name: string; model: ModelEntry }[]>;
+  /** Providers on any ladder with neither a key nor an address. */
   keyless: string[];
+}
+
+/**
+ * A task's own ladder: its choice, then its chain, each step a rung named by its tier label (`T2`, then `T2-2`
+ * when the label comes again). The Runner only runs pi, so a step with a model already on the ladder is skipped.
+ */
+export function taskLadder(
+  task: Pick<RoutingPlan["tasks"][number], "choice" | "chain">,
+  byRef: Map<number, ModelEntry>,
+): { name: string; model: ModelEntry }[] {
+  const ladder: { name: string; model: ModelEntry; tier: string }[] = [];
+  for (const step of task.choice ? [task.choice, ...task.chain] : []) {
+    const model = byRef.get(step.modelRef);
+    if (!model || ladder.some((rung) => rung.model.id === model.id)) continue;
+    const same = ladder.filter((rung) => rung.tier === step.tier).length;
+    ladder.push({ name: same === 0 ? step.tier : `${step.tier}-${same + 1}`, model, tier: step.tier });
+  }
+  return ladder.map(({ name, model }) => ({ name, model }));
 }
 
 export function generateConfig(
@@ -266,15 +287,17 @@ export function generateConfig(
     const model = best ? byRef.get(best[0]) : undefined;
     if (model) rungs.push({ name: tier, model });
   }
-  const rungOf = new Map(rungs.map((rung) => [rung.name, rung.model.id]));
-  const moved = plan.tasks.filter(
-    (task) => task.choice && rungOf.get(task.choice.tier) !== task.choice.modelRef,
-  ).length;
+  const taskLadders: GeneratedConfig["taskLadders"] = {};
+  for (const task of plan.tasks) {
+    const ladder = taskLadder(task, byRef);
+    if (ladder.length > 0) taskLadders[String(task.seq).padStart(2, "0")] = ladder;
+  }
   const provider = (model: ModelEntry) => `km0-${model.providerId}`;
+  const ref = (model: ModelEntry) => `${provider(model)}/${model.modelId}`;
   const providers: Record<string, unknown> = {};
   const env: Record<string, string> = {};
   const keyless: string[] = [];
-  for (const { model } of rungs) {
+  for (const { model } of [...rungs, ...Object.values(taskLadders).flat()]) {
     const name = provider(model);
     const key = keyOf(model.providerId);
     const baseUrl = baseUrlOf(model.providerId);
@@ -303,12 +326,18 @@ export function generateConfig(
   return {
     config: {
       pi: { command: [pi.command], models_json: pi.modelsJson },
-      ladder: rungs.map(({ name, model }) => ({ name, model: `${provider(model)}/${model.modelId}` })),
+      ladder: rungs.map(({ name, model }) => ({ name, model: ref(model) })),
+      task_ladders: Object.fromEntries(
+        Object.entries(taskLadders).map(([seq, ladder]) => [
+          seq,
+          ladder.map(({ name, model }) => ({ name, model: ref(model) })),
+        ]),
+      ),
     },
     modelsJson: { providers },
     env,
     rungs,
-    moved,
+    taskLadders,
     keyless,
   };
 }
@@ -488,11 +517,12 @@ export class ExecutionService {
           item({ id: "models", ok: false, blocking: true, detail: text.noModels, fix: "routing" });
         } else {
           const rungs = generated.rungs.map((rung) => `${rung.name} ${rung.model.name}`).join(" → ");
+          const owned = Object.keys(generated.taskLadders).length;
           item({
             id: "ladder",
             ok: true,
             blocking: false,
-            detail: text.ladder(rungs) + (generated.moved > 0 ? text.ladderMoved(generated.moved) : ""),
+            detail: text.ladder(rungs) + (owned > 0 ? text.ownLadders(owned) : ""),
             fix: null,
           });
           item({

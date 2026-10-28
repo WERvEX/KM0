@@ -6,8 +6,8 @@ import { z } from "zod";
  * (unverified). The browser debug build cannot start local processes.
  */
 
-/** The oldest KM0 Runner that writes progress.jsonl and stops on request. */
-export const RUNNER_MIN_VERSION = "0.2.0";
+/** The oldest KM0 Runner that writes progress.jsonl, stops on request and runs each task on its own ladder. */
+export const RUNNER_MIN_VERSION = "0.3.0";
 /** The pi version KM0 Runner pins; its configs refuse another one. */
 export const PI_VERSION = "1.3.0";
 
