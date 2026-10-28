@@ -73,7 +73,7 @@ test("the model registry can be imported from a file through the file browser", 
   await dialog.getByRole("button", { name: "model-registry.json" }).click();
   await dialog.getByRole("button", { name: "打开" }).click();
   await expect(page.getByRole("status").filter({ hasText: /已导入截至 .* 的榜单数据/ })).toBeVisible();
-  await expect(section.getByText(/从文件导入/).first()).toBeVisible();
+  await expect(section.getByText(/榜单数据截至 \d{4}-\d{2}-\d{2} · 已在 .+ 从文件导入/)).toBeVisible();
   await section.getByRole("button", { name: "恢复内置数据" }).click();
-  await expect(section.getByText(/随 KM0 发布/)).toBeVisible();
+  await expect(section.getByText(/榜单数据截至 \d{4}-\d{2}-\d{2} · 随 KM0 发布/)).toBeVisible();
 });
