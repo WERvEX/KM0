@@ -4,15 +4,16 @@
 // writes progress.jsonl, one report and diff per task and summary.json, stops on SIGTERM or a STOP file
 // (exit 3), and exits 0 when every task passed, 1 otherwise.
 //
+// A task in the config's `task_ladders` climbs that ladder of its own, else the run's `ladder` from T1.
 // FAKE_RUNNER_STEP_MS sets the pause between events (default 150). FAKE_RUNNER_FAIL lists task seqs that
-// escalate from T1 to T2 and still fail their tests. The arguments and the KM0_KEY_* variable names it was
-// given are written to fake-runner.json in the run directory.
+// escalate from their first rung to the next and still fail their tests. The arguments and the KM0_KEY_*
+// variable names it was given are written to fake-runner.json in the run directory.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const argv = process.argv.slice(2);
 if (argv.includes("--version")) {
-  console.log(`km0-runner ${process.env.FAKE_RUNNER_VERSION ?? "0.2.0"}`);
+  console.log(`km0-runner ${process.env.FAKE_RUNNER_VERSION ?? "0.3.0"}`);
   process.exit(0);
 }
 const option = (name) => {
@@ -71,7 +72,8 @@ const tasks = JSON.parse(readFileSync(join(packageDir, "km0", "tasks.json"), "ut
   (task) => only.length === 0 || only.includes(task.seq),
 );
 const id = (task) => String(task.seq).padStart(2, "0");
-const model = (tier) => ladder.find((rung) => rung.name === tier)?.model ?? `fake/${tier}`;
+const ladderOf = (task) => config.task_ladders?.[id(task)] ?? null;
+const model = (task, tier) => (ladderOf(task) ?? ladder).find((rung) => rung.name === tier)?.model ?? `fake/${tier}`;
 console.log(`fake runner: ${tasks.length} tasks in ${runDir}`);
 emit("run_started", {
   run_id: option("--run-id"),
@@ -93,7 +95,8 @@ for (const task of tasks) {
         task_id: taskId,
         title: task.title,
         predicted_tier: task.tier,
-        start_tier: task.tier,
+        start_tier: ladderOf(task)?.[0]?.name ?? task.tier,
+        ladder: ladderOf(task),
         solved_tier: null,
         escalations: [],
         cost: 0,
@@ -124,21 +127,22 @@ for (const task of tasks) {
     continue;
   }
   const fails = failing.includes(task.seq);
-  const tiers = fails ? ["T1", "T2"] : [task.tier ?? "T1"];
+  const own = ladderOf(task)?.map((rung) => rung.name);
+  const tiers = own ? own.slice(0, fails ? 2 : 1) : fails ? ["T1", "T2"] : [task.tier ?? "T1"];
   emit("task_started", { task_id: taskId, title: task.title, tier: tiers[0], explored: false });
   const attempts = [];
   let cancelled = false;
   for (const [index, tier] of tiers.entries()) {
-    emit("attempt_started", { task_id: taskId, tier, model: model(tier), purpose: "task" });
+    emit("attempt_started", { task_id: taskId, tier, model: model(task, tier), purpose: "task" });
     // A long attempt, cut short by a stop request.
     for (let i = 0; i < 4 && !stopRequested(); i += 1) await pause();
     const cost = 0.01 * (index + 1);
-    attempts.push({ tier, model: model(tier), cost });
+    attempts.push({ tier, model: model(task, tier), cost });
     if (stopRequested()) {
       emit("attempt_finished", {
         task_id: taskId,
         tier,
-        model: model(tier),
+        model: model(task, tier),
         purpose: "task",
         cost,
         steps: 1,
@@ -150,7 +154,7 @@ for (const task of tasks) {
     emit("attempt_finished", {
       task_id: taskId,
       tier,
-      model: model(tier),
+      model: model(task, tier),
       purpose: "task",
       cost,
       steps: 3,
@@ -158,11 +162,11 @@ for (const task of tasks) {
     });
     const passed = !fails;
     emit("test_result", { task_id: taskId, passed, detail: passed ? "1 passed" : "1 failed" });
-    if (fails && index === 0) {
+    if (fails && index === 0 && tiers[1]) {
       emit("escalation", {
         task_id: taskId,
-        from_tier: "T1",
-        to_tier: "T2",
+        from_tier: tiers[0],
+        to_tier: tiers[1],
         signal: "tests_failed",
         detail: "1 failed",
       });
@@ -176,7 +180,8 @@ for (const task of tasks) {
   const failure = cancelled ? "cancelled" : fails ? "tests_failed" : null;
   report({
     solved_tier: status === "passed" ? tiers.at(-1) : null,
-    escalations: fails ? [{ from_tier: "T1", to_tier: "T2", signal: "tests_failed", detail: "1 failed" }] : [],
+    escalations:
+      fails && tiers[1] ? [{ from_tier: tiers[0], to_tier: tiers[1], signal: "tests_failed", detail: "1 failed" }] : [],
     cost,
     steps: 3 * attempts.length,
     test_result: cancelled ? null : { passed: !fails, judge: "test_command", detail: fails ? "1 failed" : "1 passed" },
