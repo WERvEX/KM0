@@ -56,7 +56,8 @@ export function AppShell() {
             </Button>
           </div>
         </aside>
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        {/* relative: absolutely placed helpers (screen-reader labels) stay inside the pane that scrolls. */}
+        <main className="relative min-w-0 flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>

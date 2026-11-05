@@ -51,8 +51,10 @@ export function ProjectPage({ projectId }: { projectId: number }) {
   const failure = detail.error ?? (actionError ? { kind: "internal", message: errorMessage(actionError) } : null);
 
   return (
-    <div className="flex min-h-full">
-      <div className="min-w-0 flex-1 px-8 py-8">
+    // Two panes that scroll on their own: the work on the left keeps its scrollbar at its own edge, and the
+    // decision ledger stays in view beside it however far down the page goes.
+    <div className="flex h-full">
+      <div className="relative min-w-0 flex-1 overflow-y-auto px-8 py-8">
         <Header
           detail={detail}
           busy={busy}
@@ -139,7 +141,7 @@ export function ProjectPage({ projectId }: { projectId: number }) {
       </div>
 
       {/* Beside the page on wide windows; a slide-over panel on narrower ones. */}
-      <div className="hidden w-80 shrink-0 border-l border-border bg-bg px-5 py-8 xl:block">
+      <div className="relative hidden w-80 shrink-0 overflow-y-auto border-l border-border bg-bg px-5 py-8 xl:block">
         <DecisionLedger
           stages={detail.stages}
           decisions={detail.decisions}

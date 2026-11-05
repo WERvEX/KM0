@@ -741,7 +741,7 @@ export const zhCN = {
   },
   runner: {
     title: "执行结果验收",
-    body: "导入 KM0 Runner 的一次运行（runs/<run_id> 文件夹），由规划模型逐个对照验收标准判定。每次尝试都会修正模型的能力估计，未通过的任务会换到更强的组合重新分发；判定结果写回 acceptance.jsonl，供 Runner 校准路由规则。",
+    body: "在 KM0 里执行的结果结束后自动出现在这里；自己运行 KM0 Runner 的结果可以导入（runs/<run_id> 文件夹）。规划模型逐个对照验收标准判定，每次尝试都会修正模型的能力估计，未通过的任务会换到更强的组合重新分发；判定结果写回 acceptance.jsonl，供 Runner 校准路由规则。",
     import: "导入运行",
     empty: "还没有导入过运行。",
     summary: "{{count}} 个任务 · {{accepted}} 个已通过 · {{cost}}",

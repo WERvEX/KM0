@@ -1,4 +1,4 @@
-import { type AgentOutcome, type AgentRun, type EventStream, empty, runAgentProcess } from "./claude-code";
+import { type AgentOutcome, type AgentRun, type EventStream, empty, relativeTo, runAgentProcess } from "./claude-code";
 
 export interface CodexOptions {
   /** How to start Codex, such as `["/usr/local/bin/codex"]`. */
@@ -54,6 +54,9 @@ function describeItem(item: CodexItem): string | null {
 
 /** Fold `codex exec --json` events into an outcome; `turn.completed` or a failure ends the run. */
 export class CodexStream implements EventStream {
+  /** `cwd`: the task's worktree, left out of the paths in the log. */
+  constructor(private readonly cwd = "") {}
+
   steps = 0;
   result: AgentOutcome | null = null;
   lastText = "";
@@ -67,7 +70,8 @@ export class CodexStream implements EventStream {
     }
     const item = (event.item ?? {}) as CodexItem;
     if (event.type === "item.started") {
-      const shown = describeItem(item);
+      const described = describeItem(item);
+      const shown = described === null ? null : relativeTo(this.cwd, described);
       if (shown) this.steps += 1;
       return shown
         ? shown
@@ -116,7 +120,7 @@ export function runCodex(options: CodexOptions): AgentRun {
     env: options.env,
     eventsFile: options.eventsFile,
     onLine: options.onLine,
-    stream: new CodexStream(),
+    stream: new CodexStream(options.cwd),
     name: "Codex",
   });
 }

@@ -24,7 +24,9 @@ import { projectKey } from "../project/useProject";
 import { runnerKey } from "../runner/RunnerPanel";
 import { executionKey } from "./ExecutionWatcher";
 
-const usd = (value: number) => (value === 0 ? "$0" : value < 0.01 ? "<$0.01" : `$${value.toFixed(value < 1 ? 3 : 2)}`);
+/** A cost as the acceptance panel shows it: a small run keeps two significant digits ($0.0052), not "<$0.01". */
+const usd = (value: number) =>
+  value === 0 ? "$0" : value < 0.01 ? `$${value.toPrecision(2)}` : `$${value.toFixed(value < 1 ? 3 : 2)}`;
 
 const TASK_TONE: Record<ExecTaskStatus, "neutral" | "accent" | "success" | "warning" | "danger"> = {
   waiting: "neutral",
@@ -218,7 +220,7 @@ function RunCard({
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
         {run.log.length > 0 ? (
-          <details className="min-w-0 flex-1 text-xs">
+          <details className="w-full text-xs">
             <summary className="cursor-pointer text-muted">{t("execution.log")}</summary>
             <pre className="mt-1 max-h-48 overflow-auto rounded bg-sunken p-2 font-mono whitespace-pre-wrap">
               {run.log.slice(-20).join("\n")}
