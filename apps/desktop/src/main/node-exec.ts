@@ -39,6 +39,18 @@ function follow(child: ChildProcess, onLine: (line: string) => void): RunningPro
 
 const environment = (env: Record<string, string>) => ({ ...process.env, ...env, PYTHONUNBUFFERED: "1" });
 
+/**
+ * Node refuses to spawn a .cmd or .bat file directly on Windows (it throws EINVAL), and npm installs tools such as
+ * pi as .cmd shims, so those go through cmd.exe with every part quoted.
+ */
+function launch(program: string, args: string[], options: Parameters<typeof spawnChild>[2]): ChildProcess {
+  if (process.platform === "win32" && /\.(cmd|bat)$/i.test(program)) {
+    const quote = (part: string) => `"${part.replace(/"/g, '""')}"`;
+    return spawnChild([program, ...args].map(quote).join(" "), { ...options, shell: true });
+  }
+  return spawnChild(program, args, options);
+}
+
 export function nodeExec(): ExecPort {
   return {
     platform: process.platform,
@@ -61,7 +73,12 @@ export function nodeExec(): ExecPort {
         const [program, ...args] = command;
         if (!program) return resolve({ code: null, output: "" });
         let output = "";
-        const child = spawnChild(program, args, { env: environment({}), windowsHide: true });
+        let child: ChildProcess;
+        try {
+          child = launch(program, args, { env: environment({}), windowsHide: true });
+        } catch (error) {
+          return resolve({ code: null, output: (error as Error).message });
+        }
         const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
         child.stdout?.on("data", (chunk) => (output += chunk));
         child.stderr?.on("data", (chunk) => (output += chunk));
@@ -77,7 +94,7 @@ export function nodeExec(): ExecPort {
     },
     spawn(command: string[], options: SpawnOptions) {
       const [program, ...args] = command;
-      const child = spawnChild(program ?? "", args, {
+      const child = launch(program ?? "", args, {
         cwd: options.cwd,
         env: environment(options.env),
         windowsHide: true,

@@ -34,8 +34,22 @@ export interface ClaudeCodeOptions {
   onLine: (line: string) => void;
 }
 
-/** What Claude Code may do without asking: edit (accepted by `acceptEdits`), read, search and run commands. */
-export const ALLOWED_TOOLS = ["Bash", "Read", "Edit", "MultiEdit", "Write", "Glob", "Grep", "LS", "TodoWrite"];
+/**
+ * What Claude Code may do without asking: edit (accepted by `acceptEdits`), read, search and run commands. On Windows
+ * Claude Code may run commands with PowerShell instead of Bash; without it here every command is refused.
+ */
+export const ALLOWED_TOOLS = [
+  "Bash",
+  "PowerShell",
+  "Read",
+  "Edit",
+  "MultiEdit",
+  "Write",
+  "Glob",
+  "Grep",
+  "LS",
+  "TodoWrite",
+];
 
 export function claudeCodeArgs(model: string | null, maxBudgetUsd: number | null): string[] {
   return [
@@ -106,7 +120,9 @@ export class StreamState {
         },
         detail: String(event.result ?? (failed ? subtype : this.lastText)).slice(0, 2000),
       };
-      return failed ? `Claude Code: ${subtype || "error"}` : null;
+      // An error such as "Not logged in" still comes as subtype "success", with is_error set and the reason in `result`.
+      const why = subtype && subtype !== "success" ? subtype : String(event.result ?? "error").split("\n")[0];
+      return failed ? `Claude Code: ${why}` : null;
     }
     return null;
   }

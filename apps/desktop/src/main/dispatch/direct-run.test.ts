@@ -6,6 +6,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it } from "vitest";
 import { createKm0McpServer, insideWorktree } from "../../mcp/server";
+import { nodeExec } from "../node-exec";
 import { DirectRun, type DirectTask, dependencyOrder } from "./direct-run";
 import { readInbox } from "./inbox";
 
@@ -269,7 +270,9 @@ describe.skipIf(!process.env.KM0_CLAUDE_REAL)("the real Claude Code", () => {
       model: process.env.KM0_CLAUDE_MODEL ?? "claude-haiku-5-5",
       prompt: "Create a file named hello.txt in the current folder containing the single line: hello from KM0",
     };
-    const { run, runDir } = start(repo, [job], { claudeCommand: ["claude"] });
+    // On Windows npm installs `claude.cmd`, which only a full path reaches; KM0 finds it the same way.
+    const claude = (await nodeExec().which("claude")) ?? "claude";
+    const { run, runDir } = start(repo, [job], { claudeCommand: [claude] });
     expect((await run.exited).code).toBe(0);
     expect(report(runDir, "01")).toMatchObject({ test_result: { passed: true }, failure_category: null });
     expect(Number(report(runDir, "01").steps)).toBeGreaterThan(0);
