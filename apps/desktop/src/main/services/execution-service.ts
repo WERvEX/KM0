@@ -2,6 +2,7 @@ import type { Language } from "@km0/core";
 import {
   AppError,
   CLAUDE_CODE_MIN_VERSION,
+  CODEX_MIN_VERSION,
   DIRECT_AGENTS,
   type ExecTask,
   type ExecTaskStatus,
@@ -210,9 +211,13 @@ const TEXT = {
     exited: (code: number | null) => `执行进程退出，退出码 ${code ?? "无"}。`,
     interrupted: "KM0 关闭时这个执行还没有结束。",
     directAgents: (count: number) =>
-      `${count} 个任务直接交给对应的 Agent：Claude Code 自动执行，Claude Desktop 等它来领取。`,
+      `${count} 个任务直接交给对应的 Agent：Claude Code 和 Codex 自动执行，Claude Desktop 等它来领取。`,
     unsupported: (tasks: string) =>
-      `这些任务分给了不能直接执行的 Agent：${tasks}。在路由表里改成 Claude Code 或 Claude Desktop，或者改用 KM0 Runner 执行。`,
+      `这些任务分给了不能直接执行的 Agent：${tasks}。在路由表里改成 Claude Code、Codex 或 Claude Desktop，或者改用 KM0 Runner 执行。`,
+    codexMissing: "没有找到 Codex：npm install -g @openai/codex，或者在“设置 → 执行”里填写启动方式。",
+    codexOld: (version: string) => `Codex ${version} 太旧，需要 ${CODEX_MIN_VERSION} 或更新的版本。`,
+    codexOk: (version: string) =>
+      `Codex ${version}；使用 Codex 自己的登录，只能改动任务的 worktree；用订阅登录时，请自行确认这样调用符合订阅条款。`,
     claudeMissing:
       "没有找到 Claude Code：npm install -g @anthropic-ai/claude-code，或者在“设置 → 执行”里填写启动方式。",
     claudeOld: (version: string) => `Claude Code ${version} 太旧，需要 ${CLAUDE_CODE_MIN_VERSION} 或更新的版本。`,
@@ -255,9 +260,14 @@ const TEXT = {
     exited: (code: number | null) => `The process exited with code ${code ?? "none"}.`,
     interrupted: "This run had not finished when KM0 closed.",
     directAgents: (count: number) =>
-      `${count} ${count === 1 ? "task goes" : "tasks go"} straight to its agent: Claude Code runs by itself, Claude Desktop is waited for.`,
+      `${count} ${count === 1 ? "task goes" : "tasks go"} straight to its agent: Claude Code and Codex run by themselves, Claude Desktop is waited for.`,
     unsupported: (tasks: string) =>
-      `These tasks went to agents the direct executor cannot run: ${tasks}. Route them to Claude Code or Claude Desktop, or run with KM0 Runner.`,
+      `These tasks went to agents the direct executor cannot run: ${tasks}. Route them to Claude Code, Codex or Claude Desktop, or run with KM0 Runner.`,
+    codexMissing:
+      "Codex was not found: npm install -g @openai/codex, or set how to start it under Settings → Execution.",
+    codexOld: (version: string) => `Codex ${version} is too old; ${CODEX_MIN_VERSION} or newer is needed.`,
+    codexOk: (version: string) =>
+      `Codex ${version}; it uses Codex's own sign-in and may change only the task's worktree; with a subscription sign-in, check that being run this way fits its terms.`,
     claudeMissing:
       "Claude Code was not found: npm install -g @anthropic-ai/claude-code, or set how to start it under Settings → Execution.",
     claudeOld: (version: string) => `Claude Code ${version} is too old; ${CLAUDE_CODE_MIN_VERSION} or newer is needed.`,
@@ -400,6 +410,8 @@ export interface DirectSetup {
 
 /** `2.1.3 (Claude Code)` → `2.1.3`. */
 const claudeVersionIn = (output: string) => (/claude/i.test(output) ? versionIn(output) : null);
+/** `codex-cli 0.154.0` → `0.154.0`. */
+const codexVersionIn = (output: string) => (/codex/i.test(output) ? versionIn(output) : null);
 
 /**
  * Runs hand-off packages from KM0. With KM0 Runner (the default) KM0 writes the package and a Runner config
@@ -466,17 +478,24 @@ export class ExecutionService {
         runner: none,
         pi: none,
         claude: none,
+        codex: none,
         mcp: null,
         runsDir: this.runsDir(),
       };
     }
-    const [runner, pi, claude] = await Promise.all([this.findRunner(), this.findPi(), this.findClaude()]);
+    const [runner, pi, claude, codex] = await Promise.all([
+      this.findRunner(),
+      this.findPi(),
+      this.findClaude(),
+      this.findCodex(),
+    ]);
     return {
       available: true,
       reason: null,
       runner: runner.check,
       pi,
       claude: claude.check,
+      codex: codex.check,
       mcp: this.direct?.mcp ?? null,
       runsDir: this.runsDir(),
     };
@@ -502,6 +521,30 @@ export class ExecutionService {
     }
     return {
       check: { found: false, command: configured, version: null, ok: false, problem: text.claudeMissing },
+      command: null,
+    };
+  }
+
+  private async findCodex(): Promise<{ check: ToolCheck; command: string[] | null }> {
+    const port = this.port as ExecPort;
+    const text = TEXT[this.language()];
+    const configured = this.getSettings().codexCommand;
+    const command = configured
+      ? splitCommand(configured)
+      : await port.which("codex").then((found) => (found ? [found] : null));
+    if (command) {
+      const result = await port.capture([...command, "--version"]);
+      const version = result.code === 0 ? codexVersionIn(result.output) : null;
+      if (version) {
+        const ok = atLeast(version, CODEX_MIN_VERSION);
+        return {
+          check: { found: true, command: command.join(" "), version, ok, problem: ok ? null : text.codexOld(version) },
+          command,
+        };
+      }
+    }
+    return {
+      check: { found: false, command: configured, version: null, ok: false, problem: text.codexMissing },
       command: null,
     };
   }
@@ -685,6 +728,16 @@ export class ExecutionService {
         fix: claude.check.ok ? null : "settings.execution",
       });
     }
+    if (tasks.some((task) => task.agent === "codex")) {
+      const codex = await this.findCodex();
+      item({
+        id: "codex",
+        ok: codex.check.ok,
+        blocking: true,
+        detail: codex.check.ok ? text.codexOk(codex.check.version ?? "") : (codex.check.problem ?? text.codexMissing),
+        fix: codex.check.ok ? null : "settings.execution",
+      });
+    }
     const desktop = tasks.filter((task) => task.agent === "claude_desktop").length;
     if (desktop > 0) item({ id: "desktop", ok: true, blocking: false, detail: text.desktop(desktop), fix: null });
   }
@@ -818,10 +871,10 @@ export class ExecutionService {
       seq: number;
       testCommand: string | null;
     }[];
-    const coded = plan.tasks.some(
-      (task) => task.agent === "claude_code" && (seqs.length === 0 || seqs.includes(task.seq)),
-    );
-    const claude = coded ? (await this.findClaude()).command : null;
+    const runs = (agent: string) =>
+      plan.tasks.some((task) => task.agent === agent && (seqs.length === 0 || seqs.includes(task.seq)));
+    const claude = runs("claude_code") ? (await this.findClaude()).command : null;
+    const codex = runs("codex") ? (await this.findCodex()).command : null;
     const tasks: DirectTask[] = plan.tasks.map((task) => {
       const model = task.modelRef !== null ? models.get(task.modelRef) : undefined;
       return {
@@ -853,6 +906,7 @@ export class ExecutionService {
       reuse,
       inboxDir: direct.inboxDir,
       claudeCommand: claude,
+      codexCommand: codex,
       budget: plan.budget,
       language: this.language(),
       version: direct.version,
