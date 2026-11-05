@@ -13,8 +13,10 @@ export const RUNNER_MIN_VERSION = "0.3.0";
 export const PI_VERSION = "1.3.0";
 /** The oldest Claude Code KM0 has run with `-p --output-format stream-json`. */
 export const CLAUDE_CODE_MIN_VERSION = "2.0.0";
+/** The oldest Codex CLI KM0 has run with `exec --json`. */
+export const CODEX_MIN_VERSION = "0.100.0";
 /** Agents the direct executor can hand a task to. */
-export const DIRECT_AGENTS = ["claude_code", "claude_desktop"] as const;
+export const DIRECT_AGENTS = ["claude_code", "claude_desktop", "codex"] as const;
 
 const Path = z.string().trim().min(1).max(1000);
 const EnvName = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "invalidEnvName");
@@ -29,6 +31,8 @@ export const ExecutorSettings = z.object({
   configFile: Path.nullable().default(null),
   /** Direct: how to start Claude Code, such as `claude`; null finds it on PATH. */
   claudeCommand: Path.nullable().default(null),
+  /** Direct: how to start Codex, such as `codex`; null finds it on PATH. */
+  codexCommand: Path.nullable().default(null),
   /** Custom executor: the command, with {package}, {repo}, {run_dir} and {tasks} filled in. */
   customTemplate: z.string().trim().min(1).max(2000).nullable().default(null),
   customCwd: Path.nullable().default(null),
@@ -62,6 +66,7 @@ export const ExecutorStatus = z.object({
   runner: ToolCheck,
   pi: ToolCheck,
   claude: ToolCheck,
+  codex: ToolCheck,
   /** How to add KM0's MCP server to Claude Desktop; null in the browser build. */
   mcp: McpSetup.nullable(),
   runsDir: z.string(),
@@ -69,7 +74,20 @@ export const ExecutorStatus = z.object({
 export type ExecutorStatus = z.infer<typeof ExecutorStatus>;
 
 export const PrecheckItem = z.object({
-  id: z.enum(["repo", "runner", "pi", "models", "keys", "ladder", "budget", "custom", "agents", "claude", "desktop"]),
+  id: z.enum([
+    "repo",
+    "runner",
+    "pi",
+    "models",
+    "keys",
+    "ladder",
+    "budget",
+    "custom",
+    "agents",
+    "claude",
+    "codex",
+    "desktop",
+  ]),
   ok: z.boolean(),
   /** A failed blocking item stops the run from starting; others are warnings or information. */
   blocking: z.boolean(),

@@ -75,7 +75,7 @@ function describeTool(block: { name?: unknown; input?: unknown }): string {
 }
 
 /** Fold Claude Code's stream-json events into an outcome; `result` ends the run. */
-export class StreamState {
+export class StreamState implements EventStream {
   steps = 0;
   result: AgentOutcome | null = null;
   lastText = "";
@@ -144,11 +144,34 @@ function endTree(child: ChildProcess): void {
 
 const quoteForCmd = (value: string) => `"${value.replaceAll('"', '""')}"`;
 
-/** Run Claude Code non-interactively on one task in its worktree; the prompt goes in on stdin. */
-export function runClaudeCode(options: ClaudeCodeOptions): AgentRun {
-  const [program = "claude", ...rest] = options.command;
-  const args = [...rest, ...claudeCodeArgs(options.model, options.maxBudgetUsd)];
-  // Node will not start a .cmd or .bat without a shell (npm installs `claude.cmd` on Windows).
+/** Folds an agent's JSON-lines output into an outcome; `result` is set once the agent says how it ended. */
+export interface EventStream {
+  steps: number;
+  result: AgentOutcome | null;
+  /** One line of output; returns what to show in the run's log, if anything. */
+  take(line: string): string | null;
+}
+
+export interface AgentProcessOptions {
+  /** How to start the agent, such as `["claude"]`; the agent's own arguments follow. */
+  command: string[];
+  args: string[];
+  cwd: string;
+  prompt: string;
+  env: Record<string, string>;
+  /** Where to keep the agent's event stream. */
+  eventsFile: string;
+  onLine: (line: string) => void;
+  stream: EventStream;
+  /** The agent's name, for an exit without an outcome. */
+  name: string;
+}
+
+/** Run a coding agent's CLI on one task in its worktree: the prompt goes in on stdin, JSON lines come out. */
+export function runAgentProcess(options: AgentProcessOptions): AgentRun {
+  const [program = "", ...rest] = options.command;
+  const args = [...rest, ...options.args];
+  // Node will not start a .cmd or .bat without a shell (npm installs `claude.cmd` and `codex.cmd` on Windows).
   const viaShell = process.platform === "win32" && /\.(cmd|bat)$/i.test(program);
   const child = viaShell
     ? spawn([program, ...args].map(quoteForCmd).join(" "), {
@@ -163,7 +186,7 @@ export function runClaudeCode(options: ClaudeCodeOptions): AgentRun {
         detached: process.platform !== "win32",
         windowsHide: true,
       });
-  const state = new StreamState();
+  const state = options.stream;
   let stopped = false;
   let writes = Promise.resolve();
   let buffer = "";
@@ -202,7 +225,7 @@ export function runClaudeCode(options: ClaudeCodeOptions): AgentRun {
           resolve({ ...(state.result ?? empty(state.steps)), stopReason: "cancelled", detail: "" });
         } else if (state.result) resolve(state.result);
         else {
-          const why = problem ?? (errors.join("\n").trim() || `Claude Code exited with code ${code ?? "none"}`);
+          const why = problem ?? (errors.join("\n").trim() || `${options.name} exited with code ${code ?? "none"}`);
           resolve({ ...empty(state.steps), stopReason: "error", detail: why.slice(-2000) });
         }
       });
@@ -219,7 +242,22 @@ export function runClaudeCode(options: ClaudeCodeOptions): AgentRun {
   };
 }
 
-const empty = (steps: number): AgentOutcome => ({
+/** Run Claude Code non-interactively on one task in its worktree; the prompt goes in on stdin. */
+export function runClaudeCode(options: ClaudeCodeOptions): AgentRun {
+  return runAgentProcess({
+    command: options.command.length > 0 ? options.command : ["claude"],
+    args: claudeCodeArgs(options.model, options.maxBudgetUsd),
+    cwd: options.cwd,
+    prompt: options.prompt,
+    env: options.env,
+    eventsFile: options.eventsFile,
+    onLine: options.onLine,
+    stream: new StreamState(),
+    name: "Claude Code",
+  });
+}
+
+export const empty = (steps: number): AgentOutcome => ({
   stopReason: "error",
   steps,
   cost: 0,

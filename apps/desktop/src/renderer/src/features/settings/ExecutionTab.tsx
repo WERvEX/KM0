@@ -238,6 +238,7 @@ export function ExecutionTab() {
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 flex-col gap-2">
                 <ToolLine label="Claude Code" check={status.data.claude} />
+                <ToolLine label="Codex" check={status.data.codex} />
               </div>
               <Button size="sm" variant="ghost" onClick={() => void status.refetch()} disabled={status.isFetching}>
                 <RefreshCw className={cn(status.isFetching && "animate-spin")} />
@@ -255,6 +256,18 @@ export function ExecutionTab() {
                 placeholder={t("settings.execution.automatic")}
                 value={draft.claudeCommand ?? ""}
                 onChange={(event) => set({ claudeCommand: text(event.target.value) })}
+              />
+            </Field>
+            <Field
+              label={t("settings.execution.codexCommand")}
+              htmlFor="codexCommand"
+              hint={t("settings.execution.codexCommandHint")}
+            >
+              <Input
+                id="codexCommand"
+                placeholder={t("settings.execution.automatic")}
+                value={draft.codexCommand ?? ""}
+                onChange={(event) => set({ codexCommand: text(event.target.value) })}
               />
             </Field>
             <PathField
