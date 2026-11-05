@@ -11,6 +11,7 @@ import { DirectRun, type DirectTask, dependencyOrder } from "./direct-run";
 import { readInbox } from "./inbox";
 
 const FAKE_CLAUDE = [process.execPath, join(import.meta.dirname, "../../../../../e2e/fixtures/fake-claude.mjs")];
+const FAKE_CODEX = [process.execPath, join(import.meta.dirname, "../../../../../e2e/fixtures/fake-codex.mjs")];
 /** A test command that passes when every named file is in the worktree; quoted for sh and cmd alike. */
 const has = (...files: string[]) =>
   `node -e "process.exit([${files.map((file) => `'${file}'`).join(",")}].every((f) => require('fs').existsSync(f)) ? 0 : 1)"`;
@@ -239,10 +240,10 @@ describe("Claude Code and Claude Desktop finish a project together", () => {
   });
 
   it("refuses an agent it cannot hand a task to", async () => {
-    const { run, runDir } = start(gitRepo(), [task(1, "codex", [], null)]);
+    const { run, runDir } = start(gitRepo(), [task(1, "cursor", [], null)]);
     expect((await run.exited).code).toBe(1);
     expect(report(runDir, "01")).toMatchObject({
-      failure_detail: expect.stringMatching(/cannot hand a task to codex/),
+      failure_detail: expect.stringMatching(/cannot hand a task to cursor/),
     });
   });
 });
@@ -259,6 +260,85 @@ describe("the MCP server's file tools stay in the worktree", () => {
     expect(await insideWorktree(root, ".git/config")).toBeNull();
     if (process.platform !== "win32") expect(await insideWorktree(root, "escape/secret.txt")).toBeNull();
   });
+});
+
+describe("Codex", () => {
+  it("does its task after Claude Code's, on top of it, with the model it was routed to", async () => {
+    const repo = gitRepo();
+    const argsFile = join(mkdtempSync(join(tmpdir(), "km0-args-")), "args.jsonl");
+    process.env.FAKE_CODEX_ARGS = argsFile;
+    try {
+      const { run, runDir, runId, lines } = start(
+        repo,
+        [
+          task(1, "claude_code", [], has("claude-01.txt")),
+          { ...task(2, "codex", [1], has("claude-01.txt", "codex-02.txt")), model: "gpt-5.6-luna" },
+        ],
+        { codexCommand: FAKE_CODEX },
+      );
+      expect((await run.exited).code).toBe(0);
+      expect(report(runDir, "02")).toMatchObject({
+        agent: "codex",
+        steps: 1,
+        cost: 0,
+        tokens: { input: 1500, output: 150, cache_read: 500, cache_write: 0 },
+        test_result: { passed: true },
+        failure_category: null,
+        attempts: [expect.objectContaining({ agent: "codex", events: "events/02.jsonl", stop_reason: "settled" })],
+      });
+      const [call] = readFileSync(argsFile, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      expect(call.args).toEqual(["exec", "--json", "--sandbox", "workspace-write", "--model", "gpt-5.6-luna", "-"]);
+      expect(lines.some((line) => /^→ Write .*codex-02\.txt$/.test(line))).toBe(true);
+      const show = (ref: string) => execSync(`git show ${ref}`, { cwd: repo, encoding: "utf8" });
+      expect(show(`km0/${runId}/02:claude-01.txt`)).toMatch(/task 01/);
+      expect(show(`km0/${runId}/02:codex-02.txt`)).toMatch(/task 02 by fake Codex \(gpt-5.6-luna\)/);
+    } finally {
+      delete process.env.FAKE_CODEX_ARGS;
+    }
+  });
+
+  it("fails a task whose turn fails, and says so when Codex is missing", async () => {
+    process.env.FAKE_CODEX_FAIL = "01";
+    try {
+      const { run, runDir } = start(gitRepo(), [task(1, "codex", [], null)], { codexCommand: FAKE_CODEX });
+      expect((await run.exited).code).toBe(1);
+      expect(report(runDir, "01")).toMatchObject({
+        failure_category: "error",
+        failure_detail: "The fake model gave up.",
+      });
+    } finally {
+      delete process.env.FAKE_CODEX_FAIL;
+    }
+    const missing = start(gitRepo(), [task(1, "codex", [], null)], { codexCommand: null });
+    expect((await missing.run.exited).code).toBe(1);
+    expect(report(missing.runDir, "01")).toMatchObject({ failure_detail: "Codex was not found." });
+  });
+});
+
+// With KM0_CODEX_REAL=1, the real `codex` on PATH does one small task (it spends a little of the account's quota).
+describe.skipIf(!process.env.KM0_CODEX_REAL)("the real Codex", () => {
+  it("does a small task in its worktree and KM0 commits it", async () => {
+    const repo = gitRepo();
+    const model = process.env.KM0_CODEX_MODEL ?? "gpt-5.6-luna";
+    const job: DirectTask = {
+      ...task(1, "codex", [], has("hello.txt")),
+      model,
+      modelRef: `km0-1/${model}`,
+      prompt: "Create a file named hello.txt in the current folder containing the single line: hello from KM0",
+    };
+    const codex = (await nodeExec().which("codex")) ?? "codex";
+    const { run, runDir } = start(repo, [job], { codexCommand: [codex] });
+    expect((await run.exited).code).toBe(0);
+    expect(report(runDir, "01")).toMatchObject({
+      test_result: { passed: true },
+      failure_category: null,
+      attempts: [expect.objectContaining({ model: `km0-1/${model}` })],
+    });
+    expect(Number(report(runDir, "01").steps)).toBeGreaterThan(0);
+  }, 300_000);
 });
 
 // With KM0_CLAUDE_REAL=1, the real `claude` on PATH does one small task (it spends a little of the account's quota).
