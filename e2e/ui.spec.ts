@@ -154,6 +154,9 @@ function layoutProblems(): Promise<string[]> {
       `<${element.tagName.toLowerCase()}> "${(element.textContent ?? "").trim().slice(0, 40)}"`;
     const root = document.documentElement;
     if (root.scrollWidth > root.clientWidth + 1) problems.push(`the window scrolls sideways (${root.scrollWidth}px)`);
+    // Only the shell's panes scroll; content that makes the window taller would add a second scrollbar beside them.
+    if (root.scrollHeight > root.clientHeight + 1)
+      problems.push(`the window is taller than itself (${root.scrollHeight}px)`);
     for (const pane of document.querySelectorAll("main, aside, [role=dialog]")) {
       const style = getComputedStyle(pane);
       if (style.overflowX !== "hidden" && pane.scrollWidth > pane.clientWidth + 1) {
@@ -188,6 +191,20 @@ function layoutProblems(): Promise<string[]> {
       const box = table.parentElement;
       if (box && box.scrollWidth > box.clientWidth + 1) {
         problems.push(`a table needs sideways scrolling (${box.scrollWidth} > ${box.clientWidth})`);
+      }
+    }
+    // A pane-sized scroller inside another one that also scrolls puts two scrollbars side by side.
+    const scrollsDown = (element: Element) =>
+      /(auto|scroll)/.test(getComputedStyle(element).overflowY) && element.scrollHeight > element.clientHeight + 1;
+    for (const element of document.querySelectorAll("body *")) {
+      if (!scrollsDown(element)) continue;
+      for (let outer = element.parentElement; outer; outer = outer.parentElement) {
+        if (scrollsDown(outer) && element.clientHeight >= outer.clientHeight * 0.8) {
+          problems.push(
+            `${describe(element).slice(0, 12)} scrolls inside ${describe(outer).slice(0, 12)}, which scrolls too`,
+          );
+          break;
+        }
       }
     }
     // A box that scrolls by a few pixels shows a stray scrollbar; that is a rendering slip, not content.

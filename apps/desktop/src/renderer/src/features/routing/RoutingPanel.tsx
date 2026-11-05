@@ -626,8 +626,35 @@ function TaskDetail({
             ) : null}
           </Block>
         ) : null}
+        <Block title={t("routing.detail.runs")}>
+          <p className="text-xs text-muted">{t("routing.detail.runsHint", { count: ESCALATE_AFTER })}</p>
+          {task.failures.length > 0 ? (
+            <p className="mt-1 text-xs">
+              {t("routing.detail.failureLog", { count: task.failures.length, current: failureCount })}
+            </p>
+          ) : null}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button size="sm" disabled={busy || !task.choice} onClick={() => onRecord(true)}>
+              <Check />
+              {t("routing.detail.recordPass")}
+            </Button>
+            <Button size="sm" disabled={busy || !task.choice} onClick={() => onRecord(false)}>
+              <X />
+              {t("routing.detail.recordFailure")}
+            </Button>
+            {task.failures.length > 0 ? (
+              <Button size="sm" variant="ghost" disabled={busy} onClick={onClearFailures}>
+                {t("routing.detail.clearFailures")}
+              </Button>
+            ) : null}
+          </div>
+        </Block>
+      </div>
+
+      {/* Across both columns: a combination reads as "agent · model, chance, cost" and needs the room. */}
+      <div className="lg:col-span-2">
         <Block title={t("routing.detail.override")}>
-          <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-2">
+          <div className="grid max-w-2xl grid-cols-[5rem_minmax(0,1fr)] items-center gap-2">
             <label htmlFor={`level-${task.id}`} className="text-xs text-muted">
               {t("routing.detail.level")}
             </label>
@@ -668,29 +695,6 @@ function TaskDetail({
               {t("routing.detail.reset")}
             </Button>
           ) : null}
-        </Block>
-        <Block title={t("routing.detail.runs")}>
-          <p className="text-xs text-muted">{t("routing.detail.runsHint", { count: ESCALATE_AFTER })}</p>
-          {task.failures.length > 0 ? (
-            <p className="mt-1 text-xs">
-              {t("routing.detail.failureLog", { count: task.failures.length, current: failureCount })}
-            </p>
-          ) : null}
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button size="sm" disabled={busy || !task.choice} onClick={() => onRecord(true)}>
-              <Check />
-              {t("routing.detail.recordPass")}
-            </Button>
-            <Button size="sm" disabled={busy || !task.choice} onClick={() => onRecord(false)}>
-              <X />
-              {t("routing.detail.recordFailure")}
-            </Button>
-            {task.failures.length > 0 ? (
-              <Button size="sm" variant="ghost" disabled={busy} onClick={onClearFailures}>
-                {t("routing.detail.clearFailures")}
-              </Button>
-            ) : null}
-          </div>
         </Block>
       </div>
     </div>

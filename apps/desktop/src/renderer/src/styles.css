@@ -57,6 +57,18 @@ body,
   height: 100%;
 }
 
+/* The shell scrolls its own panes; the window itself never does, so it never adds a second scrollbar. */
+html,
+body {
+  overflow: hidden;
+}
+
+/* Thin scrollbars in the theme's colours, so a pane's scrollbar reads as part of the pane. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--km0-muted) 45%, transparent) transparent;
+}
+
 body {
   margin: 0;
   background: var(--km0-bg);

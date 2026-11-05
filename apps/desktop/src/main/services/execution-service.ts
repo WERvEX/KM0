@@ -179,6 +179,13 @@ function newRunId(now = new Date()): string {
   return `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}-${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}`;
 }
 
+/** How many of a run's tasks go to each agent the direct executor drives. */
+interface DirectCounts {
+  claudeCode: number;
+  codex: number;
+  desktop: number;
+}
+
 const TEXT = {
   "zh-CN": {
     web: "网页调试版不能启动本地程序。请在桌面版里执行，或者导出交接包后自己运行 KM0 Runner。",
@@ -210,8 +217,14 @@ const TEXT = {
     judgeFailed: (message: string) => `结果已导入，但验收没有完成：${message}`,
     exited: (code: number | null) => `执行进程退出，退出码 ${code ?? "无"}。`,
     interrupted: "KM0 关闭时这个执行还没有结束。",
-    directAgents: (count: number) =>
-      `${count} 个任务直接交给对应的 Agent：Claude Code 和 Codex 自动执行，Claude Desktop 等它来领取。`,
+    directAgents: (counts: DirectCounts) =>
+      `${[
+        counts.claudeCode > 0 ? `${counts.claudeCode} 个任务由 Claude Code 自动执行` : null,
+        counts.codex > 0 ? `${counts.codex} 个由 Codex 自动执行` : null,
+        counts.desktop > 0 ? `${counts.desktop} 个等 Claude Desktop 领取` : null,
+      ]
+        .filter(Boolean)
+        .join("，")}。`,
     unsupported: (tasks: string) =>
       `这些任务分给了不能直接执行的 Agent：${tasks}。在路由表里改成 Claude Code、Codex 或 Claude Desktop，或者改用 KM0 Runner 执行。`,
     codexMissing: "没有找到 Codex：npm install -g @openai/codex，或者在“设置 → 执行”里填写启动方式。",
@@ -259,8 +272,18 @@ const TEXT = {
     judgeFailed: (message: string) => `The results are imported, but acceptance did not finish: ${message}`,
     exited: (code: number | null) => `The process exited with code ${code ?? "none"}.`,
     interrupted: "This run had not finished when KM0 closed.",
-    directAgents: (count: number) =>
-      `${count} ${count === 1 ? "task goes" : "tasks go"} straight to its agent: Claude Code and Codex run by themselves, Claude Desktop is waited for.`,
+    directAgents: (counts: DirectCounts) =>
+      `${[
+        counts.claudeCode > 0
+          ? `${counts.claudeCode} ${counts.claudeCode === 1 ? "task runs" : "tasks run"} on Claude Code by itself`
+          : null,
+        counts.codex > 0 ? `${counts.codex} on Codex by itself` : null,
+        counts.desktop > 0
+          ? `${counts.desktop} ${counts.desktop === 1 ? "waits" : "wait"} for Claude Desktop to take ${counts.desktop === 1 ? "it" : "them"}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("; ")}.`,
     unsupported: (tasks: string) =>
       `These tasks went to agents the direct executor cannot run: ${tasks}. Route them to Claude Code, Codex or Claude Desktop, or run with KM0 Runner.`,
     codexMissing:
@@ -711,7 +734,11 @@ export class ExecutionService {
           ? text.unsupported(
               unsupported.map((task) => `${pad(task.seq)} ${names.get(task.agent) ?? task.agent}`).join("、"),
             )
-          : text.directAgents(tasks.length),
+          : text.directAgents({
+              claudeCode: tasks.filter((task) => task.agent === "claude_code").length,
+              codex: tasks.filter((task) => task.agent === "codex").length,
+              desktop: tasks.filter((task) => task.agent === "claude_desktop").length,
+            }),
       fix: unsupported.length > 0 ? "routing" : null,
     });
     const coded = tasks.filter((task) => task.agent === "claude_code");

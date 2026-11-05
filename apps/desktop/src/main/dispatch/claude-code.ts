@@ -67,15 +67,26 @@ export function claudeCodeArgs(model: string | null, maxBudgetUsd: number | null
   ];
 }
 
-/** A short line for the run's log about one tool call: `Edit src/app.ts`. */
-function describeTool(block: { name?: unknown; input?: unknown }): string {
+/** A short line for the run's log about one tool call: `Edit src/app.ts`, paths relative to the worktree. */
+function describeTool(block: { name?: unknown; input?: unknown }, cwd: string): string {
   const input = (block.input ?? {}) as Record<string, unknown>;
-  const target = input.file_path ?? input.path ?? input.pattern ?? input.command ?? "";
-  return `${String(block.name ?? "tool")} ${String(target).split("\n")[0]?.slice(0, 160) ?? ""}`.trim();
+  // A search says more by what it looks for than by where (often the worktree itself).
+  const target = input.file_path ?? input.pattern ?? input.command ?? input.path ?? "";
+  const line = relativeTo(cwd, String(target).split("\n")[0] ?? "");
+  return `${String(block.name ?? "tool")} ${line.slice(0, 160)}`.trim();
+}
+
+/** A line of the run's log with the worktree's own path left out: `src/app.ts`, or `.` for the worktree itself. */
+export function relativeTo(cwd: string, line: string): string {
+  if (!cwd) return line;
+  return line === cwd ? "." : line.replaceAll(`${cwd}/`, "").replaceAll(`${cwd}\\`, "");
 }
 
 /** Fold Claude Code's stream-json events into an outcome; `result` ends the run. */
 export class StreamState implements EventStream {
+  /** `cwd`: the task's worktree, left out of the paths in the log. */
+  constructor(private readonly cwd = "") {}
+
   steps = 0;
   result: AgentOutcome | null = null;
   lastText = "";
@@ -99,7 +110,7 @@ export class StreamState implements EventStream {
       for (const block of content) {
         if (block.type === "tool_use") {
           this.steps += 1;
-          shown.push(`→ ${describeTool(block)}`);
+          shown.push(`→ ${describeTool(block, this.cwd)}`);
         } else if (block.type === "text" && block.text) this.lastText = block.text;
       }
       return shown.length > 0 ? shown.join("\n") : null;
@@ -252,7 +263,7 @@ export function runClaudeCode(options: ClaudeCodeOptions): AgentRun {
     env: options.env,
     eventsFile: options.eventsFile,
     onLine: options.onLine,
-    stream: new StreamState(),
+    stream: new StreamState(options.cwd),
     name: "Claude Code",
   });
 }
