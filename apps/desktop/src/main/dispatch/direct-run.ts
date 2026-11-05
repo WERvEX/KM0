@@ -3,6 +3,7 @@ import { appendFile, cp, mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { RunningProcess } from "../services/exec-port";
 import { type AgentOutcome, type AgentRun, runClaudeCode } from "./claude-code";
+import { runCodex } from "./codex";
 import { AUTHOR, EXCLUDES, GitError, git, gitDiff } from "./git";
 import { findTask, type InboxTask, putTask, readInbox, removeRun, removeTask, updateTask } from "./inbox";
 
@@ -49,6 +50,8 @@ export interface DirectRunOptions {
   reuse: string | null;
   inboxDir: string;
   claudeCommand: string[] | null;
+  /** How to start Codex; null when no task goes to it or it was not found. */
+  codexCommand?: string[] | null;
   /** The project budget; the remainder caps each Claude Code run. */
   budget: number | null;
   language: "zh-CN" | "en";
@@ -72,6 +75,9 @@ const TEXT = {
     conflict: (detail: string) => `合并上游任务的分支时有冲突：${detail}`,
     noAgent: (agent: string) => `直接执行还不能把任务交给 ${agent}。`,
     noClaude: "没有找到 Claude Code。",
+    noCodex: "没有找到 Codex。",
+    codexNote: (branch: string) =>
+      `你在一个独立的 git worktree 里工作，分支是 \`${branch}\`。按下面的任务完成改动；任务有测试命令时，完成后运行它。不要切换分支、提交或推送：你结束后，KM0 会把改动提交到这个分支。项目背景和文档在 \`km0/\` 文件夹里。`,
     gaveUp: (summary: string) => `Agent 放弃了这个任务：${summary}`,
     testsFailed: "测试没有通过。",
     noRepoCommit: "仓库还没有任何提交：先提交一次，再执行。",
@@ -85,6 +91,9 @@ const TEXT = {
     conflict: (detail: string) => `The upstream tasks' branches conflict: ${detail}`,
     noAgent: (agent: string) => `The direct executor cannot hand a task to ${agent} yet.`,
     noClaude: "Claude Code was not found.",
+    noCodex: "Codex was not found.",
+    codexNote: (branch: string) =>
+      `You work in a git worktree of your own, on branch \`${branch}\`. Make the change the task below asks for; when the task has a test command, run it at the end. Do not switch branches, commit or push: when you finish, KM0 commits your changes to this branch. The project's background and documents are in the \`km0/\` folder.`,
     gaveUp: (summary: string) => `The agent gave the task up: ${summary}`,
     testsFailed: "The tests do not pass.",
     noRepoCommit: "The repository has no commit yet: commit once, then run.",
@@ -391,7 +400,7 @@ export class DirectRun implements RunningProcess {
         wall_time: wallTime,
         stop_reason: outcome.stopReason,
         test_result: testResult,
-        events: task.agent === "claude_code" ? `events/${taskId}.jsonl` : null,
+        events: task.agent === "claude_code" || task.agent === "codex" ? `events/${taskId}.jsonl` : null,
       },
     ];
     await this.removeWorktree(worktree);
@@ -431,6 +440,23 @@ export class DirectRun implements RunningProcess {
         model: task.model,
         env: task.env,
         maxBudgetUsd: left,
+        eventsFile,
+        onLine: options.onLine,
+      });
+      const outcome = await this.current.outcome;
+      this.current = null;
+      return outcome;
+    }
+    if (task.agent === "codex") {
+      if (!options.codexCommand) return failed(text.noCodex);
+      const eventsFile = join(options.runDir, "events", `${pad(task.seq)}.jsonl`);
+      await mkdir(dirname(eventsFile), { recursive: true });
+      this.current = runCodex({
+        command: options.codexCommand,
+        cwd: worktree,
+        prompt: `${text.codexNote(branch)}\n\n---\n\n${task.prompt}`,
+        model: task.model,
+        env: task.env,
         eventsFile,
         onLine: options.onLine,
       });

@@ -94,6 +94,8 @@ export const en: Messages = {
         "When the provider has an API key or a relay address, KM0 passes it to Claude Code as environment variables; otherwise Claude Code uses its own sign-in. With a subscription sign-in, check that being run this way fits its terms.",
       claudeCommand: "How to start Claude Code (optional)",
       claudeCommandHint: "Such as /usr/local/bin/claude; empty looks for claude on PATH",
+      codexCommand: "How to start Codex (optional)",
+      codexCommandHint: "Such as /usr/local/bin/codex; empty looks for codex on PATH",
       desktopSteps: [
         "In Claude Desktop, open Settings → Developer → Edit Config, merge the entry below into claude_desktop_config.json and restart Claude Desktop.",
         "Enable Claude Desktop under Settings → Agents, then give it tasks in the routing table.",
@@ -760,7 +762,7 @@ export const en: Messages = {
   },
   runner: {
     title: "Run acceptance",
-    body: "Import a KM0 Runner run (its runs/<run_id> folder) and the planner model checks each change against the task's acceptance criteria. Every attempt corrects the model's ability estimate, and a rejected task is handed off again to a stronger combination; verdicts are written back to acceptance.jsonl, which the Runner calibrates the routing rules from.",
+    body: "Runs started from KM0 land here when they end; import a KM0 Runner run of your own from its runs/<run_id> folder. The planner model checks each change against the task's acceptance criteria. Every attempt corrects the model's ability estimate, and a rejected task is handed off again to a stronger combination; verdicts are written back to acceptance.jsonl, which the Runner calibrates the routing rules from.",
     import: "Import a run",
     empty: "No runs imported yet.",
     summary: "{{count}} tasks · {{accepted}} accepted · {{cost}}",

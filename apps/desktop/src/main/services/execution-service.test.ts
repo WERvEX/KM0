@@ -413,7 +413,8 @@ describe("progress", () => {
     expect(done.tasks).toEqual([
       expect.objectContaining({ seq: 1, agent: "claude_code", status: "unjudged", cost: 0.0125 }),
     ]);
-    expect(done.log).toContain(`→ Write ${join(first.runDir, "worktrees", "01", "claude-01.txt")}`);
+    // Paths in the log are relative to the task's worktree.
+    expect(done.log).toContain("→ Write claude-01.txt");
     expect(execSync(`git show km0/${first.runId}/01:claude-01.txt`, { cwd: repo, encoding: "utf8" })).toMatch(
       /task 01/,
     );

@@ -99,6 +99,8 @@ export const zhCN = {
         "服务商配了 API Key 或中转地址时，KM0 通过环境变量交给 Claude Code；没配时它用自己的登录。用订阅登录时，请自行确认这样调用符合订阅条款。",
       claudeCommand: "Claude Code 启动方式（可选）",
       claudeCommandHint: "例如 /usr/local/bin/claude；留空则在 PATH 里查找 claude",
+      codexCommand: "Codex 启动方式（可选）",
+      codexCommandHint: "例如 /usr/local/bin/codex；留空则在 PATH 里查找 codex",
       desktopSteps: [
         "在 Claude Desktop 的“设置 → 开发者 → 编辑配置”里，把下面的内容合并进 claude_desktop_config.json，然后重启 Claude Desktop。",
         "在“设置 → Agent”里启用 Claude Desktop，然后在路由表里把任务指定给它。",
@@ -739,7 +741,7 @@ export const zhCN = {
   },
   runner: {
     title: "执行结果验收",
-    body: "导入 KM0 Runner 的一次运行（runs/<run_id> 文件夹），由规划模型逐个对照验收标准判定。每次尝试都会修正模型的能力估计，未通过的任务会换到更强的组合重新分发；判定结果写回 acceptance.jsonl，供 Runner 校准路由规则。",
+    body: "在 KM0 里执行的结果结束后自动出现在这里；自己运行 KM0 Runner 的结果可以导入（runs/<run_id> 文件夹）。规划模型逐个对照验收标准判定，每次尝试都会修正模型的能力估计，未通过的任务会换到更强的组合重新分发；判定结果写回 acceptance.jsonl，供 Runner 校准路由规则。",
     import: "导入运行",
     empty: "还没有导入过运行。",
     summary: "{{count}} 个任务 · {{accepted}} 个已通过 · {{cost}}",
