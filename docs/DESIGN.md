@@ -210,7 +210,7 @@ km0/agents/km0.mdc
 
 ### 直接交给 Agent（1.1）
 
-第三种执行方式。KM0 只负责规划每个任务由哪个 Agent 的哪个模型来做，然后把任务原样交给它；执行中不切换模型（Runner 仍然按自己的规则切换）。目前能直接交付的 Agent 是 Claude Code 和 Claude Desktop（`DIRECT_AGENTS`），其他 Agent 的任务在预检里列出、阻止开始。
+第三种执行方式。KM0 只负责规划每个任务由哪个 Agent 的哪个模型来做，然后把任务原样交给它；执行中不切换模型（Runner 仍然按自己的规则切换）。目前能直接交付的 Agent 是 Claude Code、Claude Desktop 和 Codex（`DIRECT_AGENTS`），其他 Agent 的任务在预检里列出、阻止开始。
 
 - **执行过程**（`apps/desktop/src/main/dispatch/direct-run.ts`，在主进程里运行）：
   1. 按依赖顺序，给每个任务在运行目录下建 worktree，分支 `km0/<run_id>/<NN>`。有依赖的任务从第一个上游分支开始，再依次合并其他上游分支，冲突就标为“阻塞”。
@@ -229,9 +229,12 @@ km0/agents/km0.mdc
   - Claude Desktop 通过 KM0 的 MCP 服务器（`src/mcp/server.ts`）调用 `km0_next_task` 领取任务，用 `km0_list_files`、`km0_read_file`、`km0_write_file`、`km0_delete_file` 修改，用 `km0_run_tests` 跑测试，最后 `km0_report`。
   - 这些文件工具只能访问任务的 worktree：不能用 `..` 跳出，不能碰 `.git`，符号链接按真实路径检查。
   - MCP 服务器是一个独立的脚本（esbuild 打包成 `out/mcp/km0-mcp.cjs`，安装包里放在 asar 之外的 `resources/km0-mcp.cjs`），由 KM0 自己的可执行文件以 `ELECTRON_RUN_AS_NODE=1` 运行；它不碰数据库，只读写 `dispatch/`。“设置 → 执行”给出要加进 `claude_desktop_config.json` 的片段，以及交互式 Claude Code 用的 `claude mcp add` 命令。
+- **Codex**（`dispatch/codex.ts`）：
+  - 命令：`codex exec --json --sandbox workspace-write --model <模型> -`，提示词从 stdin 传入，与 Claude Code 共用进程执行器。
+  - 读输出：工具调用计步并写入输出日志（路径相对 worktree）；`turn.completed` 给出 token 用量，`turn.failed` 或 `error` 判为失败。使用本机 Codex 自己的登录（要求 0.100.0 或更新）。
 - **测试**：
-  - `e2e/fixtures/fake-claude.mjs` 冒充 `claude`；单测和 e2e 里由脚本化的 MCP 客户端扮演 Claude Desktop。e2e 用设置页给出的片段原样启动 MCP 服务器。
-  - `KM0_CLAUDE_REAL=1` 时用真实的 `claude` 跑一个小任务。
+  - `e2e/fixtures/fake-claude.mjs` 冒充 `claude`，`e2e/fixtures/fake-codex.mjs` 冒充 `codex`；单测和 e2e 里由脚本化的 MCP 客户端扮演 Claude Desktop。e2e 用设置页给出的片段原样启动 MCP 服务器。
+  - `KM0_CLAUDE_REAL=1` 时用真实的 `claude` 跑一个小任务，`KM0_CODEX_REAL=1` 时用真实的 `codex` 跑一个小任务。
   - 真实环境的手动验收见 [checklists/claude-agents.md](checklists/claude-agents.md)。
 
 ### 更新、备份与评测（正式版 R6）
@@ -363,7 +366,7 @@ IPC 通道定义在 `packages/shared/src/ipc.ts`，主进程按 zod schema 校�
 | P5 界面 | 完整工作区、问题卡、决策账本、文档页、路由表、交接面板、设置页 | 端到端走完一条完整通道并截图；**完成后暂停，请用户确认界面** |
 | P6 收尾 | 技术选型查证（Bocha / MCP）、仓库扫描、配置导入导出、README | 全量测试通过；三平台安装包 |
 
-P0–P6 已完成，0.1.0 已发布；之后接入了 KM0 Runner 与验收（见“Agent 交接”一节）。正式版的阶段 R0–R6 见 [ROADMAP-1.0.md](ROADMAP-1.0.md)，1.0 已发布；1.1 的规划见 [ROADMAP-1.1.md](ROADMAP-1.1.md)。
+P0–P6 已完成，0.1.0 已发布；之后接入了 KM0 Runner 与验收（见“Agent 交接”一节）。正式版的阶段 R0–R6 见 [ROADMAP-1.0.md](ROADMAP-1.0.md)，1.0 已发布；1.1 的规划见 [ROADMAP-1.1.md](ROADMAP-1.1.md)，1.1 已发布。
 
 ## 风险
 

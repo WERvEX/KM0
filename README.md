@@ -1,10 +1,10 @@
 # KM0
 
-KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断它的复杂度，通过提问和你把需求与实现方案谈清楚，输出《产品需求文档》和《技术实现方案》，再把实现拆成任务，按公开榜单估计的能力为每个任务选择合适的 Agent 和模型（Claude Code、Codex、Cursor、Pi、DSH、ZCode、你自己添加的 Agent，或通用格式），生成可以直接交接的任务包，也可以一键交给 KM0 Runner 执行。简单的任务交给便宜的模型，复杂的任务才用强模型。
+KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断它的复杂度，通过提问和你把需求与实现方案谈清楚，输出《产品需求文档》和《技术实现方案》，再把实现拆成任务，按公开榜单估计的能力为每个任务选择合适的 Agent 和模型（Claude Code、Codex、Cursor、Pi、DSH、ZCode、你自己添加的 Agent，或通用格式），生成可以直接交接的任务包，也可以一键直接交给对应的 Agent（Claude Code、Claude Desktop、Codex）或 KM0 Runner 执行。简单的任务交给便宜的模型，复杂的任务才用强模型。
 
 名字取自“零公里”：所有道路的里程都从这里起算。
 
-> 当前版本 1.0（[发布说明](docs/releases/v1.0.0.md)）。设置环境变量 `KM0_FAKE_LLM=1` 可以用模拟模型体验流程，不需要 API Key。设计见 [docs/DESIGN.md](docs/DESIGN.md)，1.0 的规划见 [docs/ROADMAP-1.0.md](docs/ROADMAP-1.0.md)，下一版（1.1）的规划见 [docs/ROADMAP-1.1.md](docs/ROADMAP-1.1.md)。
+> 当前版本 1.1（[发布说明](docs/releases/v1.1.0.md)）。设置环境变量 `KM0_FAKE_LLM=1` 可以用模拟模型体验流程，不需要 API Key。设计见 [docs/DESIGN.md](docs/DESIGN.md)，1.0 与 1.1 的规划见 [docs/ROADMAP-1.0.md](docs/ROADMAP-1.0.md)、[docs/ROADMAP-1.1.md](docs/ROADMAP-1.1.md)。
 
 ## 下载
 
@@ -12,12 +12,12 @@ KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断�
 
 | 平台 | 文件 |
 | --- | --- |
-| Windows (x64) | `KM0-1.0.0-setup-x64.exe` |
-| macOS (Apple 芯片) | `KM0-1.0.0-arm64.dmg` |
-| macOS (Intel) | `KM0-1.0.0-x64.dmg` |
-| Linux (x64) | `KM0-1.0.0-x86_64.AppImage`（先 `chmod +x`） |
+| Windows (x64) | `KM0-1.1.0-setup-x64.exe` |
+| macOS (Apple 芯片) | `KM0-1.1.0-arm64.dmg` |
+| macOS (Intel) | `KM0-1.1.0-x64.dmg` |
+| Linux (x64) | `KM0-1.1.0-x86_64.AppImage`（先 `chmod +x`） |
 
-1.0.0 的安装包没有签名：Windows 首次运行会出现 SmartScreen 提示，点“更多信息 → 仍要运行”；macOS 会提示“无法验证开发者”，在“系统设置 → 隐私与安全性”里点“仍要打开”。装好后在“设置 → 关于”里检查和安装新版本（未签名的 macOS 版本和非 AppImage 的 Linux 安装需要重新下载）。
+1.1.0 的安装包没有签名：Windows 首次运行会出现 SmartScreen 提示，点“更多信息 → 仍要运行”；macOS 会提示“无法验证开发者”，在“系统设置 → 隐私与安全性”里点“仍要打开”。装好后在“设置 → 关于”里检查和安装新版本（未签名的 macOS 版本和非 AppImage 的 Linux 安装需要重新下载）。
 
 ## 截图
 
@@ -35,7 +35,7 @@ KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断�
 
 ![任务路由](docs/screenshots/routing.png)
 
-**执行**：交给 KM0 Runner 执行，实时看每个任务的进度和花费，结束后自动导入并验收。
+**执行**：直接交给各 Agent 或交给 KM0 Runner 执行，实时看每个任务的进度和花费，结束后自动导入并验收。
 
 ![执行](docs/screenshots/execution.png)
 
@@ -47,7 +47,7 @@ KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断�
 
 - 桌面应用（Windows / macOS / Linux），数据全部保存在本地。
 - 支持 OpenAI 兼容接口（OpenAI、DeepSeek、Qwen、GLM、MiMo 等）和 Anthropic 接口。
-- API Key 由操作系统凭据存储加密。KM0 自己不改你的仓库；执行时由 KM0 Runner 在独立的 git worktree 和分支里改动，不碰你的工作区。
+- API Key 由操作系统凭据存储加密。KM0 自己不改你的仓库；执行时在独立的 git worktree 和分支里改动，不碰你的工作区。
 
 ## 能做什么
 
@@ -58,13 +58,16 @@ KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断�
 5. **文档**：生成 PRD 和技术方案（轻量通道是一份精简版），支持按小节编辑、AI 修订、版本恢复，决策变了会标出过期的小节。
 6. **任务路由**：拆成任务，按特征给每个任务定难度，再在所有“Agent × 模型”组合里按策略档位（激进、偏省、平衡、偏稳、保守）选：达到目标首次通过率的组合里期望成本最低的。通过率来自公开榜单（SWE-bench、Terminal-Bench 等）估计的能力，并用你本机记录的运行结果修正。每个任务显示预计通过率、期望成本和理由，可以设项目预算，每一项都能手动调整。
 7. **交接**：为 Claude Code、Codex、Cursor、Pi、DSH、ZCode 和通用格式生成交接包（zip），解压到代码库根目录后都在 `km0/` 文件夹里。
-8. **执行与验收**：在路由表下方一键交给 [KM0 Runner](https://github.com/WERvEX/KM0-runner)（0.3.0 或更新）执行：KM0 先逐项检查，再根据路由结果和你的模型生成 Runner 配置（密钥只通过环境变量传给它），实时显示每个任务的进度，可以随时停止。结束后 KM0 自动导入结果，用规划模型对照每个任务的 EARS 验收标准判定，可以手动改判；未通过的任务换到更强的组合重做。也可以导入自己运行的结果，或改用自定义命令执行（未验证）。
+8. **执行与验收**：在路由表下方选择执行方式一键执行：
+   - **直接交给 Agent**：按依赖顺序在独立 worktree 与分支里直接交给对应的 Agent 执行——支持 **Claude Code**（`claude -p`）、**Claude Desktop**（通过内置 MCP 服务器领取任务）和 **Codex**（`codex exec`）；
+   - **KM0 Runner**（需要 [KM0 Runner](https://github.com/WERvEX/KM0-runner) 0.3.0 或更新）：KM0 先逐项检查，再根据路由结果和你的模型生成 Runner 配置（密钥只通过环境变量传给它），实时显示每个任务的进度，可以随时停止。
+   - 结束后 KM0 自动导入结果，用规划模型对照每个任务的 EARS 验收标准判定，可以手动改判；未通过的任务换到更强的组合重做。也可以导入自己运行的结果，或改用自定义命令执行（未验证）。
 
 ## 快速上手
 
 1. 设置 → 模型：添加一个模型并测试连接。第一个模型自动作为路由模型；可以再加一个能力更强的作为规划模型。
 2. 设置 → Agent：启用你用的 Agent，勾选每个 Agent 能用的模型。模型会自动匹配榜单数据，拿到官方价格和能力估计；服务商的计费方式（按 token、中转倍率、订阅、免费）在“设置 → 模型”里选。
-3. 设置 → 执行（可选）：安装 KM0 Runner 和 pi 后，KM0 会自动找到它们；也可以填写启动方式或改用自定义命令。
+3. 设置 → 执行（可选）：选择执行方式——“直接交给 Agent”会自动寻找本地 `claude` 与 `codex`，并提供一键复制的 Claude Desktop MCP 配置片段；选择“KM0 Runner”时，安装 KM0 Runner 和 pi 后 KM0 会自动找到它们；也可以填写启动方式或改用自定义命令。
 4. 设置 → 搜索服务（可选）：
    - 博查：填 API Key 即可。
    - 远程 MCP 服务器：填地址、搜索工具名和查询参数名，需要鉴权时在“请求头”里每行写一个 `Name=value`。
