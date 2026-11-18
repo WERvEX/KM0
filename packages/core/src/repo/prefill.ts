@@ -27,5 +27,43 @@ export function decisionsFromScan(scan: RepoScan, language: Language): DecisionD
       alternatives: [],
     });
   }
+  const modules = scan.modules ?? [];
+  if (modules.length > 0) {
+    const formatted = modules.map((m) =>
+      m.description
+        ? language === "zh-CN"
+          ? `${m.path}（${m.description}）`
+          : `${m.path} (${m.description})`
+        : m.path,
+    );
+    drafts.push({
+      key: "modules",
+      value: {
+        text: formatted.join(language === "zh-CN" ? "、" : ", "),
+        ...(modules.length > 1 ? { items: modules.map((m) => m.path) } : {}),
+      },
+      source: "ai",
+      rationale:
+        language === "zh-CN" ? "沿用现有仓库的目录与模块划分" : "Keeps the existing repository's module structure",
+      alternatives: [],
+    });
+  }
+  if (scan.testCommand) {
+    drafts.push({
+      key: "test_strategy",
+      value: {
+        text:
+          language === "zh-CN"
+            ? `运行现有测试命令 \`${scan.testCommand}\` 并为新增或修改的逻辑补充测试`
+            : `Run \`${scan.testCommand}\` and add tests for new or changed behaviour`,
+      },
+      source: "ai",
+      rationale:
+        language === "zh-CN"
+          ? `沿用仓库现有的测试命令 \`${scan.testCommand}\``
+          : `Uses the repository's test command \`${scan.testCommand}\``,
+      alternatives: [],
+    });
+  }
   return drafts;
 }

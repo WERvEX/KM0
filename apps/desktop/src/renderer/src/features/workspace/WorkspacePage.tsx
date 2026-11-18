@@ -24,7 +24,8 @@ export function WorkspacePage() {
   const steps = ["triage", "discuss", "route", "handoff"] as const;
 
   const create = useMutation({
-    mutationFn: () => call("project.create", { description: description.trim(), repoPath: linked?.path ?? null }),
+    mutationFn: (quickStart: boolean) =>
+      call("project.create", { description: description.trim(), repoPath: linked?.path ?? null, quickStart }),
     onSuccess: (detail) => {
       queryClient.setQueryData(projectKey(detail.id), detail);
       void queryClient.invalidateQueries({ queryKey: ["project.list"] });
@@ -65,7 +66,7 @@ export function WorkspacePage() {
         className="rounded-lg border border-border bg-panel p-4"
         onSubmit={(event) => {
           event.preventDefault();
-          if (canSubmit) create.mutate();
+          if (canSubmit) create.mutate(false);
         }}
       >
         <Textarea
@@ -76,7 +77,7 @@ export function WorkspacePage() {
           disabled={!hasModel || create.isPending}
           onChange={(event) => setDescription(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && canSubmit) create.mutate();
+            if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && canSubmit) create.mutate(false);
           }}
         />
         <RepoLink
@@ -95,10 +96,23 @@ export function WorkspacePage() {
             {!hasModel ? t("workspace.needModel") : simulated ? t("workspace.simulated") : ""}
           </p>
           {hasModel ? (
-            <Button type="submit" variant="primary" disabled={!canSubmit}>
-              {create.isPending ? <Loader2 className="animate-spin" /> : null}
-              {create.isPending ? t("project.creating") : t("workspace.submit")}
-            </Button>
+            <div className="flex items-center gap-2">
+              {linked ? (
+                <Button
+                  type="button"
+                  disabled={!canSubmit}
+                  title={t("workspace.quickStartHint")}
+                  onClick={() => create.mutate(true)}
+                >
+                  {create.isPending && create.variables === true ? <Loader2 className="animate-spin" /> : null}
+                  {create.isPending && create.variables === true ? t("project.creating") : t("workspace.quickStart")}
+                </Button>
+              ) : null}
+              <Button type="submit" variant="primary" disabled={!canSubmit}>
+                {create.isPending && create.variables !== true ? <Loader2 className="animate-spin" /> : null}
+                {create.isPending && create.variables !== true ? t("project.creating") : t("workspace.submit")}
+              </Button>
+            </div>
           ) : (
             <Button asChild variant="primary">
               <Link to="/settings">
@@ -169,6 +183,11 @@ function RepoLink({
             {scan.stack.length > 0
               ? t("workspace.repo.detected", { value: scan.stack.map((item) => item.name).join(", ") })
               : t("workspace.repo.nothing")}
+            {scan.modules.length > 0 ? ` · ${t("workspace.repo.modules", { count: scan.modules.length })}` : ""}
+            {scan.testCommand ? ` · ${t("workspace.repo.testCommand", { value: scan.testCommand })}` : ""}
+            {scan.guides.length > 0
+              ? ` · ${t("workspace.repo.guides", { value: scan.guides.map((g) => g.file).join(", ") })}`
+              : ""}
           </span>
           <Button type="button" size="sm" variant="ghost" onClick={onPick} disabled={disabled || busy}>
             {t("workspace.repo.change")}

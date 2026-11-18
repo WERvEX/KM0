@@ -554,6 +554,28 @@ describe("breakdown", () => {
     expect(system).toContain("Do not prescribe internal structure");
   });
 
+  it("allows more tasks and grounds files on fast-path existing-codebase projects", () => {
+    const system = breakdownSystem({
+      language: "zh-CN",
+      path: "fast",
+      title: "t",
+      description: "d",
+      triage: {
+        title: "t",
+        taskType: "feature",
+        complexity: "L",
+        suggestedPath: "full",
+        hasCodebase: true,
+        summary: "s",
+        reasons: [],
+      },
+      decisions: [],
+      documents: [],
+    });
+    expect(system).toContain("Return 2-6 tasks.");
+    expect(system).toContain("ground each task's `files` and `test_command`");
+  });
+
   it("keeps only earlier tasks as prerequisites and references that exist", async () => {
     const llm = createSimulatedLlm();
     const tasks = await breakDown(llm, {

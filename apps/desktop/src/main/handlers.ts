@@ -129,7 +129,7 @@ export function createHandlers({
     "folder.answer": (answer) => folders?.answer(answer),
 
     "project.list": () => projects.list(),
-    "project.create": ({ description, repoPath }) => projects.create(description, repoPath),
+    "project.create": ({ description, repoPath, quickStart }) => projects.create(description, repoPath, quickStart),
     "project.get": ({ id }) => projects.get(id),
     "project.rename": ({ id, title }) => projects.rename(id, title),
     "project.setRepo": ({ id, path }) => projects.setRepo(id, path),

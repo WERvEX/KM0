@@ -233,6 +233,15 @@ function Header({
               })}
             </span>
           ) : null}
+          {detail.repoScan.modules.length > 0 ? (
+            <span>· {t("workspace.repo.modules", { count: detail.repoScan.modules.length })}</span>
+          ) : null}
+          {detail.repoScan.testCommand ? (
+            <span>· {t("workspace.repo.testCommand", { value: detail.repoScan.testCommand })}</span>
+          ) : null}
+          {detail.repoScan.guides.length > 0 ? (
+            <span>· {t("workspace.repo.guides", { value: detail.repoScan.guides.map((g) => g.file).join(", ") })}</span>
+          ) : null}
         </div>
       ) : null}
       <StageStepper detail={detail} />

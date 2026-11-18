@@ -38,6 +38,8 @@ export const zhCN = {
     subtitle: "描述你要做的事。KM0 会判断它的复杂度，和你把需求和方案谈清楚，再把每个任务交给合适的模型和 Agent。",
     placeholder: "例如：给我的 FastAPI 项目加上 GitHub 登录",
     submit: "开始分诊",
+    quickStart: "快速规划",
+    quickStartHint: "跳过多阶段问答，确认改动范围后直接拆分任务",
     simulated: "当前使用模拟模型（KM0_FAKE_LLM=1），回答是固定的示例。",
     needModel: "先配置一个模型，KM0 才能开始工作。",
     configureModel: "去配置模型",
@@ -50,6 +52,9 @@ export const zhCN = {
       detected: "识别到：{{value}}",
       nothing: "没有识别出技术栈",
       files: "{{count}} 个文件",
+      modules: "{{count}} 个模块",
+      guides: "规范：{{value}}",
+      testCommand: "测试：{{value}}",
     },
     stepsTitle: "接下来会发生什么",
     steps: {

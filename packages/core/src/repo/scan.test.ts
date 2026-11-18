@@ -99,7 +99,46 @@ describe("scanRepo", () => {
 
   it("finds nothing in an empty folder without failing", async () => {
     const scan = await scanRepo(memoryFs({}), opts);
-    expect(scan).toMatchObject({ fileCount: 0, stack: [], languages: [], readme: null });
+    expect(scan).toMatchObject({
+      fileCount: 0,
+      stack: [],
+      languages: [],
+      readme: null,
+      modules: [],
+      scripts: [],
+      guides: [],
+    });
+  });
+
+  it("discovers workspace modules, package scripts and project guide files", async () => {
+    const scan = await scanRepo(
+      memoryFs({
+        "package.json": JSON.stringify({
+          scripts: { dev: "vite", test: "vitest run", build: "tsc" },
+        }),
+        "pnpm-lock.yaml": "",
+        "CLAUDE.md": "Always run pnpm test before finishing.",
+        "docs/DESIGN.md": "# Architecture\nMonorepo with shared schema and core logic.",
+        "packages/core/package.json": JSON.stringify({ description: "Core domain logic" }),
+        "packages/core/src/index.ts": "",
+        "src/server/index.ts": "",
+      }),
+      opts,
+    );
+    expect(scan.scripts).toEqual(["dev", "test", "build"]);
+    expect(scan.modules).toEqual([
+      { path: "packages/core", description: "Core domain logic" },
+      { path: "src/server", description: null },
+    ]);
+    expect(scan.guides).toEqual([
+      { file: "CLAUDE.md", excerpt: "Always run pnpm test before finishing." },
+      { file: "docs/DESIGN.md", excerpt: "# Architecture\nMonorepo with shared schema and core logic." },
+    ]);
+    const summary = repoSummary(scan);
+    expect(summary).toContain("Scripts: dev, test, build.");
+    expect(summary).toContain("Modules: packages/core (Core domain logic), src/server.");
+    expect(summary).toContain("Project guides:");
+    expect(summary).toContain("### CLAUDE.md");
   });
 });
 
@@ -128,5 +167,23 @@ describe("decisionsFromScan", () => {
     ]);
     expect(drafts[0]?.rationale).toContain("package.json");
     expect(repoSummary(scan)).toContain("Detected frontend: Vue.");
+  });
+
+  it("prefills modules and test_strategy when the scan finds modules and a test command", async () => {
+    const scan = await scanRepo(
+      memoryFs({
+        "package.json": JSON.stringify({ scripts: { test: "vitest run" }, dependencies: { react: "19" } }),
+        "pnpm-lock.yaml": "",
+        "packages/core/package.json": JSON.stringify({ description: "Domain rules" }),
+        "packages/core/index.ts": "",
+      }),
+      opts,
+    );
+    const drafts = decisionsFromScan(scan, "zh-CN");
+    expect(drafts.map((draft) => [draft.key, draft.value.text])).toEqual([
+      ["frontend", "React"],
+      ["modules", "packages/core（Domain rules）"],
+      ["test_strategy", "运行现有测试命令 `pnpm test` 并为新增或修改的逻辑补充测试"],
+    ]);
   });
 });

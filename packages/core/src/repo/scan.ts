@@ -1,4 +1,4 @@
-import type { RepoScan, StackItem, StackLayer } from "@km0/shared";
+import type { RepoGuide, RepoModule, RepoScan, StackItem, StackLayer } from "@km0/shared";
 
 /** Read-only access to a repository. Paths are relative to its root and use forward slashes. */
 export interface RepoFs {
@@ -11,6 +11,21 @@ const MAX_FILES = 5000;
 const MAX_DEPTH = 6;
 const MANIFEST_BYTES = 200_000;
 const README_CHARS = 1500;
+const GUIDE_CHARS = 1200;
+const MAX_MODULES = 20;
+const MAX_GUIDES = 3;
+
+const WORKSPACE_DIRS = new Set(["packages", "apps", "services", "crates", "modules"]);
+const SOURCE_DIRS = new Set(["src", "app", "lib", "cmd", "internal", "pkg", "server", "client"]);
+const GUIDE_NAMES = new Set([
+  "agents.md",
+  "claude.md",
+  ".cursorrules",
+  "architecture.md",
+  "design.md",
+  "contributing.md",
+  "copilot-instructions.md",
+]);
 
 const SKIP_DIRS = new Set([
   ".git",
@@ -434,6 +449,38 @@ export function detectTestCommand(rootFiles: Map<string, string | null>, manager
 const TEST_MARKERS = new Set(["package.json", "Makefile", "pyproject.toml", "setup.cfg", "tox.ini"]);
 const TEST_PRESENCE = new Set(["go.mod", "Cargo.toml", "pytest.ini", "conftest.py"]);
 
+function extractScripts(packageJsonText: string | null | undefined): string[] {
+  if (!packageJsonText) return [];
+  try {
+    const json = JSON.parse(packageJsonText) as { scripts?: Record<string, unknown> };
+    return Object.entries(json.scripts ?? {})
+      .filter(([, value]) => typeof value === "string" && value.trim() && !NO_TEST_SCRIPT.test(value))
+      .map(([name]) => name)
+      .slice(0, 12);
+  } catch {
+    return [];
+  }
+}
+
+function manifestDescription(file: string, text: string): string | null {
+  const base = file.split("/").pop() ?? file;
+  if (base === "package.json") {
+    try {
+      const json = JSON.parse(text) as { description?: unknown };
+      return typeof json.description === "string" && json.description.trim()
+        ? json.description.trim().slice(0, 120)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+  if (base === "Cargo.toml" || base === "pyproject.toml") {
+    const match = /^description\s*=\s*["']([^"'\r\n]+)["']/m.exec(text);
+    return match?.[1]?.trim() ? match[1].trim().slice(0, 120) : null;
+  }
+  return null;
+}
+
 export interface ScanOptions {
   root: string;
   name: string;
@@ -448,6 +495,8 @@ export async function scanRepo(fs: RepoFs, options: ScanOptions): Promise<RepoSc
   const languageCounts = new Map<string, number>();
   const stack: StackItem[] = [];
   const managers = new Set<string>();
+  const moduleMap = new Map<string, string | null>();
+  const guides: RepoGuide[] = [];
   let fileCount = 0;
   let truncated = false;
   let hasTests = false;
@@ -472,6 +521,14 @@ export async function scanRepo(fs: RepoFs, options: ScanOptions): Promise<RepoSc
       if (entry.dir) {
         if (path === ".github/workflows" || entry.name === ".gitlab-ci" || entry.name === ".circleci") hasCi = true;
         if (TEST_DIRS.has(entry.name)) hasTests = true;
+        if (
+          depth === 1 &&
+          !entry.name.startsWith(".") &&
+          (WORKSPACE_DIRS.has(dir) || (SOURCE_DIRS.has(dir) && !TEST_DIRS.has(entry.name))) &&
+          moduleMap.size < MAX_MODULES
+        ) {
+          moduleMap.set(path, null);
+        }
         if (depth + 1 < MAX_DEPTH && (!SKIP_DIRS.has(entry.name) || path === ".github")) {
           if (!entry.name.startsWith(".") || entry.name === ".github") queue.push({ dir: path, depth: depth + 1 });
         }
@@ -499,11 +556,26 @@ export async function scanRepo(fs: RepoFs, options: ScanOptions): Promise<RepoSc
       if (marker) stack.push({ layer: marker[0], name: marker[1], file: path });
       if (MANIFESTS.has(entry.name)) {
         const text = await fs.read(path, MANIFEST_BYTES);
-        if (text) stack.push(...stackFromManifest(path, text));
+        if (text) {
+          stack.push(...stackFromManifest(path, text));
+          if (depth === 2 && moduleMap.has(dir)) {
+            const desc = manifestDescription(path, text);
+            if (desc) moduleMap.set(dir, desc);
+          }
+        }
       }
       if (depth === 0 && readme === null && /^readme(\.md|\.markdown|\.txt|\.rst)?$/i.test(entry.name)) {
         const text = await fs.read(path, README_CHARS * 4);
         readme = text ? text.slice(0, README_CHARS).trim() : null;
+      }
+      if (
+        depth <= 1 &&
+        guides.length < MAX_GUIDES &&
+        GUIDE_NAMES.has(entry.name.toLowerCase()) &&
+        (depth === 0 || dir === "docs" || dir === ".github")
+      ) {
+        const text = await fs.read(path, GUIDE_CHARS * 4);
+        if (text?.trim()) guides.push({ file: path, excerpt: text.slice(0, GUIDE_CHARS).trim() });
       }
     }
     if (truncated) break;
@@ -516,6 +588,7 @@ export async function scanRepo(fs: RepoFs, options: ScanOptions): Promise<RepoSc
   if (languages.some((language) => language.name === "HTML") && !stack.some((item) => item.layer === "frontend")) {
     stack.push({ layer: "frontend", name: "HTML/CSS", file: "" });
   }
+  const modules: RepoModule[] = [...moduleMap.entries()].map(([path, description]) => ({ path, description }));
   return {
     root: options.root,
     name: options.name,
@@ -529,6 +602,9 @@ export async function scanRepo(fs: RepoFs, options: ScanOptions): Promise<RepoSc
     hasCi,
     topLevel,
     readme,
+    modules,
+    scripts: extractScripts(rootFiles.get("package.json")),
+    guides,
     scannedAt: (options.now ?? (() => new Date().toISOString()))(),
   };
 }
@@ -568,8 +644,15 @@ export function repoSummary(scan: RepoScan): string {
     scan.packageManagers.length > 0 ? `Package managers: ${scan.packageManagers.join(", ")}.` : "",
     `Tests: ${scan.hasTests ? "yes" : "none found"}. CI: ${scan.hasCi ? "yes" : "none found"}.`,
     scan.testCommand ? `Test command: \`${scan.testCommand}\`.` : "",
+    scan.scripts && scan.scripts.length > 0 ? `Scripts: ${scan.scripts.join(", ")}.` : "",
+    scan.modules && scan.modules.length > 0
+      ? `Modules: ${scan.modules.map((m) => (m.description ? `${m.path} (${m.description})` : m.path)).join(", ")}.`
+      : "",
     scan.topLevel.length > 0 ? `Top level: ${scan.topLevel.join(" ")}` : "",
     scan.readme ? `README excerpt:\n${scan.readme.slice(0, 800)}` : "",
+    scan.guides && scan.guides.length > 0
+      ? `Project guides:\n${scan.guides.map((g) => `### ${g.file}\n${g.excerpt}`).join("\n\n")}`
+      : "",
   ];
   return lines.filter(Boolean).join("\n");
 }

@@ -2,7 +2,7 @@ import { createSimulatedLlm, type DiscussionLlm } from "@km0/core";
 import { AppError, type ProjectDetail } from "@km0/shared";
 import { describe, expect, it } from "vitest";
 import { openDatabase } from "../db/database";
-import { ProjectService } from "./project-service";
+import { ProjectService, readDecisions } from "./project-service";
 import type { RepoAccess } from "./repo-access";
 
 function setup(llm: DiscussionLlm = createSimulatedLlm()) {
@@ -222,8 +222,16 @@ describe("research and linked repositories", () => {
     open: async () => ({
       name: "ledger",
       fs: {
-        list: async (dir) =>
-          dir === "" ? Object.keys(files).map((name) => ({ name, dir: false })) : Promise.reject(new Error("none")),
+        list: async (dir) => {
+          const prefix = dir ? `${dir}/` : "";
+          const entries = new Map<string, boolean>();
+          for (const path of Object.keys(files)) {
+            if (!path.startsWith(prefix)) continue;
+            const [head, ...rest] = path.slice(prefix.length).split("/");
+            if (head) entries.set(head, rest.length > 0 || (entries.get(head) ?? false));
+          }
+          return [...entries].map(([name, isDir]) => ({ name, dir: isDir }));
+        },
         read: async (file) => files[file] ?? null,
       },
     }),
@@ -303,5 +311,43 @@ describe("research and linked repositories", () => {
   it("refuses a repository it cannot open", async () => {
     const { service } = setup();
     await expect(service.create("给现有的博客加上评论功能", "/nowhere")).rejects.toMatchObject({ kind: "config" });
+  });
+
+  it("quick-starts on an existing repository: prefills stack, modules and test strategy and goes straight to routing after one round", async () => {
+    const db = openDatabase(":memory:");
+    const repo = repoAccess({
+      "package.json": JSON.stringify({
+        scripts: { test: "vitest run" },
+        dependencies: { react: "19", express: "5", pg: "8" },
+      }),
+      "pnpm-lock.yaml": "",
+      "CLAUDE.md": "Use TypeScript strict mode.",
+      "packages/api/package.json": JSON.stringify({ description: "REST handlers" }),
+      "packages/api/index.ts": "",
+    });
+    const service = new ProjectService(
+      db,
+      () => createSimulatedLlm(),
+      () => "zh-CN",
+      { repo },
+    );
+    let project = await service.create("从零做一个团队需求管理平台并重构 API 模块", "/work/ledger", true);
+    expect(project).toMatchObject({ path: "fast", stage: "confirm" });
+    expect(project.repoScan?.modules).toEqual([{ path: "packages/api", description: "REST handlers" }]);
+    expect(project.repoScan?.guides).toEqual([{ file: "CLAUDE.md", excerpt: "Use TypeScript strict mode." }]);
+
+    const stored = readDecisions(db, project.id);
+    expect(stored.map((d) => [d.key, d.value.text])).toEqual(
+      expect.arrayContaining([
+        ["frontend", "React"],
+        ["backend", "Express"],
+        ["storage", "PostgreSQL"],
+        ["modules", "packages/api（REST handlers）"],
+        ["test_strategy", "运行现有测试命令 `pnpm test` 并为新增或修改的逻辑补充测试"],
+      ]),
+    );
+
+    project = await service.advance(project.id, true);
+    expect(project).toMatchObject({ stage: "routing", discussionComplete: true, documents: [] });
   });
 });

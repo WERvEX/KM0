@@ -128,7 +128,7 @@ export class ProjectService {
     return this.detail(id, null);
   }
 
-  async create(description: string, repoPath: string | null): Promise<ProjectDetail> {
+  async create(description: string, repoPath: string | null, quickStart = false): Promise<ProjectDetail> {
     const scan = repoPath ? await this.scanRepo(repoPath) : null;
     const triageInput = scan
       ? `${description}\n\nLinked repository (read-only scan):\n${repoSummary(scan)}`
@@ -136,7 +136,7 @@ export class ProjectService {
     const triaged = await triageTask(this.llmFor(null), triageInput, this.language());
     // A linked repository means the work happens in an existing codebase, whatever the wording.
     const triage = scan ? { ...triaged, hasCodebase: true } : triaged;
-    const path = triage.suggestedPath;
+    const path: ProjectPath = quickStart ? "fast" : triage.suggestedPath;
     const id = transaction(this.db, () => {
       const now = nowIso();
       const result = this.db
@@ -166,14 +166,20 @@ export class ProjectService {
 
   /**
    * Link the repository the work happens in, after the discussion started: for running the tasks. The
-   * scan is kept for the hand-off (its test command); decisions already made are left as they are.
+   * scan is kept for the hand-off (its test command); undecided stack, modules and test decisions are prefilled.
    */
   async setRepo(id: number, repoPath: string): Promise<ProjectDetail> {
     this.row(id);
     const scan = await this.scanRepo(repoPath);
-    this.db
-      .prepare("UPDATE projects SET repo_path = ?, repo_scan_json = ?, updated_at = ? WHERE id = ?")
-      .run(repoPath, JSON.stringify(scan), nowIso(), id);
+    const existingKeys = new Set(this.decisions(id).map((decision) => decision.key));
+    transaction(this.db, () => {
+      this.db
+        .prepare("UPDATE projects SET repo_path = ?, repo_scan_json = ?, updated_at = ? WHERE id = ?")
+        .run(repoPath, JSON.stringify(scan), nowIso(), id);
+      for (const draft of decisionsFromScan(scan, this.language())) {
+        if (!existingKeys.has(draft.key)) this.upsertDecision(id, draft);
+      }
+    });
     return this.get(id);
   }
 

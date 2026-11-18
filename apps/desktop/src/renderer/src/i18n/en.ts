@@ -42,6 +42,8 @@ export const en: Messages = {
       "Describe what you want to build. KM0 sizes it up, settles requirements and design with you, then hands each task to the right model and agent.",
     placeholder: "e.g. Add GitHub sign-in to my FastAPI project",
     submit: "Start triage",
+    quickStart: "Quick-start plan",
+    quickStartHint: "Skip multi-stage Q&A: confirm scope in one round and go straight to tasks",
     simulated: "A simulated model is active (KM0_FAKE_LLM=1); answers are fixed examples.",
     needModel: "Configure a model first so KM0 can start working.",
     configureModel: "Configure a model",
@@ -54,6 +56,9 @@ export const en: Messages = {
       detected: "Found: {{value}}",
       nothing: "No stack recognised",
       files: "{{count}} files",
+      modules: "{{count}} modules",
+      guides: "Guides: {{value}}",
+      testCommand: "Test: {{value}}",
     },
     stepsTitle: "What happens next",
     steps: {

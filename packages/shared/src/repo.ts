@@ -12,6 +12,20 @@ export const StackItem = z.object({
 });
 export type StackItem = z.infer<typeof StackItem>;
 
+/** A workspace package or module directory in the repository. */
+export const RepoModule = z.object({
+  path: z.string(),
+  description: z.string().nullable().default(null),
+});
+export type RepoModule = z.infer<typeof RepoModule>;
+
+/** An agent instruction or architecture guide found in the repository. */
+export const RepoGuide = z.object({
+  file: z.string(),
+  excerpt: z.string(),
+});
+export type RepoGuide = z.infer<typeof RepoGuide>;
+
 /** What a read-only scan of a local repository found. */
 export const RepoScan = z.object({
   /** The path the user picked (on the web build, a label for the picked folder). */
@@ -31,6 +45,12 @@ export const RepoScan = z.object({
   /** Top-level entries, for the model's orientation. */
   topLevel: z.array(z.string()),
   readme: z.string().nullable(),
+  /** Workspace packages or top-level module folders (for example packages/core, src/main). */
+  modules: z.array(RepoModule).default([]),
+  /** Script names from the root package.json, when present. */
+  scripts: z.array(z.string()).default([]),
+  /** Coding-agent instruction files or architecture guides (CLAUDE.md, AGENTS.md, docs/DESIGN.md). */
+  guides: z.array(RepoGuide).default([]),
   scannedAt: z.string(),
 });
 export type RepoScan = z.infer<typeof RepoScan>;

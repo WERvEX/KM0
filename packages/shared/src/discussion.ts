@@ -135,6 +135,8 @@ export type ProjectDetail = z.infer<typeof ProjectDetail>;
 export const CreateProjectInput = z.object({
   description: z.string().trim().min(4).max(8000),
   repoPath: z.string().trim().min(1).nullable().default(null),
+  /** Start directly on the single-round confirm path for an existing repository. */
+  quickStart: z.boolean().default(false),
 });
 
 export const AnswerRoundInput = z.object({

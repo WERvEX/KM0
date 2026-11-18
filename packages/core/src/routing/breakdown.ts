@@ -69,14 +69,27 @@ export interface PlannedTask {
 
 const TASK_COUNT: Record<ProjectPath, string> = { fast: "1-2", light: "2-5", full: "4-12" };
 
+function taskCountFor(input: BreakdownInput): string {
+  if (input.path === "fast" && input.triage) {
+    if (input.triage.complexity === "L" || input.triage.complexity === "XL") return "2-6";
+    if (input.triage.complexity === "M") return "1-4";
+  }
+  return TASK_COUNT[input.path];
+}
+
 export function breakdownSystem(input: BreakdownInput): string {
   return [
     "You are KM0's planner. Split the agreed work into tasks for coding agents. You describe each task; KM0 picks the model tier and agent from your description with fixed rules, so describe honestly and do not mention models or agents.",
-    `Return ${TASK_COUNT[input.path]} tasks. Each task must fit in one agent session and be checkable on its own.`,
+    `Return ${taskCountFor(input)} tasks. Each task must fit in one agent session and be checkable on its own.`,
     "Order tasks so that prerequisites come first. `depends_on` lists the 1-based numbers of earlier tasks it needs.",
     "Keep a change and its tests in the same task: the agent writing the code writes or updates its tests too. Do not make a task that only adds tests for another task's change; a test-only task is right only for code that already exists and is not changed by another task.",
     "Keep risky work (data migrations, authentication and permissions, production configuration), bug fixes, and pure documentation or boilerplate in tasks of their own, so they can be routed differently.",
     "For each task: `title` is a short imperative; `goal` is one or two sentences; `acceptance` holds the task's criteria in EARS form (see below); `files` lists paths or globs likely touched (planned paths for new code); `decision_keys` are ledger keys the task relies on; `sections` are document sections it implements, written as `<kind>.<section id>` (for example `prd.functional`).",
+    ...(input.triage?.hasCodebase
+      ? [
+          "When the project modifies an existing codebase, ground each task's `files` and `test_command` in the repository's actual directories, modules and test command shown in the prompt.",
+        ]
+      : []),
     "`acceptance`: carry over every acceptance criterion or done-when condition stated in the task description, the decision ledger or the documents to the task it applies to, one EARS criterion each. Do not drop, merge or soften any of them, and do not leave one only in a referenced decision: the reviewer checks the `acceptance` list. Add your own criteria only so that every task has at least two.",
     "Write each criterion as behaviour that can be observed from outside the code: what a user, an API client or a caller of an interface the request names sees (responses, output, stored data, errors). Do not prescribe internal structure (which function does a step, where sorting or validation happens, private helpers) unless the description or the documents require it: the agent may meet a criterion any way it likes.",
     "When the description or the documents give a concrete example (sample output, an exact format, an input and its expected result), copy it verbatim into the criterion it illustrates, line breaks included; never paraphrase a format.",
