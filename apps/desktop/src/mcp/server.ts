@@ -36,7 +36,9 @@ const TEXT = {
         task.model ? `计划使用的模型：${task.model}（能选的话请用它）` : null,
         task.testCommand ? `测试命令：${task.testCommand}` : null,
         "",
-        `做法：所有工具都带上 task_ref="${task.ref}"。用 km0_list_files、km0_read_file 看代码，用 km0_write_file、km0_delete_file 修改，用 km0_run_tests 运行测试；完成后用 km0_report 回报（做不了就回报 gave_up 并说明原因）。文件只在这个任务的工作目录里，项目背景和文档在 km0/ 文件夹。`,
+        `做法：所有工具都带上 task_ref="${task.ref}"。用 km0_list_files、km0_read_file 看代码，用 km0_write_file、km0_delete_file 修改，用 km0_run_tests 运行测试；完成后用 km0_report 回报（可附 contracts 与 downstream_notes 交给下游任务；做不了就回报 gave_up 并说明原因）。文件只在这个任务的工作目录里，项目背景、文档和上游交接（如有 ` +
+          "`km0/upstream.md`" +
+          `）在 km0/ 文件夹。`,
         "",
         "---",
         "",
@@ -64,7 +66,7 @@ const TEXT = {
         task.model ? `Planned model: ${task.model} (use it if you can choose)` : null,
         task.testCommand ? `Test command: ${task.testCommand}` : null,
         "",
-        `How: pass task_ref="${task.ref}" to every tool. Read the code with km0_list_files and km0_read_file, change it with km0_write_file and km0_delete_file, run the tests with km0_run_tests, and report with km0_report when done (report gave_up with the reason if you cannot do it). The files are the task's own working folder; the project's background and documents are in km0/.`,
+        `How: pass task_ref="${task.ref}" to every tool. Read the code with km0_list_files and km0_read_file, change it with km0_write_file and km0_delete_file, run the tests with km0_run_tests, and report with km0_report when done (optionally include contracts and downstream_notes for downstream tasks; report gave_up with the reason if you cannot do it). The files are the task's own working folder; project background, documents and upstream notes (if km0/upstream.md exists) are in km0/.`,
         "",
         "---",
         "",
@@ -265,14 +267,32 @@ export function createKm0McpServer(inboxDir: string, version = "1.1.0"): McpServ
         task_ref: taskRef,
         status: z.enum(["done", "gave_up"]),
         summary: z.string().describe("What was changed, or why it could not be done"),
+        contracts: z
+          .array(z.string())
+          .optional()
+          .describe("Key interfaces, exports, API routes or data structures added/changed for downstream tasks"),
+        downstream_notes: z
+          .string()
+          .optional()
+          .describe("Important caveats or usage hints for downstream tasks that depend on this one"),
       },
     },
-    async ({ task_ref, status, summary }) => {
+    async ({ task_ref, status, summary, contracts, downstream_notes }) => {
       const opened = await open(task_ref);
       if ("error" in opened) return opened.error;
       await updateTask(inboxDir, task_ref, (task) =>
         task.state === "claimed"
-          ? { ...task, state: "done", report: { status, summary, at: new Date().toISOString() } }
+          ? {
+              ...task,
+              state: "done",
+              report: {
+                status,
+                summary,
+                ...(contracts && contracts.length > 0 ? { contracts } : {}),
+                ...(downstream_notes?.trim() ? { downstreamNotes: downstream_notes.trim() } : {}),
+                at: new Date().toISOString(),
+              },
+            }
           : null,
       );
       return reply(TEXT[opened.task.language].reported);

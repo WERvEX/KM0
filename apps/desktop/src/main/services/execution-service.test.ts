@@ -58,7 +58,15 @@ async function setup({ port = nodeExec() as ReturnType<typeof nodeExec> | null }
     () => records.all(),
   );
   const agents = new AgentStore(db, () => settings.listModels());
-  const llm = createSimulatedLlm();
+  const simulated = createSimulatedLlm();
+  let judgeCalls = 0;
+  const llm: typeof simulated = {
+    ...simulated,
+    structured: (role, call) => {
+      if (call.purpose === "acceptance") judgeCalls += 1;
+      return simulated.structured(role, call);
+    },
+  };
   const language = () => "zh-CN" as const;
   const routing = new RoutingService(db, () => llm, language, agents, undefined, {
     registry: () => registry,
@@ -112,6 +120,7 @@ async function setup({ port = nodeExec() as ReturnType<typeof nodeExec> | null }
     runsDir,
     inboxDir,
     records,
+    judgeCalls: () => judgeCalls,
     projectId: project.id,
   };
 }
@@ -411,7 +420,7 @@ describe("progress", () => {
     let done = await until(execution, projectId, (run) => run.status !== "running" && run.importedRunRef !== null);
     expect(done).toMatchObject({ status: "finished", exitCode: 0, error: null });
     expect(done.tasks).toEqual([
-      expect.objectContaining({ seq: 1, agent: "claude_code", status: "unjudged", cost: 0.0125 }),
+      expect.objectContaining({ seq: 1, agent: "claude_code", status: "passed", cost: 0.0125 }),
     ]);
     // Paths in the log are relative to the task's worktree.
     expect(done.log).toContain("→ Write claude-01.txt");
@@ -446,7 +455,7 @@ describe("progress", () => {
     await call("km0_report", { task_ref: ref, status: "done", summary: "Fixed the typo." });
     done = await until(execution, projectId, (run) => run.id === second.id && run.importedRunRef !== null);
     await client.close();
-    expect(done.tasks).toEqual([expect.objectContaining({ agent: "claude_desktop", status: "unjudged" })]);
+    expect(done.tasks).toEqual([expect.objectContaining({ agent: "claude_desktop", status: "passed" })]);
     expect(execSync(`git show km0/${second.runId}/01:app.txt`, { cwd: repo, encoding: "utf8" })).toBe("hello, fixed\n");
     // The user's checkout is never touched.
     expect(readFileSync(join(repo, "app.txt"), "utf8")).toBe("hello\n");
@@ -484,15 +493,30 @@ describe("progress", () => {
         ],
       },
       { event: "task_started", task_id: "01", tier: "T1" },
-      { event: "attempt_started", task_id: "01", tier: "T1", model: "p/cheap", purpose: "task" },
+      { event: "attempt_started", task_id: "01", tier: "T1", model: "p/cheap", agent: "codex", purpose: "task" },
       { event: "attempt_finished", task_id: "01", cost: 0.5 },
       { event: "escalation", task_id: "01", from_tier: "T1", to_tier: "T2", signal: "s", detail: "d" },
-      { event: "attempt_started", task_id: "01", tier: "T2", model: "p/mid", purpose: "task" },
+      {
+        event: "attempt_started",
+        task_id: "01",
+        tier: "T2",
+        model: "p/mid",
+        agent: "claude_code",
+        purpose: "escalation",
+      },
       { event: "task_finished", task_id: "01", status: "passed" },
     ].map((event) => JSON.stringify(event));
     const state = applyProgress({ tasks: new Map(), finished: null, cost: 0 }, [...lines, "{not json"]);
     expect([...state.tasks.values()]).toMatchObject([
-      { seq: 1, status: "passed", tier: "T2", model: "p/mid", cost: 0.5, escalations: [{ from: "T1", to: "T2" }] },
+      {
+        seq: 1,
+        status: "passed",
+        agent: "claude_code",
+        tier: "T2",
+        model: "p/mid",
+        cost: 0.5,
+        escalations: [{ from: "T1", to: "T2" }],
+      },
       { seq: 2, status: "waiting" },
     ]);
     expect(state.cost).toBe(0.5);
@@ -519,5 +543,47 @@ describe("progress", () => {
       "-m",
       "km0_runner",
     ]);
+  });
+
+  it("reuses inline verdicts without re-judging, and auto-escalates along task.chain when the initial model fails", async () => {
+    const { db, execution, routing, runner, records, judgeCalls, projectId } = await setup();
+    linkRepo(db, projectId);
+    execution.setSettings({
+      ...execution.getSettings(),
+      kind: "direct",
+      claudeCommand: FAKE_CLAUDE,
+      directGate: true,
+      directAutoEscalate: true,
+    });
+    const [routed] = (routing.get(projectId) as RoutingPlan).tasks;
+    const initialModel = routed?.model;
+    expect(initialModel).toBeTruthy();
+    expect((routed?.chain ?? []).some((step) => step.agent === "claude_code" && step.modelId !== initialModel)).toBe(
+      true,
+    );
+
+    process.env.FAKE_CLAUDE_FAIL_MODELS = initialModel ?? "";
+    try {
+      const started = await execution.start(projectId);
+      const done = await until(
+        execution,
+        projectId,
+        (run) => run.id === started.id && run.status !== "running" && run.importedRunRef !== null,
+      );
+      expect(done).toMatchObject({ status: "finished", exitCode: 0, error: null });
+      expect(done.tasks[0]?.status).toBe("passed");
+      expect(done.tasks[0]?.escalations.length).toBeGreaterThanOrEqual(1);
+      // Inline gate judged the escalated attempt once; post-run RunnerService.judge() reused acceptance.jsonl.
+      expect(judgeCalls()).toBe(1);
+      const [imported] = runner.list(projectId);
+      expect(imported?.results[0]?.accepted).toBe(true);
+      // Both the failed attempt and the passing escalated attempt were synced into run records.
+      const saved = records.all();
+      expect(saved.length).toBeGreaterThanOrEqual(2);
+      expect(saved.some((item) => item.passed === false)).toBe(true);
+      expect(saved.some((item) => item.passed === true)).toBe(true);
+    } finally {
+      delete process.env.FAKE_CLAUDE_FAIL_MODELS;
+    }
   });
 });

@@ -318,6 +318,229 @@ describe("Codex", () => {
   });
 });
 
+describe("Phase 2: structured handoffs, inline EARS gate, in-place repair and cross-agent escalation", () => {
+  it("passes structured handoff contracts and downstream notes across Claude Code → Claude Desktop → Codex", async () => {
+    const repo = gitRepo();
+    const codexArgsFile = join(mkdtempSync(join(tmpdir(), "km0-codex-handoff-")), "args.jsonl");
+    process.env.FAKE_CLAUDE_EXPORT = "01";
+    process.env.FAKE_CODEX_ARGS = codexArgsFile;
+    try {
+      const { run, runDir, inboxDir, runId } = start(
+        repo,
+        [
+          task(1, "claude_code", [], has("claude-01.txt", "exported-01.ts")),
+          task(2, "claude_desktop", [1], has("desktop-02.txt")),
+          { ...task(3, "codex", [2], has("codex-03.txt")), model: "gpt-5.6-luna" },
+        ],
+        { codexCommand: FAKE_CODEX },
+      );
+
+      const agent = await desktop(inboxDir);
+      let taken = await agent.call("km0_next_task");
+      for (let i = 0; !/Took task/.test(taken.text) && i < 500; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        taken = await agent.call("km0_next_task");
+      }
+      const ref = `${runId}/02`;
+      // Claude Desktop sees task 01's extracted TypeScript export in its prompt and km0/upstream.md.
+      expect(taken.text).toContain("exported-01.ts: export function computeTotal(items: number[])");
+      const upstreamMd = await agent.call("km0_read_file", { task_ref: ref, path: "km0/upstream.md" });
+      expect(upstreamMd.isError).toBe(false);
+      expect(upstreamMd.text).toContain("computeTotal");
+
+      await agent.call("km0_write_file", { task_ref: ref, path: "desktop-02.txt", content: "from desktop\n" });
+      await agent.call("km0_report", {
+        task_ref: ref,
+        status: "done",
+        summary: "Built UI adapter for pricing.",
+        contracts: ["export interface PricingAdapter"],
+        downstream_notes: "Always pass integer cents to PricingAdapter.",
+      });
+
+      expect((await run.exited).code).toBe(0);
+      await agent.close();
+
+      // Handoff JSON files are saved for every finished task.
+      const h1 = JSON.parse(readFileSync(join(runDir, "handoffs", "01.json"), "utf8"));
+      expect(h1.changed_files).toEqual(expect.arrayContaining(["claude-01.txt", "exported-01.ts"]));
+      expect(h1.contracts).toEqual(
+        expect.arrayContaining(["exported-01.ts: export function computeTotal(items: number[])"]),
+      );
+      const h2 = JSON.parse(readFileSync(join(runDir, "handoffs", "02.json"), "utf8"));
+      expect(h2.contracts).toEqual(["export interface PricingAdapter"]);
+      expect(h2.notes_for_downstream).toBe("Always pass integer cents to PricingAdapter.");
+
+      // Codex (task 03) received Claude Desktop's contracts and downstream notes in its prompt.
+      const [codexCall] = readFileSync(codexArgsFile, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as { prompt: string });
+      expect(codexCall?.prompt).toContain("export interface PricingAdapter");
+      expect(codexCall?.prompt).toContain("Always pass integer cents to PricingAdapter.");
+      // km0/upstream.md is never committed to the git branch.
+      expect(() =>
+        execSync(`git show km0/${runId}/03:km0/upstream.md`, { cwd: repo, stdio: ["ignore", "pipe", "pipe"] }),
+      ).toThrow();
+    } finally {
+      delete process.env.FAKE_CLAUDE_EXPORT;
+      delete process.env.FAKE_CODEX_ARGS;
+    }
+  });
+
+  it("runs the inline EARS gate, repairs in place with feedback, and unlocks downstream tasks", async () => {
+    const repo = gitRepo();
+    const argsFile = join(mkdtempSync(join(tmpdir(), "km0-repair-args-")), "args.jsonl");
+    process.env.FAKE_CLAUDE_REPAIR_FIX = "01";
+    process.env.FAKE_CLAUDE_ARGS = argsFile;
+    let judgeCalls = 0;
+    try {
+      const { run, runDir, runId } = start(
+        repo,
+        [task(1, "claude_code", [], null), task(2, "claude_code", [1], has("claude-01.txt", "claude-02.txt"))],
+        {
+          judge: async ({ task: current, diff }) => {
+            judgeCalls += 1;
+            if (current.seq === 1 && !diff?.includes("fixed")) {
+              return { accepted: false, reason: "Missing validation for negative inputs.", judgedBy: "test-judge" };
+            }
+            return { accepted: true, reason: "All EARS criteria satisfied.", judgedBy: "test-judge" };
+          },
+        },
+      );
+      expect((await run.exited).code).toBe(0);
+      // Task 01 judged twice (rejected, repaired, accepted) + task 02 judged once = 3.
+      expect(judgeCalls).toBe(3);
+
+      const r1 = report(runDir, "01");
+      expect(r1).toMatchObject({
+        failure_category: null,
+        solved_tier: "T2",
+        attempts: [
+          expect.objectContaining({
+            purpose: "task",
+            verdict: { accepted: false, reason: "Missing validation for negative inputs." },
+          }),
+          expect.objectContaining({
+            purpose: "repair",
+            events: "events/01-a2.jsonl",
+            verdict: { accepted: true, reason: "All EARS criteria satisfied." },
+          }),
+        ],
+      });
+      const calls = readFileSync(argsFile, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as { seq: string; prompt: string });
+      // The repair prompt delivered the reviewer's exact rejection reason.
+      expect(calls[1]?.prompt).toContain("KM0_REPAIR");
+      expect(calls[1]?.prompt).toContain("Missing validation for negative inputs.");
+      // Final committed file has the repaired content and acceptance.jsonl has both accepted verdicts.
+      expect(execSync(`git show km0/${runId}/01:claude-01.txt`, { cwd: repo, encoding: "utf8" })).toContain("fixed");
+      const verdicts = readFileSync(join(runDir, "acceptance.jsonl"), "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      expect(verdicts).toMatchObject([
+        { task_id: "01", accepted: true, judged_by: "test-judge" },
+        { task_id: "02", accepted: true, judged_by: "test-judge" },
+      ]);
+      expect(
+        progress(runDir).some(
+          (event) => event.event === "task_judged" && event.task_id === "01" && event.accepted === true,
+        ),
+      ).toBe(true);
+    } finally {
+      delete process.env.FAKE_CLAUDE_REPAIR_FIX;
+      delete process.env.FAKE_CLAUDE_ARGS;
+    }
+  });
+
+  it("climbs the escalation chain across agents (Codex T1 → Claude Code T2) after failed tests and cleans the worktree", async () => {
+    const repo = gitRepo();
+    const claudeArgsFile = join(mkdtempSync(join(tmpdir(), "km0-esc-args-")), "args.jsonl");
+    process.env.FAKE_CLAUDE_ARGS = claudeArgsFile;
+    try {
+      // Only Claude Code writes `claude-01.txt`, so Codex fails the test command even after its in-place repair,
+      // then DirectRun escalates cleanly to Claude Code on T2.
+      const job: DirectTask = {
+        ...task(1, "codex", [], has("claude-01.txt")),
+        tier: "T1",
+        model: "gpt-5.6-luna",
+        modelRef: "km0-2/gpt-5.6-luna",
+        escalations: [
+          {
+            agent: "claude_code",
+            model: "claude-sonnet-5-5",
+            modelRef: "km0-1/claude-sonnet-5-5",
+            tier: "T2",
+            env: {},
+          },
+        ],
+      };
+      const { run, runDir, runId } = start(repo, [job], {
+        codexCommand: FAKE_CODEX,
+        judge: async () => ({ accepted: true, reason: "Looks good.", judgedBy: "test-judge" }),
+      });
+      expect((await run.exited).code).toBe(0);
+
+      const r1 = report(runDir, "01");
+      expect(r1).toMatchObject({
+        agent: "claude_code",
+        solved_tier: "T2",
+        failure_category: null,
+        escalations: [
+          expect.objectContaining({
+            from_tier: "T1",
+            to_tier: "T2",
+            from_agent: "codex",
+            to_agent: "claude_code",
+            signal: "tests_failed",
+          }),
+        ],
+      });
+      // Attempt 1 (codex task), attempt 2 (codex repair), attempt 3 (claude_code escalation).
+      expect((r1.attempts as { agent: string; purpose: string }[]).map((a) => [a.agent, a.purpose])).toEqual([
+        ["codex", "task"],
+        ["codex", "repair"],
+        ["claude_code", "escalation"],
+      ]);
+      // Worktree was reset to baseCommit before escalation, so Codex's failed file is NOT left on the final branch.
+      expect(() =>
+        execSync(`git show km0/${runId}/01:codex-01.txt`, { cwd: repo, stdio: ["ignore", "pipe", "pipe"] }),
+      ).toThrow();
+      expect(execSync(`git show km0/${runId}/01:claude-01.txt`, { cwd: repo, encoding: "utf8" })).toContain(
+        "claude-sonnet-5-5",
+      );
+      const [claudeCall] = readFileSync(claudeArgsFile, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as { prompt: string });
+      expect(claudeCall?.prompt).toContain("codex / T1 / gpt-5.6-luna");
+    } finally {
+      delete process.env.FAKE_CLAUDE_ARGS;
+    }
+  });
+
+  it("blocks downstream tasks when the inline EARS gate rejects a task with no retries or escalations left", async () => {
+    const repo = gitRepo();
+    const { run, runDir } = start(repo, [task(1, "claude_code", [], null), task(2, "claude_code", [1], null)], {
+      maxRepairs: 0,
+      judge: async () => ({ accepted: false, reason: "Missing audit log entry.", judgedBy: "test-judge" }),
+    });
+    expect((await run.exited).code).toBe(1);
+    expect(report(runDir, "01")).toMatchObject({
+      failure_category: "acceptance_rejected",
+      failure_detail: "Missing audit log entry.",
+    });
+    expect(report(runDir, "02")).toMatchObject({ failure_category: "blocked", branch: null });
+    const verdicts = readFileSync(join(runDir, "acceptance.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(verdicts).toMatchObject([{ task_id: "01", accepted: false, reason: "Missing audit log entry." }]);
+  });
+});
+
 // With KM0_CODEX_REAL=1, the real `codex` on PATH does one small task (it spends a little of the account's quota).
 describe.skipIf(!process.env.KM0_CODEX_REAL)("the real Codex", () => {
   it("does a small task in its worktree and KM0 commits it", async () => {

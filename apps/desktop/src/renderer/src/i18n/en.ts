@@ -85,7 +85,7 @@ export const en: Messages = {
       kinds: { runner: "KM0 Runner (default)", direct: "Straight to agents", custom: "Custom command" },
       kindHints: {
         direct:
-          "Each task goes to its routed agent: KM0 starts Claude Code, Claude Desktop takes its own. Progress, stopping and judging work as with the Runner.",
+          "Each task goes to its routed agent (Claude Code, Codex, Claude Desktop) with structured upstream hand-offs, inline EARS judging, in-place repair and escalation.",
         runner:
           "KM0 starts it, shows each task's progress, can stop it at any time, and imports and judges the results when it ends.",
         custom: "A command of your own; KM0 only starts it, shows its output and stops it.",
@@ -101,6 +101,12 @@ export const en: Messages = {
       claudeCommandHint: "Such as /usr/local/bin/claude; empty looks for claude on PATH",
       codexCommand: "How to start Codex (optional)",
       codexCommandHint: "Such as /usr/local/bin/codex; empty looks for codex on PATH",
+      directGate: "Judge each task against its EARS criteria as soon as it finishes",
+      directGateHint:
+        "Checks acceptance before unlocking downstream tasks; rejected work is repaired in place with feedback first.",
+      directAutoEscalate: "Climb the escalation chain automatically on failure",
+      directAutoEscalateHint:
+        "When an in-place repair still fails or the agent errors out, move to the next available Agent × Model combination (including across agents).",
       desktopSteps: [
         "In Claude Desktop, open Settings → Developer → Edit Config, merge the entry below into claude_desktop_config.json and restart Claude Desktop.",
         "Enable Claude Desktop under Settings → Agents, then give it tasks in the routing table.",

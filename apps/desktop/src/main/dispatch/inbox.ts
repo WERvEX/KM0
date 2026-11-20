@@ -13,6 +13,10 @@ export type InboxState = "waiting" | "claimed" | "done" | "cancelled";
 export interface InboxReport {
   status: "done" | "gave_up";
   summary: string;
+  /** Key interfaces, exports, API routes or data structures added/changed for downstream tasks. */
+  contracts?: string[];
+  /** Caveats or usage hints for downstream tasks depending on this one. */
+  downstreamNotes?: string;
   at: string;
 }
 

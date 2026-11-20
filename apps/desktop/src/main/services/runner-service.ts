@@ -100,6 +100,57 @@ export class RunnerService {
     });
   }
 
+  /**
+   * Judge a single task right after it settles (for DirectRun's inline per-task EARS acceptance gate),
+   * using the exact same prompt, decisions, request and upstream context as post-run judging.
+   */
+  async judgeInline(
+    projectId: number,
+    input: {
+      seq: number;
+      title: string;
+      acceptance: string[];
+      diff: string | null;
+      upstream: { title: string; diff: string | null }[];
+      testCommand: string | null;
+      testResult: { passed: boolean | null; detail: string } | null;
+      failure: string | null;
+    },
+  ): Promise<{ accepted: boolean; reason: string; judgedBy: string }> {
+    const plan = this.routing.get(projectId);
+    const llm = this.llmFor(projectId);
+    const decisions = readDecisions(this.db, projectId);
+    const language = this.language();
+    const request = (
+      this.db.prepare("SELECT description FROM projects WHERE id = ?").get(projectId) as
+        | { description: string }
+        | undefined
+    )?.description;
+    const task = plan?.tasks.find((item) => item.seq === input.seq);
+    const upstreamSeqs = upstreamOf(input.seq, plan?.tasks ?? []);
+    const output = await judgeTask(llm, {
+      language,
+      title: task?.title ?? input.title,
+      goal: task?.goal ?? input.title,
+      acceptance: task?.acceptance ?? input.acceptance,
+      decisions: task
+        ? decisionsFor(task, decisions).map(
+            (decision) => `${keyDef(decision.key)?.label[language] ?? decision.key}: ${decision.value.text}`,
+          )
+        : [],
+      diff: input.diff,
+      upstream: input.upstream,
+      request: request ?? null,
+      others: (plan?.tasks ?? [])
+        .filter((item) => item.seq !== input.seq && !upstreamSeqs.includes(item.seq))
+        .map((item) => item.title),
+      testCommand: input.testCommand,
+      testResult: input.testResult,
+      failure: input.failure,
+    });
+    return { accepted: output.accepted, reason: output.reason, judgedBy: this.judgedBy() };
+  }
+
   /** Judge every task of the run that has a report and no verdict yet, one after another. */
   judge(projectId: number, runRef: number): Promise<RunnerRun> {
     return this.locks.run(projectId, async () => {
@@ -115,8 +166,23 @@ export class RunnerService {
       )?.description;
       const rows = this.results(run.id);
       for (const row of rows) {
-        if (row.verdict_json) continue;
         const report = RunnerReport.parse(JSON.parse(row.report_json));
+        if (row.verdict_json) {
+          // A verdict loaded from acceptance.jsonl (such as from DirectRun's inline gate) still syncs its run
+          // records and failure state idempotently without re-running the reviewer model.
+          const existing = RunnerVerdict.parse(JSON.parse(row.verdict_json));
+          const final = existing.user_override ?? existing.accepted;
+          const reason = existing.accepted && !final ? OVERRULED[language](existing.reason) : existing.reason;
+          await this.routing.setRunnerVerdict(projectId, row.seq, existing.judged_at, {
+            accepted: final,
+            tier: finishedTier(report),
+            reason,
+            attempts: report.attempts,
+            byUser: existing.user_override !== null,
+            ref: `runner:${run.run_id}:${report.task_id}`,
+          });
+          continue;
+        }
         // A blocked task never ran: there is nothing to judge until its upstream tasks pass.
         if (report.failure_category === "blocked") continue;
         const task = plan?.tasks.find((item) => item.seq === row.seq);

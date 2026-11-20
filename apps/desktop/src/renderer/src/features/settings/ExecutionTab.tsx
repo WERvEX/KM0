@@ -278,6 +278,34 @@ export function ExecutionTab() {
               onChange={(value) => set({ runsDir: value })}
               onBrowse={status.data.available ? () => void browse("runsDir") : null}
             />
+            <div className="flex flex-col gap-2 border-t border-border pt-3 text-sm">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={draft.directGate}
+                  onChange={(event) => set({ directGate: event.target.checked })}
+                />
+                <span>
+                  <span className="font-medium">{t("settings.execution.directGate")}</span>
+                  <span className="mt-0.5 block text-xs text-muted">{t("settings.execution.directGateHint")}</span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={draft.directAutoEscalate}
+                  onChange={(event) => set({ directAutoEscalate: event.target.checked })}
+                />
+                <span>
+                  <span className="font-medium">{t("settings.execution.directAutoEscalate")}</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    {t("settings.execution.directAutoEscalateHint")}
+                  </span>
+                </span>
+              </label>
+            </div>
           </section>
           <section
             aria-label="Claude Desktop"

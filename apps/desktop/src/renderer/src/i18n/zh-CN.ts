@@ -75,7 +75,7 @@ export const zhCN = {
       kindHints: {
         runner: "KM0 启动它、显示每个任务的进度、可以随时停止，结束后自动导入结果并验收。",
         direct:
-          "每个任务交给路由选定的 Agent：Claude Code 由 KM0 启动，Claude Desktop 来领取。进度、停止和验收和 Runner 一样。",
+          "每个任务交给路由选定的 Agent（Claude Code、Codex、Claude Desktop），自动向上游交接上下文、逐任务验收并在失败时原地修补或升档。",
         custom: "填一条命令，KM0 只负责启动、显示输出和停止。",
       },
       unverified: "未验证",
@@ -106,6 +106,10 @@ export const zhCN = {
       claudeCommandHint: "例如 /usr/local/bin/claude；留空则在 PATH 里查找 claude",
       codexCommand: "Codex 启动方式（可选）",
       codexCommandHint: "例如 /usr/local/bin/codex；留空则在 PATH 里查找 codex",
+      directGate: "每完成一个任务立即用规划模型验收",
+      directGateHint: "在解锁下游任务前对照 EARS 验收标准判定；未通过时先带反馈原地修补，不把问题传给下游。",
+      directAutoEscalate: "修补仍未通过或出错时，沿升级链自动换更强的组合重做",
+      directAutoEscalateHint: "自动切到路由表升级链上的下一个可用 Agent × 模型组合（支持跨 Agent 升级）。",
       desktopSteps: [
         "在 Claude Desktop 的“设置 → 开发者 → 编辑配置”里，把下面的内容合并进 claude_desktop_config.json，然后重启 Claude Desktop。",
         "在“设置 → Agent”里启用 Claude Desktop，然后在路由表里把任务指定给它。",

@@ -22,7 +22,7 @@ import {
 } from "@km0/shared";
 import { type Database, nowIso } from "../db/sql";
 // Types only: the executor itself is Node code, handed in by the desktop app so the browser build never loads it.
-import type { DirectRunOptions, DirectTask } from "../dispatch/direct-run";
+import type { DirectRunOptions, DirectStep, DirectTask } from "../dispatch/direct-run";
 import type { ExecPort, RunningProcess } from "./exec-port";
 import type { HandoffService } from "./handoff-service";
 import { KeyedLock } from "./lock";
@@ -124,6 +124,7 @@ export function applyProgress(state: ProgressState, lines: string[]): ProgressSt
             tier: String(event.tier ?? "") || task.tier,
             model: String(event.model ?? "") || null,
           });
+          if (typeof event.agent === "string" && event.agent) task.agent = event.agent;
         }
         break;
       case "attempt_finished":
@@ -744,7 +745,7 @@ export class ExecutionService {
     const coded = tasks.filter((task) => task.agent === "claude_code");
     if (coded.length > 0) {
       const claude = await this.findClaude();
-      const keyed = coded.some((task) => Object.keys(this.agentEnv(task)).length > 0);
+      const keyed = coded.some((task) => Object.keys(this.agentEnv(task.agent, task.modelRef)).length > 0);
       item({
         id: "claude",
         ok: claude.check.ok,
@@ -770,9 +771,9 @@ export class ExecutionService {
   }
 
   /** What a task's agent gets in its environment: the provider's key and address for Claude Code. */
-  private agentEnv(task: RoutingPlan["tasks"][number]): Record<string, string> {
-    if (task.agent !== "claude_code" || task.modelRef === null) return {};
-    const model = this.settings.listModels().find((entry) => entry.id === task.modelRef);
+  private agentEnv(agent: string, modelRef: number | null): Record<string, string> {
+    if (agent !== "claude_code" || modelRef === null) return {};
+    const model = this.settings.listModels().find((entry) => entry.id === modelRef);
     if (!model) return {};
     const env: Record<string, string> = {};
     const key = this.settings.providerKey(model.providerId);
@@ -892,18 +893,45 @@ export class ExecutionService {
   ): Promise<RunningProcess> {
     const direct = this.direct;
     if (!direct) throw new AppError("conflict", "The direct executor is not available here.");
+    const settings = this.getSettings();
     const plan = this.routing.get(projectId) as RoutingPlan;
     const models = new Map(this.settings.listModels().map((model) => [model.id, model]));
     const listed = JSON.parse(pkg.files.find((file) => file.path === "km0/tasks.json")?.content ?? "[]") as {
       seq: number;
       testCommand: string | null;
     }[];
-    const runs = (agent: string) =>
-      plan.tasks.some((task) => task.agent === agent && (seqs.length === 0 || seqs.includes(task.seq)));
-    const claude = runs("claude_code") ? (await this.findClaude()).command : null;
-    const codex = runs("codex") ? (await this.findCodex()).command : null;
+    const selectedTasks = seqs.length > 0 ? plan.tasks.filter((task) => seqs.includes(task.seq)) : plan.tasks;
+    const needsAgent = (agent: string) =>
+      selectedTasks.some(
+        (task) =>
+          task.agent === agent || (settings.directAutoEscalate && task.chain.some((step) => step.agent === agent)),
+      );
+    const claudeFound = needsAgent("claude_code") ? await this.findClaude() : null;
+    const codexFound = needsAgent("codex") ? await this.findCodex() : null;
+    const claude = claudeFound?.check.ok ? claudeFound.command : null;
+    const codex = codexFound?.check.ok ? codexFound.command : null;
     const tasks: DirectTask[] = plan.tasks.map((task) => {
       const model = task.modelRef !== null ? models.get(task.modelRef) : undefined;
+      const escalations: DirectStep[] = [];
+      if (settings.directAutoEscalate) {
+        const seen = new Set([`${task.agent}:${task.model ?? ""}`]);
+        for (const step of task.chain) {
+          if (step.agent === "claude_code" && !claude) continue;
+          if (step.agent === "codex" && !codex) continue;
+          if (step.agent !== "claude_code" && step.agent !== "codex") continue;
+          const key = `${step.agent}:${step.modelId}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const stepModel = models.get(step.modelRef);
+          escalations.push({
+            agent: step.agent,
+            model: step.modelId,
+            modelRef: stepModel ? `km0-${stepModel.providerId}/${stepModel.modelId}` : null,
+            tier: step.tier,
+            env: this.agentEnv(step.agent, step.modelRef),
+          });
+        }
+      }
       return {
         seq: task.seq,
         title: task.title,
@@ -915,7 +943,8 @@ export class ExecutionService {
         prompt: pkg.tasks.find((item) => item.seq === task.seq)?.prompt ?? "",
         testCommand: listed.find((item) => item.seq === task.seq)?.testCommand ?? null,
         acceptance: task.acceptance,
-        env: this.agentEnv(task),
+        env: this.agentEnv(task.agent, task.modelRef),
+        escalations,
         features: task.features,
         score: task.score,
       };
@@ -938,6 +967,20 @@ export class ExecutionService {
       language: this.language(),
       version: direct.version,
       onLine,
+      judge: settings.directGate
+        ? (input) =>
+            this.runner.judgeInline(projectId, {
+              seq: input.task.seq,
+              title: input.task.title,
+              acceptance: input.task.acceptance,
+              diff: input.diff,
+              upstream: input.upstream,
+              testCommand: input.task.testCommand,
+              testResult: input.testResult,
+              failure: input.failure,
+            })
+        : null,
+      autoEscalate: settings.directAutoEscalate,
     };
     return direct.startRun(options);
   }

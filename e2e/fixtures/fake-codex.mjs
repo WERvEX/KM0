@@ -20,19 +20,27 @@ for await (const chunk of process.stdin) prompt += chunk;
 const seq = prompt.match(/km0\/[\w.-]+\/(\d+)/)?.[1] ?? "00";
 const model = args.includes("--model") ? args[args.indexOf("--model") + 1] : "default";
 if (process.env.FAKE_CODEX_ARGS) {
-  appendFileSync(process.env.FAKE_CODEX_ARGS, `${JSON.stringify({ seq, args, cwd: process.cwd() })}\n`);
+  appendFileSync(process.env.FAKE_CODEX_ARGS, `${JSON.stringify({ seq, args, cwd: process.cwd(), prompt })}\n`);
 }
 const say = (event) => process.stdout.write(`${JSON.stringify(event)}\n`);
 say({ type: "thread.started", thread_id: `fake-${seq}` });
 say({ type: "turn.started" });
 
 const file = join(process.cwd(), `codex-${seq}.txt`);
+const repairing = prompt.includes("KM0_REPAIR");
+const body =
+  process.env.FAKE_CODEX_REPAIR_FIX === seq
+    ? repairing
+      ? `task ${seq} fixed (${model})\n`
+      : `task ${seq} incomplete (${model})\n`
+    : `task ${seq} by fake Codex (${model})\n`;
 const change = { id: "item_1", type: "file_change", changes: [{ path: file, kind: "add" }] };
 say({ type: "item.started", item: { ...change, status: "in_progress" } });
-writeFileSync(file, `task ${seq} by fake Codex (${model})\n`);
+writeFileSync(file, body);
 say({ type: "item.completed", item: { ...change, status: "completed" } });
 
-if (process.env.FAKE_CODEX_FAIL === seq) {
+const failModels = (process.env.FAKE_CODEX_FAIL_MODELS ?? "").split(",").filter(Boolean);
+if (process.env.FAKE_CODEX_FAIL === seq || failModels.includes(model)) {
   say({ type: "turn.failed", error: { message: "The fake model gave up." } });
   process.exit(1);
 }

@@ -21,26 +21,40 @@ for await (const chunk of process.stdin) prompt += chunk;
 const seq = prompt.match(/km0\/[\w.-]+\/(\d+)/)?.[1] ?? "00";
 const model = args[args.indexOf("--model") + 1] ?? "default";
 if (process.env.FAKE_CLAUDE_ARGS) {
-  appendFileSync(process.env.FAKE_CLAUDE_ARGS, `${JSON.stringify({ seq, args, cwd: process.cwd() })}\n`);
+  appendFileSync(process.env.FAKE_CLAUDE_ARGS, `${JSON.stringify({ seq, args, cwd: process.cwd(), prompt })}\n`);
 }
 const say = (event) => process.stdout.write(`${JSON.stringify(event)}\n`);
 say({ type: "system", subtype: "init", session_id: `fake-${seq}`, model, cwd: process.cwd(), tools: ["Write"] });
 
 const file = `claude-${seq}.txt`;
+const repairing = prompt.includes("KM0_REPAIR");
+const body =
+  process.env.FAKE_CLAUDE_REPAIR_FIX === seq
+    ? repairing
+      ? `task ${seq} fixed (${model})\n`
+      : `task ${seq} incomplete (${model})\n`
+    : `task ${seq} by fake Claude Code (${model})\n`;
 say({
   type: "assistant",
   message: {
     content: [{ type: "tool_use", id: "t1", name: "Write", input: { file_path: join(process.cwd(), file) } }],
   },
 });
-writeFileSync(join(process.cwd(), file), `task ${seq} by fake Claude Code (${model})\n`);
+writeFileSync(join(process.cwd(), file), body);
+if (process.env.FAKE_CLAUDE_EXPORT === seq) {
+  writeFileSync(
+    join(process.cwd(), `exported-${seq}.ts`),
+    "export function computeTotal(items: number[]): number {\n  return items.length;\n}\n",
+  );
+}
 say({ type: "user", message: { content: [{ type: "tool_result", tool_use_id: "t1", content: "ok" }] } });
 say({ type: "assistant", message: { content: [{ type: "text", text: `Wrote ${file}.` }] } });
 
 const delay = Number(process.env.FAKE_CLAUDE_DELAY_MS ?? 0);
 if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
 
-const failed = process.env.FAKE_CLAUDE_FAIL === seq;
+const failModels = (process.env.FAKE_CLAUDE_FAIL_MODELS ?? "").split(",").filter(Boolean);
+const failed = process.env.FAKE_CLAUDE_FAIL === seq || failModels.includes(model);
 say({
   type: "result",
   subtype: failed ? "error_during_execution" : "success",

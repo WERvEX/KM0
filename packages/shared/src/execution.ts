@@ -33,6 +33,10 @@ export const ExecutorSettings = z.object({
   claudeCommand: Path.nullable().default(null),
   /** Direct: how to start Codex, such as `codex`; null finds it on PATH. */
   codexCommand: Path.nullable().default(null),
+  /** Direct: judge each task against its EARS criteria right after it settles, before downstream tasks start. */
+  directGate: z.boolean().default(true),
+  /** Direct: after a failed repair or error, climb the task's escalation chain automatically. */
+  directAutoEscalate: z.boolean().default(true),
   /** Custom executor: the command, with {package}, {repo}, {run_dir} and {tasks} filled in. */
   customTemplate: z.string().trim().min(1).max(2000).nullable().default(null),
   customCwd: Path.nullable().default(null),

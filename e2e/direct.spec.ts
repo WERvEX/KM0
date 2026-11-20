@@ -99,8 +99,8 @@ test("Claude Code and Claude Desktop finish a project together", async () => {
   await dialog.getByRole("button", { name: "开始执行" }).click();
   await expect(dialog).toBeHidden();
 
-  // Claude Code does 01; then 02 waits for Claude Desktop.
-  await expect(taskRow("搭建项目骨架").getByText("待验收")).toBeVisible({ timeout: 20_000 });
+  // Claude Code does 01 (and inline acceptance passes it); then 02 waits for Claude Desktop.
+  await expect(taskRow("搭建项目骨架").getByText("通过")).toBeVisible({ timeout: 20_000 });
   await expect(taskRow("实现核心功能").getByText("等待领取")).toBeVisible({ timeout: 20_000 });
   await expect(latestRun().getByText(/在 Claude Desktop 里说“做 KM0 的任务”/)).toBeVisible();
   await panel().screenshot({ path: "test-results/screenshots/direct-awaiting.png" });
@@ -120,21 +120,29 @@ test("Claude Code and Claude Desktop finish a project together", async () => {
   const ref = taken.match(/已领取任务 (\S+)。/)?.[1] ?? "";
   expect(ref).toMatch(/\/02$/);
   await expect(taskRow("实现核心功能").getByText("执行中")).toBeVisible();
-  expect(await call("km0_list_files", { task_ref: ref })).toContain("claude-01.txt");
+  const listedFiles = await call("km0_list_files", { task_ref: ref });
+  expect(listedFiles).toContain("claude-01.txt");
+  expect(listedFiles).toContain("km0/upstream.md");
   await call("km0_write_file", { task_ref: ref, path: "desktop-02.txt", content: "task 02 by Claude Desktop\n" });
-  await call("km0_report", { task_ref: ref, status: "done", summary: "Added desktop-02.txt." });
+  await call("km0_report", {
+    task_ref: ref,
+    status: "done",
+    summary: "Added desktop-02.txt.",
+    contracts: ["desktop-02.txt"],
+    downstream_notes: "Task 03 can read desktop-02.txt directly.",
+  });
   await client.close();
 
   // Claude Code does 03 on top of both; the run ends and every task is judged.
   await expect(latestRun().getByText("已结束", { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(latestRun().getByText(/结果已导入并验收/)).toBeVisible({ timeout: 20_000 });
   for (const title of ["搭建项目骨架", "实现核心功能", "设计数据模型与权限"]) {
-    await expect(taskRow(title).getByText("待验收")).toBeVisible();
+    await expect(taskRow(title).getByText("通过")).toBeVisible();
   }
   await expect(taskRow("实现核心功能").getByText(/Claude Desktop/)).toBeVisible();
   await expect(taskRow("设计数据模型与权限").getByText(/Claude Code/)).toBeVisible();
   await panel().screenshot({ path: "test-results/screenshots/direct-finished.png" });
-  const branch = execSync("git branch --list 'km0/*/03'", { cwd: repo, encoding: "utf8" }).trim().replace("* ", "");
+  const branch = execSync('git branch --list "km0/*/03"', { cwd: repo, encoding: "utf8" }).trim().replace("* ", "");
   expect(execSync(`git show ${branch}:desktop-02.txt`, { cwd: repo, encoding: "utf8" })).toBe(
     "task 02 by Claude Desktop\n",
   );
