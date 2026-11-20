@@ -1,6 +1,7 @@
 import { exec } from "node:child_process";
 import { appendFile, cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import type { IntegrationSummary } from "@km0/shared";
 import type { RunningProcess } from "../services/exec-port";
 import { type AgentOutcome, type AgentRun, runClaudeCode } from "./claude-code";
 import { runCodex } from "./codex";
@@ -93,6 +94,12 @@ export interface DirectRunOptions {
   autoEscalate?: boolean;
   /** Same-combination in-place feedback repair attempts before escalating (default: 1). */
   maxRepairs?: number;
+  /** Max concurrent tasks across independent DAG branches (default: 3; 1 = strict serial). */
+  maxConcurrency?: number;
+  /** Automatically ask a CLI agent to resolve multi-branch git merge conflicts before blocking (default: true). */
+  resolveConflicts?: boolean;
+  /** Optional repository-wide test command to verify `km0/<run_id>/final` after merging parallel leaf branches. */
+  repoTestCommand?: string | null;
 }
 
 type Status = "passed" | "unjudged" | "failed" | "blocked" | "cancelled";
@@ -114,6 +121,18 @@ type HandOffOutcome = AgentOutcome & {
 const EXIT_CANCELLED = 3;
 const TEST_TIMEOUT_MS = 15 * 60_000;
 const isAutomatedCli = (agent: string) => agent === "claude_code" || agent === "codex";
+const CONFLICT_MARKER = /^(<{7}\s|={7}$|>{7}\s)/m;
+const TIER_RANK: Record<string, number> = { T3: 3, T2: 2, T1: 1 };
+
+function diffStats(diff: string): { files: number; added: number; removed: number } {
+  const stats = { files: 0, added: 0, removed: 0 };
+  for (const line of diff.split(/\r?\n/)) {
+    if (line.startsWith("diff --git ")) stats.files += 1;
+    else if (line.startsWith("+") && !line.startsWith("+++")) stats.added += 1;
+    else if (line.startsWith("-") && !line.startsWith("---")) stats.removed += 1;
+  }
+  return stats;
+}
 
 const TEXT = {
   "zh-CN": {
@@ -145,6 +164,24 @@ const TEXT = {
       `## KM0_REPAIR：上次提交未通过检查，请在当前 worktree 原地修补\n\n你之前的改动已经提交在当前分支上。请只针对以下问题修补代码与测试，确认通过后结束：\n\n${feedback}`,
     escalationPrompt: (from: string, feedback: string) =>
       `## 前序尝试未通过（${from}），现已升级交由你从干净基线重新完成\n\n前序尝试失败原因（请避免重复同样问题）：\n${feedback}`,
+    resolvingConflict: (other: string, files: string, agent: string) =>
+      `合并 ${other} 出现冲突（${files}），交由 ${agent} 自动协调解决…`,
+    conflictResolved: (other: string) => `已自动解决合并 ${other} 的冲突并完成合并提交。`,
+    mergeConflictPrompt: (targetBranch: string, otherBranch: string, files: string[], context: string) =>
+      [
+        `## KM0_MERGE_CONFLICT：解决多分支合并冲突`,
+        ``,
+        `当前分支 \`${targetBranch}\` 正在合并 \`${otherBranch}\`，以下文件存在 git 合并冲突：`,
+        ...files.map((file) => `- \`${file}\``),
+        ...(context ? ["", context] : []),
+        ``,
+        `请直接编辑上述冲突文件，清除所有 \`<<<<<<<\` / \`=======\` / \`>>>>>>>\` 冲突标记，尽量完整保留两个分支各自实现的功能与契约。不要切换分支、不要中止合并（\`git merge --abort\`），也不要推送。解决完成后直接结束，KM0 会校验无残留标记并完成合并提交。`,
+      ].join("\n"),
+    integrating: (branch: string, count: number) => `所有任务已完成，正在整合 ${count} 个末端分支到集成分支 ${branch}…`,
+    integrationTesting: (branch: string, cmd: string) => `正在集成分支 ${branch} 上运行仓库测试（${cmd}）…`,
+    integrationReady: (branch: string) => `集成分支 ${branch} 已就绪，可在执行面板查看总 Diff 并一键合并或检出。`,
+    integrationConflict: (other: string, files: string) => `整合最终集成分支时合并 ${other} 存在未解决冲突：${files}`,
+    integrationTestsFailed: (cmd: string) => `最终集成分支上的测试命令未通过：${cmd}`,
   },
   en: {
     claudeNote: (branch: string) =>
@@ -177,6 +214,27 @@ const TEXT = {
       `## KM0_REPAIR: Fix the issue in place in this worktree\n\nYour previous changes are already committed on this branch. Fix the problem below, re-run tests if configured, and finish:\n\n${feedback}`,
     escalationPrompt: (from: string, feedback: string) =>
       `## Escalated after an earlier attempt (${from}) failed — starting fresh from the base commit\n\nWhy the previous attempt failed (avoid repeating it):\n${feedback}`,
+    resolvingConflict: (other: string, files: string, agent: string) =>
+      `Merge conflict with ${other} (${files}); asking ${agent} to resolve…`,
+    conflictResolved: (other: string) => `Automatically resolved merge conflict with ${other} and committed the merge.`,
+    mergeConflictPrompt: (targetBranch: string, otherBranch: string, files: string[], context: string) =>
+      [
+        `## KM0_MERGE_CONFLICT: Resolve multi-branch git merge conflict`,
+        ``,
+        `Branch \`${targetBranch}\` is merging \`${otherBranch}\`. The following files have merge conflicts:`,
+        ...files.map((file) => `- \`${file}\``),
+        ...(context ? ["", context] : []),
+        ``,
+        `Edit every conflicted file to remove all \`<<<<<<<\` / \`=======\` / \`>>>>>>>\` markers while preserving both branches' intended changes and contracts. Do not switch branches, run \`git merge --abort\`, or push. Finish once all conflicts are cleanly resolved; KM0 will verify and commit the merge.`,
+      ].join("\n"),
+    integrating: (branch: string, count: number) =>
+      `All tasks finished; integrating ${count} leaf ${count === 1 ? "branch" : "branches"} into ${branch}…`,
+    integrationTesting: (branch: string, cmd: string) => `Running repository tests on ${branch} (${cmd})…`,
+    integrationReady: (branch: string) =>
+      `Integration branch ${branch} is ready: review the full diff and merge or check it out from the Run panel.`,
+    integrationConflict: (other: string, files: string) =>
+      `Unresolved merge conflict while integrating ${other} into final branch: ${files}`,
+    integrationTestsFailed: (cmd: string) => `Repository test command failed on the final integration branch: ${cmd}`,
   },
 } as const;
 
@@ -242,14 +300,19 @@ export class DirectRun implements RunningProcess {
   private cancelled = false;
   /** Marking this run's inbox tasks cancelled, once a stop was asked for; awaited before they are removed. */
   private cancelling: Promise<void> = Promise.resolve();
-  private current: AgentRun | null = null;
+  private readonly activeRuns = new Set<AgentRun>();
+  private activeTaskCount = 0;
   private seqNo = 0;
   private spent = 0;
   private writes = Promise.resolve();
+  private acceptanceWrites = Promise.resolve();
+  private repoLock = Promise.resolve();
+  private mergeAttemptSeq = 0;
   private readonly text;
   private readonly pollMs;
   private readonly handoffs = new Map<number, TaskHandoffNote>();
   private readonly diffs = new Map<number, string | null>();
+  private readonly passedTestCommands = new Map<number, string>();
 
   constructor(private readonly options: DirectRunOptions) {
     this.text = TEXT[options.language];
@@ -265,12 +328,21 @@ export class DirectRun implements RunningProcess {
 
   terminate(): void {
     this.cancelled = true;
-    this.current?.stop();
+    for (const run of this.activeRuns) run.stop();
     this.cancelling = this.cancelInbox().catch(() => undefined);
   }
 
   kill(): void {
     this.terminate();
+  }
+
+  private withRepoLock<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.repoLock.then(fn, fn);
+    this.repoLock = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
   }
 
   private async cancelInbox(): Promise<void> {
@@ -296,7 +368,7 @@ export class DirectRun implements RunningProcess {
     await writeFile(file, `${JSON.stringify(value, null, 2)}\n`, "utf8");
   }
 
-  private async appendAcceptance(taskId: string, verdict: InlineJudgeVerdict): Promise<void> {
+  private appendAcceptance(taskId: string, verdict: InlineJudgeVerdict): Promise<void> {
     const line = `${JSON.stringify({
       run_id: this.options.runId,
       task_id: taskId,
@@ -306,13 +378,15 @@ export class DirectRun implements RunningProcess {
       user_override: null,
       judged_at: nowIso(),
     })}\n`;
-    await appendFile(join(this.options.runDir, "acceptance.jsonl"), line, "utf8");
+    const file = join(this.options.runDir, "acceptance.jsonl");
+    this.acceptanceWrites = this.acceptanceWrites.then(() => appendFile(file, line, "utf8"));
+    return this.acceptanceWrites;
   }
 
-  private async loadUpstreamHandoffs(task: DirectTask): Promise<TaskHandoffNote[]> {
+  private async loadHandoffsFor(seqs: number[]): Promise<TaskHandoffNote[]> {
     const notes: TaskHandoffNote[] = [];
     const reuseDir = this.options.reuse ? join(dirname(this.options.runDir), this.options.reuse) : null;
-    for (const dep of [...task.dependsOn].sort((a, b) => a - b)) {
+    for (const dep of [...new Set(seqs)].sort((a, b) => a - b)) {
       const local = this.handoffs.get(dep);
       if (local) {
         notes.push(local);
@@ -324,6 +398,10 @@ export class DirectRun implements RunningProcess {
       }
     }
     return notes;
+  }
+
+  private loadUpstreamHandoffs(task: DirectTask): Promise<TaskHandoffNote[]> {
+    return this.loadHandoffsFor(task.dependsOn);
   }
 
   private async loadUpstreamDiffs(task: DirectTask): Promise<{ seq: number; title: string; diff: string | null }[]> {
@@ -344,92 +422,13 @@ export class DirectRun implements RunningProcess {
     return items;
   }
 
-  private async main(): Promise<number> {
+  private emptyReport(task: DirectTask) {
     const { options } = this;
-    await mkdir(options.runDir, { recursive: true });
-    const startCommit = await git(options.repo, ["rev-parse", "--verify", "HEAD"], false);
-    if (!startCommit) throw new GitError(this.text.noRepoCommit);
-    const selected =
-      options.seqs.length > 0 ? options.tasks.filter((task) => options.seqs.includes(task.seq)) : options.tasks;
-    const order = dependencyOrder(selected);
-    await this.writeJson("run.json", {
-      run_id: options.runId,
-      executor: "km0-direct",
-      km0_version: options.version,
-      repo: options.repo,
-      start_commit: startCommit,
-      started_at: nowIso(),
-      reuse: options.reuse,
-    });
-    await this.emit("run_started", {
-      run_id: options.runId,
-      tasks: order.map((task) => ({ task_id: pad(task.seq), title: task.title })),
-    });
-
-    const results = new Map<number, Status>();
-    const branches = new Map<number, string>();
-    // Upstream tasks this run does not redo: the branch an earlier run left them on.
-    if (options.reuse) {
-      for (const task of options.tasks) {
-        if (selected.includes(task)) continue;
-        const branch = `km0/${options.reuse}/${pad(task.seq)}`;
-        if (await git(options.repo, ["rev-parse", "--verify", "-q", `refs/heads/${branch}`], false)) {
-          branches.set(task.seq, branch);
-        }
-      }
-    }
-    for (const task of order) {
-      const status = await this.runTask(task, startCommit, results, branches, selected);
-      results.set(task.seq, status);
-    }
-
-    const counts = { passed: 0, unjudged: 0, failed: 0, blocked: 0, cancelled: 0 };
-    for (const status of results.values()) counts[status] += 1;
-    await this.writeJson("summary.json", {
-      run_id: options.runId,
-      executor: "km0-direct",
-      tasks: results.size,
-      ...counts,
-      cost: this.spent,
-    });
-    // Nothing of this run stays in the inbox for an agent to take.
-    await this.cancelling;
-    await removeRun(options.inboxDir, options.runId);
-    await this.emit("run_finished", { status: this.cancelled ? "cancelled" : "completed", cost: this.spent });
-    await this.writes;
-    if (this.cancelled) return EXIT_CANCELLED;
-    return counts.failed + counts.blocked > 0 ? 1 : 0;
-  }
-
-  private async prepareKm0Folder(worktree: string, upstreamNotes: TaskHandoffNote[]): Promise<void> {
-    if (!(await stat(join(worktree, "km0", "tasks.json")).catch(() => null))) {
-      await cp(this.options.packageDir, join(worktree, "km0"), { recursive: true }).catch(() => undefined);
-    }
-    if (upstreamNotes.length > 0) {
-      await mkdir(join(worktree, "km0"), { recursive: true });
-      await writeFile(
-        join(worktree, "km0", "upstream.md"),
-        formatUpstreamMarkdown(upstreamNotes, this.options.language),
-        "utf8",
-      );
-    }
-  }
-
-  private async runTask(
-    task: DirectTask,
-    startCommit: string,
-    results: Map<number, Status>,
-    branches: Map<number, string>,
-    selected: DirectTask[],
-  ): Promise<Status> {
-    const { options, text } = this;
-    const taskId = pad(task.seq);
-    const branch = `km0/${options.runId}/${taskId}`;
-    const report = {
+    return {
       report_version: 2,
       run_id: options.runId,
       project_id: options.projectId,
-      task_id: taskId,
+      task_id: pad(task.seq),
       source: "km0",
       title: task.title,
       predicted_tier: task.tier,
@@ -466,6 +465,187 @@ export class DirectRun implements RunningProcess {
       runner_version: `km0-${options.version}`,
       attempts: [] as Record<string, unknown>[],
     };
+  }
+
+  private async finishSkipped(task: DirectTask, status: Status, category: Category, detail: string): Promise<Status> {
+    const taskId = pad(task.seq);
+    const report = this.emptyReport(task);
+    report.failure_category = category;
+    report.failure_detail = detail;
+    await this.writeJson(`reports/${taskId}.json`, report);
+    await this.emit("task_finished", { task_id: taskId, status, failure_detail: detail, cost: 0 });
+    return status;
+  }
+
+  private async main(): Promise<number> {
+    const { options } = this;
+    await mkdir(options.runDir, { recursive: true });
+    const startCommit = await git(options.repo, ["rev-parse", "--verify", "HEAD"], false);
+    if (!startCommit) throw new GitError(this.text.noRepoCommit);
+    const selected =
+      options.seqs.length > 0 ? options.tasks.filter((task) => options.seqs.includes(task.seq)) : options.tasks;
+    const order = dependencyOrder(selected);
+    const maxConcurrency = Math.max(1, Math.min(6, Math.floor(options.maxConcurrency ?? 3)));
+    await this.writeJson("run.json", {
+      run_id: options.runId,
+      executor: "km0-direct",
+      km0_version: options.version,
+      repo: options.repo,
+      start_commit: startCommit,
+      started_at: nowIso(),
+      reuse: options.reuse,
+      max_concurrency: maxConcurrency,
+    });
+    await this.emit("run_started", {
+      run_id: options.runId,
+      tasks: order.map((task) => ({ task_id: pad(task.seq), title: task.title })),
+    });
+
+    const results = new Map<number, Status>();
+    const branches = new Map<number, string>();
+    // Upstream tasks this run does not redo: the branch an earlier run left them on.
+    if (options.reuse) {
+      for (const task of options.tasks) {
+        if (selected.includes(task)) continue;
+        const branch = `km0/${options.reuse}/${pad(task.seq)}`;
+        if (await git(options.repo, ["rev-parse", "--verify", "-q", `refs/heads/${branch}`], false)) {
+          branches.set(task.seq, branch);
+        }
+      }
+    }
+
+    // Dynamic DAG scheduler: independent ready tasks run concurrently up to `maxConcurrency`.
+    const selectedSeqs = new Set(selected.map((task) => task.seq));
+    const pending = [...order];
+    const running = new Map<number, Promise<void>>();
+    const settledOk = (status: Status | undefined) => status === "passed" || status === "unjudged";
+
+    while (pending.length > 0 || running.size > 0) {
+      if (this.cancelled) {
+        for (const task of pending.splice(0)) {
+          const status = await this.finishSkipped(task, "cancelled", "cancelled", "");
+          results.set(task.seq, status);
+        }
+        if (running.size > 0) await Promise.all(running.values());
+        break;
+      }
+
+      // Immediately block any pending tasks whose upstream already failed/blocked/cancelled (transitively).
+      let propagated = true;
+      while (propagated) {
+        propagated = false;
+        for (let i = 0; i < pending.length; i += 1) {
+          const task = pending[i] as DirectTask;
+          const failedDep = [...task.dependsOn]
+            .sort((a, b) => a - b)
+            .find((dep) => selectedSeqs.has(dep) && results.has(dep) && !settledOk(results.get(dep)));
+          if (failedDep !== undefined) {
+            pending.splice(i, 1);
+            const status = await this.finishSkipped(
+              task,
+              "blocked",
+              "blocked",
+              this.text.upstreamFailed(pad(failedDep)),
+            );
+            results.set(task.seq, status);
+            propagated = true;
+            break;
+          }
+        }
+      }
+
+      while (running.size < maxConcurrency && !this.cancelled) {
+        const index = pending.findIndex((task) =>
+          task.dependsOn.every((dep) => !selectedSeqs.has(dep) || settledOk(results.get(dep))),
+        );
+        if (index < 0) break;
+        const [task] = pending.splice(index, 1);
+        if (!task) break;
+        this.activeTaskCount += 1;
+        const promise = this.runTask(task, startCommit, results, branches, selected)
+          .then((status) => {
+            results.set(task.seq, status);
+          })
+          .finally(() => {
+            this.activeTaskCount -= 1;
+            running.delete(task.seq);
+          });
+        running.set(task.seq, promise);
+      }
+
+      if (running.size > 0) {
+        await Promise.race(running.values());
+      } else if (pending.length > 0) {
+        // Guard against cyclic dependencies so the scheduler never deadlocks.
+        for (const task of pending.splice(0)) {
+          const dep = task.dependsOn.find((item) => selectedSeqs.has(item)) ?? task.seq;
+          const status = await this.finishSkipped(task, "blocked", "blocked", this.text.upstreamFailed(pad(dep)));
+          results.set(task.seq, status);
+        }
+      }
+    }
+
+    const counts = { passed: 0, unjudged: 0, failed: 0, blocked: 0, cancelled: 0 };
+    for (const status of results.values()) counts[status] += 1;
+
+    let integration: IntegrationSummary | null = null;
+    if (
+      !this.cancelled &&
+      counts.failed === 0 &&
+      counts.blocked === 0 &&
+      counts.cancelled === 0 &&
+      results.size > 0 &&
+      branches.size > 0
+    ) {
+      integration = await this.integrateFinal(startCommit, branches);
+      await this.emit("integration_finished", { ...integration });
+    }
+
+    await this.writeJson("summary.json", {
+      run_id: options.runId,
+      executor: "km0-direct",
+      tasks: results.size,
+      ...counts,
+      cost: this.spent,
+      integration,
+    });
+    // Nothing of this run stays in the inbox for an agent to take.
+    await this.cancelling;
+    await removeRun(options.inboxDir, options.runId);
+    await this.emit("run_finished", { status: this.cancelled ? "cancelled" : "completed", cost: this.spent });
+    await this.acceptanceWrites;
+    await this.writes;
+    if (this.cancelled) return EXIT_CANCELLED;
+    if (counts.failed + counts.blocked > 0) return 1;
+    if (integration && integration.status !== "ready") return 1;
+    return 0;
+  }
+
+  private async prepareKm0Folder(worktree: string, upstreamNotes: TaskHandoffNote[]): Promise<void> {
+    if (!(await stat(join(worktree, "km0", "tasks.json")).catch(() => null))) {
+      await cp(this.options.packageDir, join(worktree, "km0"), { recursive: true }).catch(() => undefined);
+    }
+    if (upstreamNotes.length > 0) {
+      await mkdir(join(worktree, "km0"), { recursive: true });
+      await writeFile(
+        join(worktree, "km0", "upstream.md"),
+        formatUpstreamMarkdown(upstreamNotes, this.options.language),
+        "utf8",
+      );
+    }
+  }
+
+  private async runTask(
+    task: DirectTask,
+    startCommit: string,
+    results: Map<number, Status>,
+    branches: Map<number, string>,
+    selected: DirectTask[],
+  ): Promise<Status> {
+    const { options, text } = this;
+    const taskId = pad(task.seq);
+    const branch = `km0/${options.runId}/${taskId}`;
+    const report = this.emptyReport(task);
     const finish = async (status: Status, category: Category | null, detail: string) => {
       report.failure_category = category;
       report.failure_detail = detail;
@@ -476,34 +656,53 @@ export class DirectRun implements RunningProcess {
 
     if (this.cancelled) return finish("cancelled", "cancelled", "");
     // Upstream tasks: in this run they must have finished; outside it, their branch from `reuse` if there is one.
-    const upstream: string[] = [];
+    const upstream: { seq: number; branch: string }[] = [];
     for (const dep of [...task.dependsOn].sort((a, b) => a - b)) {
       const inRun = selected.some((item) => item.seq === dep);
       const result = results.get(dep);
       if (inRun && result !== "passed" && result !== "unjudged")
         return finish("blocked", "blocked", text.upstreamFailed(pad(dep)));
       const upstreamBranch = branches.get(dep);
-      if (upstreamBranch) upstream.push(upstreamBranch);
+      if (upstreamBranch) upstream.push({ seq: dep, branch: upstreamBranch });
     }
 
     const worktree = join(options.runDir, "worktrees", taskId);
     try {
-      await git(options.repo, ["worktree", "add", "-q", "-b", branch, worktree, upstream[0] ?? startCommit]);
+      await this.withRepoLock(() =>
+        git(options.repo, ["worktree", "add", "-q", "-b", branch, worktree, upstream[0]?.branch ?? startCommit]),
+      );
     } catch (error) {
       return finish("blocked", "error", (error as Error).message);
     }
+    const upstreamNotes = await this.loadUpstreamHandoffs(task);
+    const initialStep: DirectStep = {
+      agent: task.agent,
+      model: task.model,
+      modelRef: task.modelRef,
+      tier: task.tier,
+      env: task.env,
+    };
     for (const other of upstream.slice(1)) {
       try {
-        await git(worktree, [...AUTHOR, "merge", "-q", "--no-edit", other]);
+        await git(worktree, [...AUTHOR, "merge", "-q", "--no-edit", other.branch]);
       } catch {
-        const files = await git(worktree, ["diff", "--name-only", "--diff-filter=U"], false);
-        await git(worktree, ["merge", "--abort"], false);
-        await this.discard(worktree, branch);
-        return finish("blocked", "blocked", text.conflict(`${other}: ${files.split("\n").join(", ") || "?"}`));
+        const resolved = await this.resolveMergeConflict({
+          worktree,
+          targetBranch: branch,
+          otherBranch: other.branch,
+          taskId,
+          contextNotes: upstreamNotes,
+          preferredStep: initialStep,
+          report,
+        });
+        if (!resolved.resolved) {
+          await this.discard(worktree, branch);
+          if (this.cancelled) return finish("cancelled", "cancelled", "");
+          return finish("blocked", "blocked", text.conflict(`${other.branch}: ${resolved.files.join(", ") || "?"}`));
+        }
       }
     }
 
-    const upstreamNotes = await this.loadUpstreamHandoffs(task);
     const upstreamDiffs = options.judge ? await this.loadUpstreamDiffs(task) : [];
     await this.prepareKm0Folder(worktree, upstreamNotes);
 
@@ -513,13 +712,6 @@ export class DirectRun implements RunningProcess {
     Object.assign(report, { branch, base_commit: baseCommit, start_tier: task.tier });
     await this.emit("task_started", { task_id: taskId, tier: task.tier, agent: task.agent });
 
-    const initialStep: DirectStep = {
-      agent: task.agent,
-      model: task.model,
-      modelRef: task.modelRef,
-      tier: task.tier,
-      env: task.env,
-    };
     const steps: DirectStep[] =
       options.autoEscalate === false ? [initialStep] : [initialStep, ...(task.escalations ?? [])];
     const maxRepairs = Math.max(0, options.maxRepairs ?? 1);
@@ -767,6 +959,9 @@ export class DirectRun implements RunningProcess {
     branches.set(task.seq, branch);
 
     if (finalStatus === "passed" || finalStatus === "unjudged") {
+      if (task.testCommand && report.test_result?.passed === true) {
+        this.passedTestCommands.set(task.seq, task.testCommand);
+      }
       const changedRaw =
         lastHead !== baseCommit ? await git(worktree, ["diff", "--name-only", baseCommit, lastHead], false) : "";
       const note = buildHandoffNote({
@@ -793,29 +988,332 @@ export class DirectRun implements RunningProcess {
     return finish(finalStatus, finalCategory, finalDetail);
   }
 
-  /** Give the task to one step's agent and wait for it to finish. */
-  private async handTo(
-    task: DirectTask,
+  /** Choose the strongest available automated CLI step to resolve a multi-branch git merge conflict. */
+  private pickConflictCoordinator(preferred?: DirectStep): DirectStep | null {
+    const { options } = this;
+    const hasCli = (agent: string) =>
+      (agent === "claude_code" && Boolean(options.claudeCommand)) ||
+      (agent === "codex" && Boolean(options.codexCommand));
+    if (preferred && isAutomatedCli(preferred.agent) && hasCli(preferred.agent)) return preferred;
+
+    const candidates: DirectStep[] = [];
+    for (const task of options.tasks) {
+      const steps: DirectStep[] = [
+        { agent: task.agent, model: task.model, modelRef: task.modelRef, tier: task.tier, env: task.env },
+        ...(task.escalations ?? []),
+      ];
+      for (const step of steps) {
+        if (isAutomatedCli(step.agent) && hasCli(step.agent)) candidates.push(step);
+      }
+    }
+    if (candidates.length > 0) {
+      candidates.sort(
+        (a, b) =>
+          (TIER_RANK[b.tier ?? ""] ?? 0) - (TIER_RANK[a.tier ?? ""] ?? 0) ||
+          (b.agent === "claude_code" ? 1 : 0) - (a.agent === "claude_code" ? 1 : 0),
+      );
+      return candidates[0] ?? null;
+    }
+    if (options.claudeCommand) {
+      return { agent: "claude_code", model: null, modelRef: null, tier: null, env: {} };
+    }
+    if (options.codexCommand) {
+      return { agent: "codex", model: null, modelRef: null, tier: null, env: {} };
+    }
+    return null;
+  }
+
+  /** Hand a multi-branch git merge conflict to an automated CLI coordinator, verify no markers remain, and commit. */
+  private async resolveMergeConflict({
+    worktree,
+    targetBranch,
+    otherBranch,
+    taskId,
+    contextNotes,
+    preferredStep,
+    report,
+  }: {
+    worktree: string;
+    targetBranch: string;
+    otherBranch: string;
+    taskId: string | null;
+    contextNotes: TaskHandoffNote[];
+    preferredStep?: DirectStep;
+    report?: ReturnType<DirectRun["emptyReport"]>;
+  }): Promise<{ resolved: boolean; files: string[] }> {
+    const { options, text } = this;
+    const rawFiles = await git(worktree, ["diff", "--name-only", "--diff-filter=U"], false);
+    const files = rawFiles
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const coord =
+      options.resolveConflicts !== false && !this.cancelled && files.length > 0
+        ? this.pickConflictCoordinator(preferredStep)
+        : null;
+    if (!coord) {
+      await git(worktree, ["merge", "--abort"], false);
+      return { resolved: false, files };
+    }
+
+    await this.prepareKm0Folder(worktree, contextNotes);
+    const context = formatUpstreamPromptBlock(contextNotes, options.language);
+    const prompt = text.mergeConflictPrompt(targetBranch, otherBranch, files, context);
+    this.mergeAttemptSeq += 1;
+    const eventsRel = `events/${taskId ?? "final"}-merge-${this.mergeAttemptSeq}.jsonl`;
+
+    options.onLine(text.resolvingConflict(otherBranch, files.join(", "), stepLabel(coord)));
+    await this.emit("attempt_started", {
+      ...(taskId ? { task_id: taskId } : {}),
+      tier: coord.tier,
+      model: coord.model,
+      agent: coord.agent,
+      purpose: "merge",
+    });
+
+    const started = Date.now();
+    const outcome = await this.runCliStep(coord, prompt, worktree, targetBranch, eventsRel);
+    const wallTime = (Date.now() - started) / 1000;
+
+    this.spent += outcome.cost;
+    if (report) {
+      report.cost += outcome.cost;
+      report.steps += outcome.steps;
+      report.tokens.input += outcome.tokens.input;
+      report.tokens.output += outcome.tokens.output;
+      report.tokens.cache_read += outcome.tokens.cache_read;
+      report.tokens.cache_write += outcome.tokens.cache_write;
+      report.wall_time += wallTime;
+      report.attempts.push({
+        purpose: "merge",
+        tier: coord.tier ?? "T2",
+        model: coord.modelRef ?? coord.model ?? coord.agent,
+        agent: coord.agent,
+        steps: outcome.steps,
+        tokens: outcome.tokens,
+        cost: outcome.cost,
+        wall_time: wallTime,
+        stop_reason: outcome.stopReason,
+        test_result: null,
+        events: eventsRel,
+      });
+    }
+    await this.emit("attempt_finished", {
+      ...(taskId ? { task_id: taskId } : {}),
+      tier: coord.tier,
+      model: coord.model,
+      agent: coord.agent,
+      purpose: "merge",
+      cost: outcome.cost,
+      steps: outcome.steps,
+      stop_reason: outcome.stopReason,
+    });
+
+    if (outcome.stopReason !== "settled" || this.cancelled) {
+      await git(worktree, ["merge", "--abort"], false);
+      return { resolved: false, files };
+    }
+
+    // Verify no conflict markers remain in any previously conflicted file.
+    for (const rel of files) {
+      const content = await readFile(join(worktree, rel), "utf8").catch(() => null);
+      if (content !== null && CONFLICT_MARKER.test(content)) {
+        await git(worktree, ["merge", "--abort"], false);
+        return { resolved: false, files };
+      }
+    }
+
+    const merging = await git(worktree, ["rev-parse", "-q", "--verify", "MERGE_HEAD"], false);
+    if (merging) {
+      await git(worktree, ["add", "-A", "--", ".", ...EXCLUDES], false);
+      const unmerged = await git(worktree, ["diff", "--name-only", "--diff-filter=U"], false);
+      if (unmerged.trim()) {
+        await git(worktree, ["merge", "--abort"], false);
+        return { resolved: false, files };
+      }
+      try {
+        await git(worktree, [...AUTHOR, "commit", "-q", "--no-verify", "--no-edit"]);
+      } catch {
+        await git(worktree, ["merge", "--abort"], false);
+        return { resolved: false, files };
+      }
+    } else {
+      // If the agent committed the merge itself, verify the incoming branch is now an ancestor of HEAD.
+      try {
+        await git(worktree, ["merge-base", "--is-ancestor", otherBranch, "HEAD"]);
+      } catch {
+        return { resolved: false, files };
+      }
+    }
+
+    options.onLine(text.conflictResolved(otherBranch));
+    return { resolved: true, files };
+  }
+
+  /** Combine all parallel leaf task branches into `km0/<run_id>/final`, write `diffs/final.diff`, and run tests. */
+  private async integrateFinal(startCommit: string, branches: Map<number, string>): Promise<IntegrationSummary> {
+    const { options, text } = this;
+    const finalBranch = `km0/${options.runId}/final`;
+    const allSeqs = [...branches.keys()].sort((a, b) => a - b);
+    const dependedOn = new Set<number>();
+    for (const seq of allSeqs) {
+      const task = options.tasks.find((item) => item.seq === seq);
+      for (const dep of task?.dependsOn ?? []) {
+        if (branches.has(dep)) dependedOn.add(dep);
+      }
+    }
+    const leaves = allSeqs.filter((seq) => !dependedOn.has(seq));
+    const leafSeqs = leaves.length > 0 ? leaves : [allSeqs[allSeqs.length - 1] as number];
+    const firstSeq = leafSeqs[0] as number;
+    const firstBranch = branches.get(firstSeq) as string;
+
+    options.onLine(text.integrating(finalBranch, leafSeqs.length));
+    const needsTests =
+      Boolean(options.repoTestCommand) &&
+      !this.cancelled &&
+      !(leafSeqs.length === 1 && this.passedTestCommands.get(firstSeq) === options.repoTestCommand);
+
+    // Fast path: single leaf branch and no extra repo-wide test run needed — point `final` directly without a worktree.
+    if (leafSeqs.length === 1 && !needsTests) {
+      try {
+        await this.withRepoLock(() => git(options.repo, ["branch", "-f", finalBranch, firstBranch]));
+      } catch (error) {
+        return {
+          branch: finalBranch,
+          status: "error",
+          commit: null,
+          files: 0,
+          added: 0,
+          removed: 0,
+          testPassed: null,
+          detail: error instanceof Error ? error.message : String(error),
+        };
+      }
+      const finalHead = await git(options.repo, ["rev-parse", finalBranch]);
+      const fullDiff = finalHead !== startCommit ? await gitDiff(options.repo, startCommit, finalHead) : "";
+      const diffFile = join(options.runDir, "diffs", "final.diff");
+      await mkdir(dirname(diffFile), { recursive: true });
+      await writeFile(diffFile, fullDiff, "utf8");
+      const stats = diffStats(fullDiff);
+      const testPassed =
+        options.repoTestCommand && this.passedTestCommands.get(firstSeq) === options.repoTestCommand ? true : null;
+      options.onLine(text.integrationReady(finalBranch));
+      return {
+        branch: finalBranch,
+        status: "ready",
+        commit: finalHead,
+        files: stats.files,
+        added: stats.added,
+        removed: stats.removed,
+        testPassed,
+        detail: "",
+      };
+    }
+
+    const worktree = join(options.runDir, "worktrees", "final");
+    try {
+      await this.withRepoLock(() =>
+        git(options.repo, ["worktree", "add", "-q", "-b", finalBranch, worktree, firstBranch]),
+      );
+    } catch (error) {
+      return {
+        branch: finalBranch,
+        status: "error",
+        commit: null,
+        files: 0,
+        added: 0,
+        removed: 0,
+        testPassed: null,
+        detail: error instanceof Error ? error.message : String(error),
+      };
+    }
+
+    const integratedSeqs = [firstSeq];
+    for (const seq of leafSeqs.slice(1)) {
+      const otherBranch = branches.get(seq) as string;
+      try {
+        await git(worktree, [...AUTHOR, "merge", "-q", "--no-edit", otherBranch]);
+      } catch {
+        const contextNotes = await this.loadHandoffsFor([...integratedSeqs, seq]);
+        const resolved = await this.resolveMergeConflict({
+          worktree,
+          targetBranch: finalBranch,
+          otherBranch,
+          taskId: null,
+          contextNotes,
+        });
+        if (!resolved.resolved) {
+          await this.discard(worktree, finalBranch);
+          return {
+            branch: finalBranch,
+            status: "conflict",
+            commit: null,
+            files: 0,
+            added: 0,
+            removed: 0,
+            testPassed: null,
+            detail: text.integrationConflict(otherBranch, resolved.files.join(", ") || "?"),
+          };
+        }
+      }
+      integratedSeqs.push(seq);
+    }
+
+    const finalHead = await git(worktree, ["rev-parse", "HEAD"]);
+    const fullDiff = finalHead !== startCommit ? await gitDiff(worktree, startCommit, finalHead) : "";
+    const diffFile = join(options.runDir, "diffs", "final.diff");
+    await mkdir(dirname(diffFile), { recursive: true });
+    await writeFile(diffFile, fullDiff, "utf8");
+    const stats = diffStats(fullDiff);
+
+    let testPassed: boolean | null = null;
+    let detail = "";
+    if (options.repoTestCommand && !this.cancelled) {
+      if (leafSeqs.length === 1 && this.passedTestCommands.get(firstSeq) === options.repoTestCommand) {
+        testPassed = true;
+      } else {
+        options.onLine(text.integrationTesting(finalBranch, options.repoTestCommand));
+        const run = await runShell(options.repoTestCommand, worktree);
+        testPassed = run.code === 0;
+        if (!testPassed) detail = run.output.slice(-1000) || text.integrationTestsFailed(options.repoTestCommand);
+      }
+    }
+
+    await this.removeWorktree(worktree);
+    if (testPassed !== false) options.onLine(text.integrationReady(finalBranch));
+    return {
+      branch: finalBranch,
+      status: testPassed === false ? "tests_failed" : "ready",
+      commit: finalHead,
+      files: stats.files,
+      added: stats.added,
+      removed: stats.removed,
+      testPassed,
+      detail,
+    };
+  }
+
+  /** Run an automated CLI agent (Claude Code or Codex) in a worktree and track it for cancellation. */
+  private async runCliStep(
     step: DirectStep,
     prompt: string,
     worktree: string,
     branch: string,
-    eventsRel: string | null,
+    eventsRel: string,
   ): Promise<HandOffOutcome> {
     const { options, text } = this;
-    const failed = (detail: string): HandOffOutcome => ({
-      stopReason: "error",
-      steps: 0,
-      cost: 0,
-      tokens: { input: 0, output: 0, cache_read: 0, cache_write: 0 },
-      detail,
-    });
+    const base = { steps: 0, cost: 0, tokens: { input: 0, output: 0, cache_read: 0, cache_write: 0 } };
+    if (this.cancelled) return { ...base, stopReason: "cancelled", detail: "" };
+    const failed = (detail: string): HandOffOutcome => ({ ...base, stopReason: "error", detail });
+
     if (step.agent === "claude_code") {
       if (!options.claudeCommand) return failed(text.noClaude);
-      const left = options.budget !== null ? Math.max(options.budget - this.spent, 0.01) : null;
-      const eventsFile = join(options.runDir, eventsRel ?? `events/${pad(task.seq)}.jsonl`);
+      const slots = Math.max(this.activeTaskCount, 1);
+      const left = options.budget !== null ? Math.max((options.budget - this.spent) / slots, 0.01) : null;
+      const eventsFile = join(options.runDir, eventsRel);
       await mkdir(dirname(eventsFile), { recursive: true });
-      this.current = runClaudeCode({
+      if (this.cancelled) return { ...base, stopReason: "cancelled", detail: "" };
+      const agentRun = runClaudeCode({
         command: options.claudeCommand,
         cwd: worktree,
         prompt: `${text.claudeNote(branch)}\n\n---\n\n${prompt}`,
@@ -825,15 +1323,19 @@ export class DirectRun implements RunningProcess {
         eventsFile,
         onLine: options.onLine,
       });
-      const outcome = await this.current.outcome;
-      this.current = null;
-      return outcome;
+      this.activeRuns.add(agentRun);
+      try {
+        return await agentRun.outcome;
+      } finally {
+        this.activeRuns.delete(agentRun);
+      }
     }
     if (step.agent === "codex") {
       if (!options.codexCommand) return failed(text.noCodex);
-      const eventsFile = join(options.runDir, eventsRel ?? `events/${pad(task.seq)}.jsonl`);
+      const eventsFile = join(options.runDir, eventsRel);
       await mkdir(dirname(eventsFile), { recursive: true });
-      this.current = runCodex({
+      if (this.cancelled) return { ...base, stopReason: "cancelled", detail: "" };
+      const agentRun = runCodex({
         command: options.codexCommand,
         cwd: worktree,
         prompt: `${text.codexNote(branch)}\n\n---\n\n${prompt}`,
@@ -842,12 +1344,36 @@ export class DirectRun implements RunningProcess {
         eventsFile,
         onLine: options.onLine,
       });
-      const outcome = await this.current.outcome;
-      this.current = null;
-      return outcome;
+      this.activeRuns.add(agentRun);
+      try {
+        return await agentRun.outcome;
+      } finally {
+        this.activeRuns.delete(agentRun);
+      }
+    }
+    return failed(text.noAgent(step.agent));
+  }
+
+  /** Give the task to one step's agent and wait for it to finish. */
+  private async handTo(
+    task: DirectTask,
+    step: DirectStep,
+    prompt: string,
+    worktree: string,
+    branch: string,
+    eventsRel: string | null,
+  ): Promise<HandOffOutcome> {
+    if (step.agent === "claude_code" || step.agent === "codex") {
+      return this.runCliStep(step, prompt, worktree, branch, eventsRel ?? `events/${pad(task.seq)}.jsonl`);
     }
     if (step.agent === "claude_desktop") return this.waitForDesktop(task, step, prompt, worktree, branch);
-    return failed(text.noAgent(step.agent));
+    return {
+      stopReason: "error",
+      steps: 0,
+      cost: 0,
+      tokens: { input: 0, output: 0, cache_read: 0, cache_write: 0 },
+      detail: this.text.noAgent(step.agent),
+    };
   }
 
   /** Put the task in the inbox for Claude Desktop and wait until it reports, or the run is cancelled. */
@@ -916,15 +1442,17 @@ export class DirectRun implements RunningProcess {
     }
   }
 
-  private async removeWorktree(worktree: string): Promise<void> {
-    await git(this.options.repo, ["worktree", "remove", "--force", worktree], false);
-    await rm(worktree, { recursive: true, force: true });
-    await git(this.options.repo, ["worktree", "prune"], false);
+  private removeWorktree(worktree: string): Promise<void> {
+    return this.withRepoLock(async () => {
+      await git(this.options.repo, ["worktree", "remove", "--force", worktree], false);
+      await rm(worktree, { recursive: true, force: true });
+      await git(this.options.repo, ["worktree", "prune"], false);
+    });
   }
 
   /** Drop the worktree and its branch: the task never started. */
   private async discard(worktree: string, branch: string): Promise<void> {
     await this.removeWorktree(worktree);
-    await git(this.options.repo, ["branch", "-q", "-D", branch], false);
+    await this.withRepoLock(() => git(this.options.repo, ["branch", "-q", "-D", branch], false));
   }
 }

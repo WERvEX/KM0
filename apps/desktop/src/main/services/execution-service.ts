@@ -6,16 +6,20 @@ import {
   DIRECT_AGENTS,
   type ExecTask,
   type ExecTaskStatus,
+  type ExecutionDiff,
   type ExecutionRun,
   type ExecutionStatus,
   ExecutorSettings,
   type ExecutorStatus,
   type HandoffPackage,
+  type IntegrateRunResult,
+  IntegrationSummary,
   type McpSetup,
   type ModelEntry,
   PI_VERSION,
   type Precheck,
   type PrecheckItem,
+  RepoScan,
   type RoutingPlan,
   RUNNER_MIN_VERSION,
   type ToolCheck,
@@ -38,6 +42,7 @@ const EXIT_CANCELLED = 3;
 const POLL_MS = 500;
 const LOG_LINES = 200;
 const KEPT_LOG_LINES = 50;
+const MAX_DIFF_CHARS = 300_000;
 /** Official endpoints for providers set up without an address: an agent signs in by itself, or the default API. */
 const DEFAULT_BASE_URL = { anthropic: "https://api.anthropic.com", openai: "https://api.openai.com/v1" } as const;
 
@@ -64,6 +69,7 @@ interface ProgressState {
   tasks: Map<string, ExecTask>;
   finished: "completed" | "cancelled" | null;
   cost: number;
+  integration: IntegrationSummary | null;
 }
 
 interface Active {
@@ -75,7 +81,7 @@ interface Active {
   timer: ReturnType<typeof setInterval>;
 }
 
-const emptyProgress = (): ProgressState => ({ tasks: new Map(), finished: null, cost: 0 });
+const emptyProgress = (): ProgressState => ({ tasks: new Map(), finished: null, cost: 0, integration: null });
 
 /** Fold progress.jsonl events into the run's tasks; unknown events and malformed lines are skipped. */
 export function applyProgress(state: ProgressState, lines: string[]): ProgressState {
@@ -145,6 +151,20 @@ export function applyProgress(state: ProgressState, lines: string[]): ProgressSt
           task.detail = String(event.failure_detail ?? "");
         }
         break;
+      case "integration_finished": {
+        const parsed = IntegrationSummary.safeParse({
+          branch: event.branch,
+          status: event.status,
+          commit: event.commit ?? null,
+          files: event.files ?? 0,
+          added: event.added ?? 0,
+          removed: event.removed ?? 0,
+          testPassed: event.testPassed ?? event.test_passed ?? null,
+          detail: event.detail ?? "",
+        });
+        if (parsed.success) state.integration = parsed.data;
+        break;
+      }
       case "run_finished":
         state.finished = event.status === "cancelled" ? "cancelled" : "completed";
         if (typeof event.cost === "number") state.cost = event.cost;
@@ -240,6 +260,15 @@ const TEXT = {
     claudeOwnLogin: "使用 Claude Code 自己的登录；用订阅登录时，请自行确认这样调用符合订阅条款。",
     desktop: (count: number) =>
       `${count} 个任务会等待 Claude Desktop 领取：先在“设置 → 执行”里把 KM0 的 MCP 服务器加到 Claude Desktop，然后在 Claude Desktop 里说“做 KM0 的任务”。`,
+    noIntegration: "这次执行没有生成可合并的最终集成分支。",
+    stillRunning: "执行还在进行中，结束后再合并或检出。",
+    branchMissing: (branch: string) => `仓库里找不到集成分支 ${branch}，可能已被手动删除。`,
+    dirtyRepo: "当前仓库工作区有未提交的改动，请先提交或暂存（git stash）后再合并或检出。",
+    mergeConflict: (branch: string, target: string) =>
+      `将 ${branch} 合并到 ${target} 时发生冲突，已自动中止合并并保持你的工作区干净。你可以改用“检出集成分支”或手动合并。`,
+    integrateFailed: (detail: string) => `操作失败：${detail}`,
+    merged: (branch: string, target: string) => `已将 ${branch} 合并到当前分支 ${target}。`,
+    checkedOut: (branch: string) => `已切换到集成分支 ${branch}。`,
   },
   en: {
     web: "The browser debug build cannot start local programs. Run from the desktop app, or export the package and run KM0 Runner yourself.",
@@ -301,6 +330,15 @@ const TEXT = {
       "it uses Claude Code's own sign-in; with a subscription sign-in, check that being run this way fits its terms.",
     desktop: (count: number) =>
       `${count} ${count === 1 ? "task waits" : "tasks wait"} for Claude Desktop to take ${count === 1 ? "it" : "them"}: add KM0's MCP server to Claude Desktop under Settings → Execution, then ask Claude Desktop to "do the KM0 tasks".`,
+    noIntegration: "This run has no final integration branch available.",
+    stillRunning: "The run is still active; wait for it to finish before integrating.",
+    branchMissing: (branch: string) => `Integration branch ${branch} no longer exists in the repository.`,
+    dirtyRepo: "The repository working tree has uncommitted changes; commit or stash them first.",
+    mergeConflict: (branch: string, target: string) =>
+      `Merging ${branch} into ${target} hit conflicts; the merge was aborted so your working tree stayed clean. Check out the integration branch or merge manually.`,
+    integrateFailed: (detail: string) => `Git operation failed: ${detail}`,
+    merged: (branch: string, target: string) => `Merged ${branch} into ${target}.`,
+    checkedOut: (branch: string) => `Checked out integration branch ${branch}.`,
   },
 } as const;
 
@@ -901,7 +939,11 @@ export class ExecutionService {
       testCommand: string | null;
     }[];
     const selectedTasks = seqs.length > 0 ? plan.tasks.filter((task) => seqs.includes(task.seq)) : plan.tasks;
+    const mayMerge =
+      settings.directResolveConflicts &&
+      (plan.tasks.length > 1 || selectedTasks.some((task) => task.dependsOn.length > 1));
     const needsAgent = (agent: string) =>
+      mayMerge ||
       selectedTasks.some(
         (task) =>
           task.agent === agent || (settings.directAutoEscalate && task.chain.some((step) => step.agent === agent)),
@@ -949,7 +991,19 @@ export class ExecutionService {
         score: task.score,
       };
     });
-    const project = this.db.prepare("SELECT title FROM projects WHERE id = ?").get(projectId) as { title: string };
+    const project = this.db.prepare("SELECT title, repo_scan_json FROM projects WHERE id = ?").get(projectId) as {
+      title: string;
+      repo_scan_json: string | null;
+    };
+    let repoTestCommand: string | null = null;
+    if (project.repo_scan_json) {
+      try {
+        const parsed = RepoScan.safeParse(JSON.parse(project.repo_scan_json));
+        if (parsed.success) repoTestCommand = parsed.data.testCommand;
+      } catch {
+        // Ignore malformed repo scan cache.
+      }
+    }
     const options: DirectRunOptions = {
       runId,
       runDir,
@@ -981,6 +1035,9 @@ export class ExecutionService {
             })
         : null,
       autoEscalate: settings.directAutoEscalate,
+      maxConcurrency: settings.directConcurrency,
+      resolveConflicts: settings.directResolveConflicts,
+      repoTestCommand,
     };
     return direct.startRun(options);
   }
@@ -1021,6 +1078,90 @@ export class ExecutionService {
           .all(projectId) as unknown as RunRow[]
       ).map((row) => this.loadView(row)),
     );
+  }
+
+  /** Read the cumulative unified diff (`diffs/final.diff`) of a finished run's integration branch. */
+  async diff(projectId: number, runRef: number): Promise<ExecutionDiff> {
+    const text = TEXT[this.language()];
+    if (!this.port) throw new AppError("conflict", text.web);
+    const row = this.row(runRef);
+    if (row.project_id !== projectId) throw new AppError("not_found", `Run ${runRef} does not exist.`);
+    const progress = this.active.get(runRef)?.progress ?? (await this.readProgress(row));
+    const integration = progress.integration;
+    if (!integration || (integration.status !== "ready" && integration.status !== "tests_failed")) {
+      throw new AppError("not_found", text.noIntegration);
+    }
+    const { text: raw } = await this.port.readFrom(this.port.join(row.run_dir, "diffs", "final.diff"), 0);
+    const truncated = raw.length > MAX_DIFF_CHARS;
+    return {
+      branch: integration.branch,
+      diff: truncated ? raw.slice(0, MAX_DIFF_CHARS) : raw,
+      truncated,
+      files: integration.files,
+      added: integration.added,
+      removed: integration.removed,
+    };
+  }
+
+  /** Merge or check out `km0/<run_id>/final` into the linked repository without ever leaving a dirty conflict state. */
+  integrate(projectId: number, runRef: number, mode: "merge" | "checkout"): Promise<IntegrateRunResult> {
+    return this.locks.run(projectId, async () => {
+      const text = TEXT[this.language()];
+      if (!this.port) throw new AppError("conflict", text.web);
+      const port = this.port;
+      const row = this.row(runRef);
+      if (row.project_id !== projectId) throw new AppError("not_found", `Run ${runRef} does not exist.`);
+      if (this.active.has(runRef)) throw new AppError("conflict", text.stillRunning);
+      const progress = await this.readProgress(row);
+      const integration = progress.integration;
+      if (!integration || (integration.status !== "ready" && integration.status !== "tests_failed")) {
+        throw new AppError("conflict", text.noIntegration);
+      }
+      const repo = this.repoOf(projectId);
+      if (!repo) throw new AppError("conflict", text.noRepo);
+
+      const hasBranch = await port.capture([
+        "git",
+        "-C",
+        repo,
+        "rev-parse",
+        "--verify",
+        "-q",
+        `refs/heads/${integration.branch}`,
+      ]);
+      if (hasBranch.code !== 0) throw new AppError("not_found", text.branchMissing(integration.branch));
+
+      const dirty = await port.capture(["git", "-C", repo, "status", "--porcelain"]);
+      if (dirty.code !== 0 || dirty.output.trim().length > 0) throw new AppError("conflict", text.dirtyRepo);
+
+      const currentRes = await port.capture(["git", "-C", repo, "branch", "--show-current"]);
+      const currentBranch = currentRes.output.trim() || "HEAD";
+
+      if (mode === "checkout") {
+        const res = await port.capture(["git", "-C", repo, "checkout", integration.branch]);
+        if (res.code !== 0) throw new AppError("conflict", text.integrateFailed(res.output.trim()));
+        return {
+          mode,
+          branch: integration.branch,
+          targetBranch: integration.branch,
+          detail: text.checkedOut(integration.branch),
+        };
+      }
+
+      const hasUser = (await port.capture(["git", "-C", repo, "config", "user.name"])).output.trim().length > 0;
+      const author = hasUser ? [] : ["-c", "user.name=KM0", "-c", "user.email=km0@localhost"];
+      const res = await port.capture(["git", "-C", repo, ...author, "merge", "--no-edit", integration.branch]);
+      if (res.code !== 0) {
+        await port.capture(["git", "-C", repo, "merge", "--abort"]);
+        throw new AppError("conflict", text.mergeConflict(integration.branch, currentBranch));
+      }
+      return {
+        mode,
+        branch: integration.branch,
+        targetBranch: currentBranch,
+        detail: text.merged(integration.branch, currentBranch),
+      };
+    });
   }
 
   /** Read new progress lines; a line is only taken once it is complete. */
@@ -1141,6 +1282,7 @@ export class ExecutionService {
       importedRunRef: row.runner_run_ref,
       seqs: JSON.parse(row.seqs_json) as number[],
       reuse: row.reuse,
+      integration: state.integration,
     };
   }
 

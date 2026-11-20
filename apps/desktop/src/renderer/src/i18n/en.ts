@@ -107,6 +107,14 @@ export const en: Messages = {
       directAutoEscalate: "Climb the escalation chain automatically on failure",
       directAutoEscalateHint:
         "When an in-place repair still fails or the agent errors out, move to the next available Agent × Model combination (including across agents).",
+      directConcurrency: "Max parallel tasks",
+      directConcurrencyHint:
+        "Independent tasks in the dependency graph run concurrently in separate git worktrees; set to 1 for strict serial execution.",
+      directConcurrencySerial: "1 (serial)",
+      directConcurrencyRecommended: "{{n}} (recommended)",
+      directResolveConflicts: "Resolve multi-branch git merge conflicts automatically",
+      directResolveConflictsHint:
+        "When parallel branches edit the same lines, ask an available CLI agent to resolve conflict markers using upstream hand-off contracts before blocking.",
       desktopSteps: [
         "In Claude Desktop, open Settings → Developer → Edit Config, merge the entry below into claude_desktop_config.json and restart Claude Desktop.",
         "Enable Claude Desktop under Settings → Agents, then give it tasks in the routing table.",
@@ -698,7 +706,7 @@ export const en: Messages = {
     intro:
       "Run the tasks one by one in the linked repository with KM0 Runner: a branch per task, a stronger model when one gets stuck, and the results imported and judged when it ends.",
     introDirect:
-      "Each task goes to its routed agent in dependency order, on a branch of its own: KM0 starts Claude Code, Claude Desktop takes its tasks; the results are imported and judged when it ends.",
+      "Each task goes to its routed agent along the dependency graph (independent tasks run in parallel), on its own branch with inline judging, and finishes with an integration branch ready to review and merge.",
     awaitingHint: 'Ask Claude Desktop to "do the KM0 tasks" and it takes this one.',
     introCustom:
       "Run with the command set under Settings → Execution. KM0 only starts it, shows its output and stops it; Runner results are imported if it leaves any.",
@@ -761,8 +769,37 @@ export const en: Messages = {
         custom: "Custom command",
         agents: "Agents",
         claude: "Claude Code",
+        codex: "Codex",
         desktop: "Claude Desktop",
       },
+    },
+    integration: {
+      status: {
+        ready: "Integration ready",
+        tests_failed: "Tests failed",
+        conflict: "Merge conflict",
+        error: "Integration error",
+      },
+      testsPassed: "Repo tests passed",
+      testsFailed: "Repo tests failed",
+      viewDiff: "Full diff",
+      merge: "Merge into current",
+      checkout: "Checkout",
+      diffTitle: "Full diff · {{branch}}",
+      diffLoading: "Loading diff…",
+      diffTruncated: "Diff is large; showing the first 300 KB.",
+      emptyDiff: "No file changes relative to the base commit.",
+      close: "Close",
+      mergeTitle: "Merge integration branch",
+      mergeBody:
+        "Merge {{branch}} into the repository's current branch. Requires a clean working tree; if git hits conflicts the merge is aborted cleanly.",
+      checkoutTitle: "Checkout integration branch",
+      checkoutBody:
+        "Switch the repository to {{branch}} to review or run tests locally. Requires a clean working tree.",
+      testsFailedWarning: "Note: repository tests failed on this integration branch.",
+      confirmMerge: "Merge",
+      confirmCheckout: "Checkout",
+      cancel: "Cancel",
     },
     quit: {
       title: "Runs are still going",

@@ -3,13 +3,28 @@ import {
   type ExecTask,
   type ExecTaskStatus,
   type ExecutionRun,
+  type IntegrationSummary,
   isPresetAgent,
   type Precheck,
   type PrecheckItem,
 } from "@km0/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ArrowUp, Check, FolderGit2, Info, Loader2, Play, RotateCcw, Square, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowUp,
+  Check,
+  FileDiff,
+  FolderGit2,
+  GitBranch,
+  GitMerge,
+  Info,
+  Loader2,
+  Play,
+  RotateCcw,
+  Square,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
 import { call, errorMessage } from "@/lib/ipc";
 import { useIpcQuery } from "@/lib/queries";
@@ -46,11 +62,18 @@ const RUN_TONE = {
   failed: "danger",
   interrupted: "warning",
 } as const;
+const INTEGRATION_TONE: Record<IntegrationSummary["status"], "success" | "warning" | "danger"> = {
+  ready: "success",
+  tests_failed: "warning",
+  conflict: "danger",
+  error: "danger",
+};
 const DONE = new Set<ExecTaskStatus>(["passed", "unjudged", "failed", "blocked", "cancelled"]);
 
 /** Run the routed tasks from KM0: check first, start, follow each task, stop, and redo what did not pass. */
 export function ExecutionPanel({ projectId }: { projectId: number }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const status = useIpcQuery("execution.status");
   const settings = useIpcQuery("execution.settings.get");
@@ -58,6 +81,10 @@ export function ExecutionPanel({ projectId }: { projectId: number }) {
   const verdicts = useQuery({ queryKey: runnerKey(projectId), queryFn: () => call("runner.list", { projectId }) });
   const [checking, setChecking] = useState(false);
   const [stopTarget, setStopTarget] = useState<ExecutionRun | null>(null);
+  const [diffTarget, setDiffTarget] = useState<ExecutionRun | null>(null);
+  const [integrateTarget, setIntegrateTarget] = useState<{ run: ExecutionRun; mode: "merge" | "checkout" } | null>(
+    null,
+  );
   const start = useMutation({
     mutationFn: (input: { seqs?: number[]; reuse?: string | null }) =>
       call("execution.start", { projectId, seqs: input.seqs ?? [], reuse: input.reuse ?? null }),
@@ -73,6 +100,18 @@ export function ExecutionPanel({ projectId }: { projectId: number }) {
   const stop = useMutation({
     mutationFn: (runRef: number) => call("execution.stop", { projectId, runRef }),
     onSuccess: () => setStopTarget(null),
+  });
+  const integrate = useMutation({
+    mutationFn: (input: { runRef: number; mode: "merge" | "checkout" }) =>
+      call("execution.integrate", { projectId, runRef: input.runRef, mode: input.mode }),
+    onSuccess: (result) => {
+      setIntegrateTarget(null);
+      toast({ kind: "success", message: result.detail });
+    },
+    onError: (error) => {
+      setIntegrateTarget(null);
+      toast({ kind: "error", message: errorMessage(error) });
+    },
   });
 
   const available = status.data?.available ?? false;
@@ -119,9 +158,11 @@ export function ExecutionPanel({ projectId }: { projectId: number }) {
               key={run.id}
               run={run}
               redo={rejectedSeqs(run)}
-              busy={start.isPending || running}
+              busy={start.isPending || running || integrate.isPending}
               onStop={() => setStopTarget(run)}
               onRedo={(seqs) => start.mutate({ seqs, reuse: run.runId })}
+              onViewDiff={() => setDiffTarget(run)}
+              onIntegrate={(mode) => setIntegrateTarget({ run, mode })}
             />
           ))}
         </ul>
@@ -137,6 +178,43 @@ export function ExecutionPanel({ projectId }: { projectId: number }) {
           start.reset();
         }}
         onStart={() => start.mutate({})}
+      />
+      <IntegrationDiffDialog projectId={projectId} run={diffTarget} onClose={() => setDiffTarget(null)} />
+      <ConfirmDialog
+        open={integrateTarget !== null}
+        title={
+          integrateTarget?.mode === "checkout"
+            ? t("execution.integration.checkoutTitle")
+            : t("execution.integration.mergeTitle")
+        }
+        description={
+          integrateTarget
+            ? [
+                t(
+                  integrateTarget.mode === "checkout"
+                    ? "execution.integration.checkoutBody"
+                    : "execution.integration.mergeBody",
+                  { branch: integrateTarget.run.integration?.branch ?? "" },
+                ),
+                integrateTarget.run.integration?.status === "tests_failed"
+                  ? t("execution.integration.testsFailedWarning")
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" ")
+            : ""
+        }
+        confirmLabel={
+          integrateTarget?.mode === "checkout"
+            ? t("execution.integration.confirmCheckout")
+            : t("execution.integration.confirmMerge")
+        }
+        cancelLabel={t("execution.integration.cancel")}
+        pending={integrate.isPending}
+        onCancel={() => setIntegrateTarget(null)}
+        onConfirm={() =>
+          integrateTarget && integrate.mutate({ runRef: integrateTarget.run.id, mode: integrateTarget.mode })
+        }
       />
       <ConfirmDialog
         open={stopTarget !== null}
@@ -159,17 +237,24 @@ function RunCard({
   busy,
   onStop,
   onRedo,
+  onViewDiff,
+  onIntegrate,
 }: {
   run: ExecutionRun;
   redo: number[];
   busy: boolean;
   onStop: () => void;
   onRedo: (seqs: number[]) => void;
+  onViewDiff: () => void;
+  onIntegrate: (mode: "merge" | "checkout") => void;
 }) {
   const { t, i18n } = useTranslation();
   const live = run.status === "running" || run.status === "stopping";
   const done = run.tasks.filter((task) => DONE.has(task.status)).length;
   const started = new Date(run.startedAt).toLocaleString(i18n.language);
+  const integration = !live ? run.integration : null;
+  const canIntegrate =
+    integration !== null && (integration.status === "ready" || integration.status === "tests_failed");
   return (
     <li aria-label={t("execution.runLabel", { runId: run.runId })} className="rounded-md border border-border">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
@@ -213,6 +298,48 @@ function RunCard({
           ))}
         </ul>
       ) : null}
+      {integration ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-sunken/40 px-3 py-2 text-xs">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <GitBranch className="size-3.5 shrink-0 text-muted" />
+            <code className="truncate">{integration.branch}</code>
+            <Badge tone={INTEGRATION_TONE[integration.status]}>
+              {t(`execution.integration.status.${integration.status}`)}
+            </Badge>
+            {canIntegrate ? (
+              <span className="text-muted">
+                {t("runner.diff", {
+                  files: integration.files,
+                  added: integration.added,
+                  removed: integration.removed,
+                })}
+              </span>
+            ) : null}
+            {integration.testPassed === true ? (
+              <span className="text-success">{t("execution.integration.testsPassed")}</span>
+            ) : integration.testPassed === false ? (
+              <span className="text-warning">{t("execution.integration.testsFailed")}</span>
+            ) : null}
+            {!canIntegrate && integration.detail ? <span className="text-danger">{integration.detail}</span> : null}
+          </div>
+          {canIntegrate ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Button size="sm" variant="ghost" onClick={onViewDiff}>
+                <FileDiff />
+                {t("execution.integration.viewDiff")}
+              </Button>
+              <Button size="sm" disabled={busy} onClick={() => onIntegrate("merge")}>
+                <GitMerge />
+                {t("execution.integration.merge")}
+              </Button>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => onIntegrate("checkout")}>
+                <GitBranch />
+                {t("execution.integration.checkout")}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {run.error ? (
         <p role="alert" className="mx-3 my-2 whitespace-pre-wrap rounded bg-danger/5 p-2 text-xs text-danger">
           {run.error}
@@ -238,6 +365,56 @@ function RunCard({
         ) : null}
       </div>
     </li>
+  );
+}
+
+function IntegrationDiffDialog({
+  projectId,
+  run,
+  onClose,
+}: {
+  projectId: number;
+  run: ExecutionRun | null;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const diff = useQuery({
+    queryKey: ["execution.diff", projectId, run?.id],
+    queryFn: () => call("execution.diff", { projectId, runRef: run?.id ?? 0 }),
+    enabled: run !== null,
+    gcTime: 0,
+  });
+  const branch = run?.integration?.branch ?? "";
+  const description = diff.data
+    ? [
+        t("runner.diff", { files: diff.data.files, added: diff.data.added, removed: diff.data.removed }),
+        diff.data.truncated ? t("execution.integration.diffTruncated") : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : undefined;
+  return (
+    <Dialog
+      open={run !== null}
+      onOpenChange={(next) => !next && onClose()}
+      title={t("execution.integration.diffTitle", { branch })}
+      description={description}
+      wide
+      footer={<Button onClick={onClose}>{t("execution.integration.close")}</Button>}
+    >
+      {diff.isFetching && !diff.data ? (
+        <p className="flex items-center gap-2 text-sm text-muted">
+          <Loader2 className="size-4 animate-spin" />
+          {t("execution.integration.diffLoading")}
+        </p>
+      ) : diff.error ? (
+        <p className="text-sm text-danger">{errorMessage(diff.error)}</p>
+      ) : diff.data ? (
+        <pre className="max-h-[60vh] overflow-auto rounded bg-sunken p-3 font-mono text-xs whitespace-pre">
+          {diff.data.diff || t("execution.integration.emptyDiff")}
+        </pre>
+      ) : null}
+    </Dialog>
   );
 }
 

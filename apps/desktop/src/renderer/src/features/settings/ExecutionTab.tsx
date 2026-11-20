@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Textarea } from "@/components/ui/field";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { useFiles } from "@/lib/files";
 import { errorMessage } from "@/lib/ipc";
@@ -278,7 +278,29 @@ export function ExecutionTab() {
               onChange={(value) => set({ runsDir: value })}
               onBrowse={status.data.available ? () => void browse("runsDir") : null}
             />
-            <div className="flex flex-col gap-2 border-t border-border pt-3 text-sm">
+            <div className="flex flex-col gap-3 border-t border-border pt-3 text-sm">
+              <Field
+                label={t("settings.execution.directConcurrency")}
+                htmlFor="directConcurrency"
+                hint={t("settings.execution.directConcurrencyHint")}
+              >
+                <Select
+                  id="directConcurrency"
+                  className="max-w-xs"
+                  value={String(draft.directConcurrency)}
+                  onChange={(event) => set({ directConcurrency: Number(event.target.value) })}
+                >
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <option key={n} value={n}>
+                      {n === 1
+                        ? t("settings.execution.directConcurrencySerial")
+                        : n === 3
+                          ? t("settings.execution.directConcurrencyRecommended", { n })
+                          : String(n)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
               <label className="flex items-start gap-2">
                 <input
                   type="checkbox"
@@ -302,6 +324,20 @@ export function ExecutionTab() {
                   <span className="font-medium">{t("settings.execution.directAutoEscalate")}</span>
                   <span className="mt-0.5 block text-xs text-muted">
                     {t("settings.execution.directAutoEscalateHint")}
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={draft.directResolveConflicts}
+                  onChange={(event) => set({ directResolveConflicts: event.target.checked })}
+                />
+                <span>
+                  <span className="font-medium">{t("settings.execution.directResolveConflicts")}</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    {t("settings.execution.directResolveConflictsHint")}
                   </span>
                 </span>
               </label>

@@ -541,6 +541,171 @@ describe("Phase 2: structured handoffs, inline EARS gate, in-place repair and cr
   });
 });
 
+describe("Phase 3: parallel DAG execution, conflict coordination and final integration branch", () => {
+  it("runs independent DAG branches concurrently and converges onto a downstream task and final branch", async () => {
+    const repo = gitRepo();
+    const argsFile = join(mkdtempSync(join(tmpdir(), "km0-parallel-args-")), "args.jsonl");
+    process.env.FAKE_CLAUDE_ARGS = argsFile;
+    process.env.FAKE_CLAUDE_DELAY_MS = "300";
+    try {
+      const { run, runDir, runId } = start(
+        repo,
+        [
+          task(1, "claude_code", [], has("claude-01.txt")),
+          task(2, "claude_code", [1], has("claude-01.txt", "claude-02.txt")),
+          task(3, "claude_code", [1], has("claude-01.txt", "claude-03.txt")),
+          task(4, "claude_code", [2, 3], has("claude-01.txt", "claude-02.txt", "claude-03.txt", "claude-04.txt")),
+        ],
+        { maxConcurrency: 2 },
+      );
+      expect((await run.exited).code).toBe(0);
+
+      const calls = readFileSync(argsFile, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as { seq: string; startedAt: number; finishedAt: number });
+      const bySeq = new Map(calls.map((c) => [c.seq, c]));
+      const c1 = bySeq.get("01");
+      const c2 = bySeq.get("02");
+      const c3 = bySeq.get("03");
+      const c4 = bySeq.get("04");
+      expect(c1 && c2 && c3 && c4).toBeTruthy();
+      if (!c1 || !c2 || !c3 || !c4) return;
+      // Tasks 02 and 03 overlapped in wall-clock time, after 01 and before 04.
+      expect(Math.max(c2.startedAt, c3.startedAt)).toBeLessThan(Math.min(c2.finishedAt, c3.finishedAt));
+      expect(c2.startedAt).toBeGreaterThanOrEqual(c1.finishedAt - 20);
+      expect(c4.startedAt).toBeGreaterThanOrEqual(Math.max(c2.finishedAt, c3.finishedAt) - 20);
+
+      const finalBranch = `km0/${runId}/final`;
+      for (const file of ["claude-01.txt", "claude-02.txt", "claude-03.txt", "claude-04.txt"]) {
+        expect(execSync(`git show ${finalBranch}:${file}`, { cwd: repo, encoding: "utf8" })).toContain(
+          "fake Claude Code",
+        );
+      }
+      const summary = JSON.parse(readFileSync(join(runDir, "summary.json"), "utf8"));
+      expect(summary.integration).toMatchObject({ branch: finalBranch, status: "ready", files: 4 });
+      expect(readFileSync(join(runDir, "diffs", "final.diff"), "utf8")).toContain("claude-04.txt");
+      expect(
+        progress(runDir).some((event) => event.event === "integration_finished" && event.branch === finalBranch),
+      ).toBe(true);
+    } finally {
+      delete process.env.FAKE_CLAUDE_ARGS;
+      delete process.env.FAKE_CLAUDE_DELAY_MS;
+    }
+  }, 15_000);
+
+  it("automatically resolves multi-upstream git merge conflicts before a downstream task starts", async () => {
+    const repo = gitRepo();
+    process.env.FAKE_CLAUDE_CONFLICT_FILE = "app.txt";
+    process.env.FAKE_CODEX_CONFLICT_FILE = "app.txt";
+    try {
+      const { run, runDir } = start(
+        repo,
+        [
+          task(1, "claude_code", [], has("claude-01.txt")),
+          { ...task(2, "codex", [], has("codex-02.txt")), model: "gpt-5.6-luna" },
+          task(3, "claude_code", [1, 2], null),
+        ],
+        {
+          codexCommand: FAKE_CODEX,
+          maxConcurrency: 2,
+          resolveConflicts: true,
+        },
+      );
+      expect((await run.exited).code).toBe(0);
+      const r3 = report(runDir, "03");
+      expect(r3.failure_category).toBeNull();
+      expect((r3.attempts as { purpose: string }[]).some((a) => a.purpose === "merge")).toBe(true);
+    } finally {
+      delete process.env.FAKE_CLAUDE_CONFLICT_FILE;
+      delete process.env.FAKE_CODEX_CONFLICT_FILE;
+    }
+  }, 15_000);
+
+  it("resolves leaf-branch merge conflicts when building km0/<run_id>/final and runs repoTestCommand", async () => {
+    const repo = gitRepo();
+    process.env.FAKE_CLAUDE_CONFLICT_FILE = "app.txt";
+    process.env.FAKE_CODEX_CONFLICT_FILE = "app.txt";
+    try {
+      const checkBoth = `node -e "const s=require('fs').readFileSync('app.txt','utf8');process.exit(s.includes('claude task 01')&&s.includes('codex task 02')&&!s.includes('<<<<<<<')?0:1)"`;
+      const leafRun = start(
+        repo,
+        [
+          task(1, "claude_code", [], has("claude-01.txt")),
+          { ...task(2, "codex", [], has("codex-02.txt")), model: "gpt-5.6-luna" },
+        ],
+        {
+          codexCommand: FAKE_CODEX,
+          maxConcurrency: 2,
+          resolveConflicts: true,
+          repoTestCommand: checkBoth,
+        },
+      );
+      expect((await leafRun.run.exited).code).toBe(0);
+      const finalBranch = `km0/${leafRun.runId}/final`;
+      const mergedApp = execSync(`git show ${finalBranch}:app.txt`, { cwd: repo, encoding: "utf8" });
+      expect(mergedApp).toContain("shared line from claude task 01");
+      expect(mergedApp).toContain("shared line from codex task 02");
+      expect(mergedApp).not.toContain("<<<<<<<");
+      const summary = JSON.parse(readFileSync(join(leafRun.runDir, "summary.json"), "utf8"));
+      expect(summary.integration).toMatchObject({ branch: finalBranch, status: "ready", testPassed: true });
+    } finally {
+      delete process.env.FAKE_CLAUDE_CONFLICT_FILE;
+      delete process.env.FAKE_CODEX_CONFLICT_FILE;
+    }
+  }, 15_000);
+
+  it("aborts cleanly and reports conflict status when conflict markers remain unresolved", async () => {
+    const repo = gitRepo();
+    process.env.FAKE_CLAUDE_CONFLICT_FILE = "app.txt";
+    process.env.FAKE_CODEX_CONFLICT_FILE = "app.txt";
+    process.env.FAKE_CLAUDE_LEAVE_CONFLICT = "1";
+    try {
+      const blocked = start(
+        repo,
+        [
+          task(1, "claude_code", [], has("claude-01.txt")),
+          { ...task(2, "codex", [], has("codex-02.txt")), model: "gpt-5.6-luna" },
+        ],
+        { codexCommand: FAKE_CODEX, maxConcurrency: 2, resolveConflicts: true },
+      );
+      expect((await blocked.run.exited).code).toBe(1);
+      const summary = JSON.parse(readFileSync(join(blocked.runDir, "summary.json"), "utf8"));
+      expect(summary.integration).toMatchObject({ status: "conflict", commit: null });
+      expect(execSync("git status --porcelain", { cwd: repo, encoding: "utf8" })).toBe("");
+    } finally {
+      delete process.env.FAKE_CLAUDE_CONFLICT_FILE;
+      delete process.env.FAKE_CODEX_CONFLICT_FILE;
+      delete process.env.FAKE_CLAUDE_LEAVE_CONFLICT;
+    }
+  }, 15_000);
+
+  it("stops every concurrently running agent cleanly on terminate()", async () => {
+    const repo = gitRepo();
+    process.env.FAKE_CLAUDE_DELAY_MS = "5000";
+    try {
+      const { run, runDir } = start(
+        repo,
+        [task(1, "claude_code", [], null), task(2, "claude_code", [], null), task(3, "claude_code", [1, 2], null)],
+        { maxConcurrency: 2 },
+      );
+      for (let i = 0; i < 200; i += 1) {
+        const events = existsSync(join(runDir, "progress.jsonl")) ? progress(runDir) : [];
+        if (events.filter((e) => e.event === "task_started").length >= 2) break;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      run.terminate();
+      expect((await run.exited).code).toBe(3);
+      for (const seq of ["01", "02", "03"]) {
+        expect(report(runDir, seq)).toMatchObject({ failure_category: "cancelled" });
+      }
+      expect(readdirSync(join(runDir, "worktrees"))).toEqual([]);
+    } finally {
+      delete process.env.FAKE_CLAUDE_DELAY_MS;
+    }
+  });
+});
+
 // With KM0_CODEX_REAL=1, the real `codex` on PATH does one small task (it spends a little of the account's quota).
 describe.skipIf(!process.env.KM0_CODEX_REAL)("the real Codex", () => {
   it("does a small task in its worktree and KM0 commits it", async () => {

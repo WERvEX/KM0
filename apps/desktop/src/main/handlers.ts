@@ -173,5 +173,7 @@ export function createHandlers({
     "execution.start": ({ projectId, seqs, reuse }) => execution.start(projectId, seqs, reuse),
     "execution.stop": ({ projectId, runRef }) => execution.stop(projectId, runRef),
     "execution.list": ({ projectId }) => execution.list(projectId),
+    "execution.diff": ({ projectId, runRef }) => execution.diff(projectId, runRef),
+    "execution.integrate": ({ projectId, runRef, mode }) => execution.integrate(projectId, runRef, mode),
   };
 }

@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -147,4 +147,21 @@ test("Claude Code and Claude Desktop finish a project together", async () => {
     "task 02 by Claude Desktop\n",
   );
   expect(execSync(`git show ${branch}:claude-01.txt`, { cwd: repo, encoding: "utf8" })).toMatch(/task 01/);
+
+  // Phase 3: final integration branch appears in the RunCard; review full diff and merge into the user's branch.
+  await expect(latestRun().getByText("集成分支就绪")).toBeVisible();
+  await latestRun().getByRole("button", { name: "总 Diff" }).click();
+  const diffDialog = page.getByRole("dialog", { name: /集成分支总 Diff/ });
+  await expect(diffDialog.getByText(/desktop-02\.txt/)).toBeVisible();
+  await expect(diffDialog.getByText(/claude-03\.txt/)).toBeVisible();
+  await diffDialog.getByRole("button", { name: "关闭" }).click();
+  await expect(diffDialog).toBeHidden();
+
+  await latestRun().getByRole("button", { name: "合并到当前分支" }).click();
+  const mergeConfirm = page.getByRole("dialog", { name: "合并集成分支到当前分支" });
+  await mergeConfirm.getByRole("button", { name: "确认合并" }).click();
+  await expect(mergeConfirm).toBeHidden();
+  await expect(page.getByText(/已将 km0\/.*\/final 合并到当前分支/)).toBeVisible();
+  expect(readFileSync(join(repo, "desktop-02.txt"), "utf8").trim()).toBe("task 02 by Claude Desktop");
+  expect(readFileSync(join(repo, "claude-03.txt"), "utf8")).toMatch(/task 03/);
 });

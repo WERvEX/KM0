@@ -20,10 +20,13 @@ import {
 import { ProjectPath, ProjectSummary } from "./domain";
 import type { AppErrorShape } from "./errors";
 import {
+  ExecutionDiff,
   ExecutionRef,
   ExecutionRun,
   ExecutorSettings,
   ExecutorStatus,
+  IntegrateRunInput,
+  IntegrateRunResult,
   Precheck,
   QuitRequest,
   StartExecutionInput,
@@ -205,6 +208,10 @@ export const ipcContract = {
   "execution.start": channel(StartExecutionInput, ExecutionRun),
   "execution.stop": channel(ExecutionRef, ExecutionRun),
   "execution.list": channel(z.object({ projectId: z.number().int().positive() }), z.array(ExecutionRun)),
+  /** Unified diff of the run's final integration branch (`km0/<run_id>/final`). */
+  "execution.diff": channel(ExecutionRef, ExecutionDiff),
+  /** Merge or check out the run's final integration branch into the linked repository. */
+  "execution.integrate": channel(IntegrateRunInput, IntegrateRunResult),
 } as const;
 
 export type IpcContract = typeof ipcContract;

@@ -99,7 +99,7 @@ async function setup({ port = nodeExec() as ReturnType<typeof nodeExec> | null }
       inboxDir,
       mcp: { command: "km0", args: ["km0-mcp.cjs"], env: {} },
       version: "1.1.0",
-      startRun: (options) => new DirectRun(options),
+      startRun: (options) => new DirectRun({ ...options, pollMs: 50 }),
       forget: (runId) => removeRun(inboxDir, runId),
     },
   );
@@ -342,7 +342,7 @@ describe("execution", () => {
         inboxDir,
         mcp: null,
         version: "1.1.0",
-        startRun: (options) => new DirectRun(options),
+        startRun: (options) => new DirectRun({ ...options, pollMs: 50 }),
         forget: (runId) => removeRun(inboxDir, runId),
       },
     );
@@ -459,7 +459,7 @@ describe("progress", () => {
     expect(execSync(`git show km0/${second.runId}/01:app.txt`, { cwd: repo, encoding: "utf8" })).toBe("hello, fixed\n");
     // The user's checkout is never touched.
     expect(readFileSync(join(repo, "app.txt"), "utf8")).toBe("hello\n");
-  });
+  }, 15_000);
 
   it("says which tasks the direct executor cannot hand to their agent", async () => {
     const { db, execution, routing, agents, projectId } = await setup();
@@ -505,8 +505,22 @@ describe("progress", () => {
         purpose: "escalation",
       },
       { event: "task_finished", task_id: "01", status: "passed" },
+      {
+        event: "integration_finished",
+        branch: "km0/r1/final",
+        status: "ready",
+        commit: "abc123",
+        files: 2,
+        added: 10,
+        removed: 3,
+        testPassed: true,
+        detail: "",
+      },
     ].map((event) => JSON.stringify(event));
-    const state = applyProgress({ tasks: new Map(), finished: null, cost: 0 }, [...lines, "{not json"]);
+    const state = applyProgress({ tasks: new Map(), finished: null, cost: 0, integration: null }, [
+      ...lines,
+      "{not json",
+    ]);
     expect([...state.tasks.values()]).toMatchObject([
       {
         seq: 1,
@@ -520,6 +534,16 @@ describe("progress", () => {
       { seq: 2, status: "waiting" },
     ]);
     expect(state.cost).toBe(0.5);
+    expect(state.integration).toEqual({
+      branch: "km0/r1/final",
+      status: "ready",
+      commit: "abc123",
+      files: 2,
+      added: 10,
+      removed: 3,
+      testPassed: true,
+      detail: "",
+    });
   });
 
   it("names a task's rungs by tier label and skips a model already on its ladder", () => {
@@ -585,5 +609,45 @@ describe("progress", () => {
     } finally {
       delete process.env.FAKE_CLAUDE_FAIL_MODELS;
     }
+  });
+
+  it("exposes the final integration diff and safely merges or checks out km0/<run_id>/final", async () => {
+    const { db, execution, projectId } = await setup();
+    const repo = linkRepo(db, projectId);
+    execution.setSettings({
+      ...execution.getSettings(),
+      kind: "direct",
+      claudeCommand: FAKE_CLAUDE,
+      directGate: true,
+    });
+
+    const started = await execution.start(projectId);
+    const done = await until(
+      execution,
+      projectId,
+      (run) => run.id === started.id && run.status === "finished" && run.importedRunRef !== null,
+    );
+    const finalBranch = `km0/${started.runId}/final`;
+    expect(done.integration).toMatchObject({ branch: finalBranch, status: "ready", files: 1, added: 1, removed: 0 });
+
+    const fullDiff = await execution.diff(projectId, started.id);
+    expect(fullDiff).toMatchObject({ branch: finalBranch, truncated: false, files: 1, added: 1, removed: 0 });
+    expect(fullDiff.diff).toContain("claude-01.txt");
+
+    // Dirty working tree is refused cleanly before touching git state.
+    writeFileSync(join(repo, "uncommitted.txt"), "wip\n");
+    await expect(execution.integrate(projectId, started.id, "merge")).rejects.toThrow(/未提交/);
+    execSync("git clean -fdq", { cwd: repo });
+
+    // Merge into current branch cleanly applies the integrated changes.
+    const merged = await execution.integrate(projectId, started.id, "merge");
+    expect(merged.mode).toBe("merge");
+    expect(merged.branch).toBe(finalBranch);
+    expect(readFileSync(join(repo, "claude-01.txt"), "utf8")).toContain("fake Claude Code");
+
+    // Checkout switches directly to the integration branch.
+    const checkedOut = await execution.integrate(projectId, started.id, "checkout");
+    expect(checkedOut).toMatchObject({ mode: "checkout", branch: finalBranch, targetBranch: finalBranch });
+    expect(execSync("git branch --show-current", { cwd: repo, encoding: "utf8" }).trim()).toBe(finalBranch);
   });
 });

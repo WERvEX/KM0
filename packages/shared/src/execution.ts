@@ -37,6 +37,10 @@ export const ExecutorSettings = z.object({
   directGate: z.boolean().default(true),
   /** Direct: after a failed repair or error, climb the task's escalation chain automatically. */
   directAutoEscalate: z.boolean().default(true),
+  /** Direct: maximum number of independent DAG tasks to run concurrently (1 = strict serial). */
+  directConcurrency: z.number().int().min(1).max(6).default(3),
+  /** Direct: automatically ask an automated CLI agent to resolve multi-branch git merge conflicts before blocking. */
+  directResolveConflicts: z.boolean().default(true),
   /** Custom executor: the command, with {package}, {repo}, {run_dir} and {tasks} filled in. */
   customTemplate: z.string().trim().min(1).max(2000).nullable().default(null),
   customCwd: Path.nullable().default(null),
@@ -137,6 +141,19 @@ export type ExecTask = z.infer<typeof ExecTask>;
 export const ExecutionStatus = z.enum(["running", "stopping", "finished", "cancelled", "failed", "interrupted"]);
 export type ExecutionStatus = z.infer<typeof ExecutionStatus>;
 
+/** Status of the run's final integration branch (`km0/<run_id>/final`) combining all leaf branches. */
+export const IntegrationSummary = z.object({
+  branch: z.string(),
+  status: z.enum(["ready", "conflict", "tests_failed", "error"]),
+  commit: z.string().nullable().default(null),
+  files: z.number().int().default(0),
+  added: z.number().int().default(0),
+  removed: z.number().int().default(0),
+  testPassed: z.boolean().nullable().default(null),
+  detail: z.string().default(""),
+});
+export type IntegrationSummary = z.infer<typeof IntegrationSummary>;
+
 export const ExecutionRun = z.object({
   /** KM0's id for the run (`runs` table). */
   id: z.number().int(),
@@ -159,6 +176,8 @@ export const ExecutionRun = z.object({
   /** A redo of these task seqs on top of an earlier run's branches; empty for a full run. */
   seqs: z.array(z.number().int()),
   reuse: z.string().nullable(),
+  /** Final integration branch (`km0/<run_id>/final`) built when all tasks finish. */
+  integration: IntegrationSummary.nullable().default(null),
 });
 export type ExecutionRun = z.infer<typeof ExecutionRun>;
 
@@ -176,6 +195,31 @@ export const StartExecutionInput = z.object({
 });
 
 export const ExecutionRef = z.object({ projectId: ProjectId, runRef: z.number().int().positive() });
+
+export const ExecutionDiff = z.object({
+  branch: z.string(),
+  diff: z.string(),
+  truncated: z.boolean(),
+  files: z.number().int(),
+  added: z.number().int(),
+  removed: z.number().int(),
+});
+export type ExecutionDiff = z.infer<typeof ExecutionDiff>;
+
+export const IntegrateRunInput = z.object({
+  projectId: ProjectId,
+  runRef: z.number().int().positive(),
+  mode: z.enum(["merge", "checkout"]),
+});
+export type IntegrateRunInput = z.infer<typeof IntegrateRunInput>;
+
+export const IntegrateRunResult = z.object({
+  mode: z.enum(["merge", "checkout"]),
+  branch: z.string(),
+  targetBranch: z.string(),
+  detail: z.string(),
+});
+export type IntegrateRunResult = z.infer<typeof IntegrateRunResult>;
 
 /** The window is closing while runs are still going; the renderer asks whether to stop them. */
 export const QuitRequest = z.object({ running: z.number().int() });
