@@ -7,8 +7,10 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/toast";
+import { Markdown } from "@/features/documents/Markdown";
 import { errorMessage } from "@/lib/ipc";
 import { useIpcMutation, useIpcQuery } from "@/lib/queries";
+import { normalizeReleaseNotes } from "./release-notes";
 
 /** Keeps the update state current from `update.state` events. */
 export function useUpdateState() {
@@ -75,9 +77,11 @@ export function UpdateSection() {
           ) : null}
           {data.notes &&
           (data.status === "available" || data.status === "downloaded" || data.status === "downloading") ? (
-            <details className="text-xs">
-              <summary className="cursor-pointer text-muted">{t("settings.about.update.notes")}</summary>
-              <div className="mt-1 max-h-48 overflow-auto rounded bg-sunken p-2 whitespace-pre-wrap">{data.notes}</div>
+            <details className="w-full min-w-0 text-xs">
+              <summary className="cursor-pointer text-muted hover:text-fg">{t("settings.about.update.notes")}</summary>
+              <div className="mt-2 max-h-72 overflow-y-auto rounded-md border border-border bg-bg p-3 text-xs">
+                <Markdown>{normalizeReleaseNotes(data.notes)}</Markdown>
+              </div>
             </details>
           ) : null}
           <div className="flex flex-wrap gap-2">

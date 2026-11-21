@@ -156,7 +156,7 @@ export const zhCN = {
       plannerHint: "写文档、拆任务，建议用能力强的模型",
       sameAsRouter: "与路由模型相同",
       unassigned: "未指定",
-      notCallable: "（KM0 无法调用：服务商没有密钥或地址）",
+      notCallable: "（未配密钥/地址，不可调用）",
       matched: "{{name}}",
       matchedManual: "{{name}}（手动指定）",
       unmatched: "榜单里没有对应的模型",

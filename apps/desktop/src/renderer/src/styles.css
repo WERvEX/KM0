@@ -97,13 +97,26 @@ body {
 .km0-prose blockquote {
   margin: 0.6em 0;
 }
+.km0-prose h1,
+.km0-prose h2,
 .km0-prose h3,
 .km0-prose h4 {
-  margin: 1.1em 0 0.4em;
+  margin: 1em 0 0.4em;
   font-weight: 600;
+}
+.km0-prose h1 {
+  font-size: 1.2em;
+}
+.km0-prose h2 {
+  font-size: 1.1em;
 }
 .km0-prose h3 {
   font-size: 1.05em;
+}
+.km0-prose hr {
+  border: 0;
+  border-top: 1px solid var(--km0-border);
+  margin: 0.9em 0;
 }
 .km0-prose ul {
   list-style: disc;
@@ -112,6 +125,10 @@ body {
 .km0-prose ol {
   list-style: decimal;
   padding-left: 1.4em;
+}
+.km0-prose li > ul,
+.km0-prose li > ol {
+  margin: 0.25em 0;
 }
 .km0-prose li + li {
   margin-top: 0.2em;

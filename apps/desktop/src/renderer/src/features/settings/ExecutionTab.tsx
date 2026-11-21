@@ -41,7 +41,7 @@ function ToolLine({ label, check }: { label: string; check: ToolCheck | undefine
       )}
       <span className="font-medium">{label}</span>
       {check.version ? <Badge>{check.version}</Badge> : null}
-      {check.command ? <code className="truncate text-xs text-muted">{check.command}</code> : null}
+      {check.command ? <code className="max-w-full min-w-0 truncate text-xs text-muted">{check.command}</code> : null}
       {!check.found && !check.problem ? <span className="text-muted">{t("settings.execution.notFound")}</span> : null}
       {check.problem ? <p className="w-full pl-6 text-xs text-muted">{check.problem}</p> : null}
     </div>
@@ -63,7 +63,7 @@ function CopyBlock({ label, text }: { label: string; text: string }) {
   const { t } = useTranslation();
   const [done, setDone] = useState(false);
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-muted">{label}</span>
         <Button
@@ -140,7 +140,7 @@ export function ExecutionTab() {
         </p>
       ) : null}
 
-      <fieldset className="grid gap-2 sm:grid-cols-3">
+      <fieldset className="grid min-w-0 gap-2 sm:grid-cols-3">
         <legend className="mb-2 text-sm font-semibold">{t("settings.execution.kind")}</legend>
         {(["runner", "direct", "custom"] as const).map((kind) => (
           <label
@@ -195,7 +195,7 @@ export function ExecutionTab() {
             onChange={(value) => set({ runsDir: value })}
             onBrowse={status.data.available ? () => void browse("runsDir") : null}
           />
-          <fieldset className="flex flex-col gap-2 text-sm">
+          <fieldset className="flex w-full min-w-0 flex-col gap-2 text-sm">
             <legend className="mb-1.5 text-xs font-medium text-muted">{t("settings.execution.config")}</legend>
             <label className="flex items-center gap-2">
               <input
@@ -286,7 +286,6 @@ export function ExecutionTab() {
               >
                 <Select
                   id="directConcurrency"
-                  className="max-w-xs"
                   value={String(draft.directConcurrency)}
                   onChange={(event) => set({ directConcurrency: Number(event.target.value) })}
                 >
@@ -445,9 +444,10 @@ function PathField({
   const { t } = useTranslation();
   return (
     <Field label={label} htmlFor={id}>
-      <div className="flex gap-2">
+      <div className="flex min-w-0 gap-2">
         <Input
           id={id}
+          className="min-w-0 flex-1"
           placeholder={placeholder}
           value={value ?? ""}
           onChange={(event) => onChange(event.target.value.trim() ? event.target.value : null)}

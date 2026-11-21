@@ -26,38 +26,40 @@ export function SettingsPage() {
   const tabs = TABS;
 
   return (
-    <div className="mx-auto max-w-3xl px-8 py-10">
-      <h1 className="text-xl font-semibold">{t("settings.title")}</h1>
-      <div role="tablist" className="mt-6 mb-6 flex gap-1 border-b border-border">
-        {tabs.map((item) => (
-          <button
-            key={item}
-            role="tab"
-            type="button"
-            aria-selected={tab === item}
-            onClick={() => setTab(item)}
-            className={cn(
-              "-mb-px border-b-2 px-3 py-2 text-sm",
-              tab === item ? "border-accent font-medium text-fg" : "border-transparent text-muted hover:text-fg",
-            )}
-          >
-            {t(`settings.tabs.${item}`)}
-          </button>
-        ))}
+    <div className="relative h-full overflow-y-auto [scrollbar-gutter:stable]">
+      <div className="mx-auto max-w-3xl px-8 py-10">
+        <h1 className="text-xl font-semibold">{t("settings.title")}</h1>
+        <div role="tablist" className="mt-6 mb-6 flex gap-1 border-b border-border">
+          {tabs.map((item) => (
+            <button
+              key={item}
+              role="tab"
+              type="button"
+              aria-selected={tab === item}
+              onClick={() => setTab(item)}
+              className={cn(
+                "-mb-px border-b-2 px-3 py-2 text-sm",
+                tab === item ? "border-accent font-medium text-fg" : "border-transparent text-muted hover:text-fg",
+              )}
+            >
+              {t(`settings.tabs.${item}`)}
+            </button>
+          ))}
+        </div>
+        {tab === "models" ? (
+          <ModelsTab />
+        ) : tab === "agents" ? (
+          <AgentsTab />
+        ) : tab === "execution" ? (
+          <ExecutionTab />
+        ) : tab === "search" ? (
+          <SearchTab />
+        ) : tab === "general" ? (
+          <GeneralTab />
+        ) : (
+          <AboutTab />
+        )}
       </div>
-      {tab === "models" ? (
-        <ModelsTab />
-      ) : tab === "agents" ? (
-        <AgentsTab />
-      ) : tab === "execution" ? (
-        <ExecutionTab />
-      ) : tab === "search" ? (
-        <SearchTab />
-      ) : tab === "general" ? (
-        <GeneralTab />
-      ) : (
-        <AboutTab />
-      )}
     </div>
   );
 }
@@ -69,8 +71,8 @@ function GeneralTab() {
   if (!preferences.data) return null;
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="grid max-w-sm gap-4">
+    <div className="flex flex-col gap-6">
+      <section className="grid gap-4 rounded-lg border border-border bg-panel p-4 sm:grid-cols-2">
         <Field label={t("settings.general.language")} htmlFor="language">
           <Select
             id="language"
@@ -93,7 +95,7 @@ function GeneralTab() {
             <option value="dark">{t("settings.general.themeDark")}</option>
           </Select>
         </Field>
-      </div>
+      </section>
       <ConfigSection />
     </div>
   );

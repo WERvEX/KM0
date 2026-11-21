@@ -116,7 +116,7 @@ export function ModelForm({ model, providers, providerId, submitting, error, onS
         <Input id="name" {...register("name")} />
       </Field>
 
-      <fieldset className="col-span-2 flex flex-col gap-2">
+      <fieldset className="col-span-2 flex min-w-0 flex-col gap-2">
         <legend className="mb-1.5 text-xs font-medium text-muted">{t("settings.form.match")}</legend>
         <label className="flex items-center gap-2 text-sm">
           <input type="radio" checked={canonical === null} onChange={() => setCanonical(null)} />

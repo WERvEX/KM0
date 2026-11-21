@@ -173,7 +173,7 @@ export const en: Messages = {
       plannerHint: "Documents and task breakdown; a strong model works best",
       sameAsRouter: "Same as router",
       unassigned: "Not assigned",
-      notCallable: "(KM0 cannot call it: the provider has no key or address)",
+      notCallable: "(no key or URL)",
       matched: "{{name}}",
       matchedManual: "{{name}} (set by hand)",
       unmatched: "No matching leaderboard model",

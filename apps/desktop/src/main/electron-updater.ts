@@ -61,7 +61,10 @@ function fakeUpdater(version: string): UpdaterPort {
   return {
     async check() {
       await pause(300);
-      return { version, notes: `KM0 ${version}\n\n- Fixes found after 1.0.0.` };
+      return {
+        version,
+        notes: `<p>KM0 ${version}</p><h2>新功能</h2><ul><li>Fixes found after 1.0.0. <code>km0</code></li></ul><blockquote><p>Note</p></blockquote>`,
+      };
     },
     async download(onProgress) {
       for (let percent = 0; percent <= 100; percent += 10) {

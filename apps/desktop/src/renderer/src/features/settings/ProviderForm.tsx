@@ -197,6 +197,7 @@ export function ProviderForm({ provider, submitting, error, onSubmit, onCancel }
           htmlFor="multiplier"
           hint={t("settings.providerForm.multiplierHint")}
           error={fieldError("multiplier")}
+          className="col-span-2"
         >
           <Input id="multiplier" inputMode="decimal" {...register("multiplier")} />
         </Field>
@@ -215,7 +216,7 @@ export function ProviderForm({ provider, submitting, error, onSubmit, onCancel }
               ))}
             </Select>
           </Field>
-          <fieldset className="col-span-2 grid grid-cols-3 gap-2">
+          <fieldset className="col-span-2 grid min-w-0 grid-cols-3 gap-2">
             <legend className="mb-1.5 text-xs font-medium text-muted">{t("settings.providerForm.quota")}</legend>
             <Input
               aria-label={t("settings.providerForm.quotaAmount")}

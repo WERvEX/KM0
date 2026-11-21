@@ -24,6 +24,8 @@ test("a newer version is announced on start and installed from the About page", 
   await expect(section().getByRole("status")).toHaveText("KM0 1.0.1 可以更新了。");
   await section().getByText("更新说明").click();
   await expect(section().getByText("Fixes found after 1.0.0.")).toBeVisible();
+  await expect(section().locator("details")).not.toContainText("<li>");
+  await expect(section().locator("details")).not.toContainText("<blockquote>");
   await page.screenshot({ path: "test-results/screenshots/update-available.png" });
 
   await section().getByRole("button", { name: "下载" }).click();

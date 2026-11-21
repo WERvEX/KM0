@@ -148,7 +148,7 @@ export function ModelsTab() {
                 className="flex flex-col gap-3 rounded-lg border border-border bg-panel p-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h3 className="font-medium">{provider.name}</h3>
                     <p className="mt-0.5 truncate text-xs text-muted">
                       {t(`settings.providerForm.kinds.${provider.kind}`)}
@@ -309,7 +309,7 @@ function ModelRow({
   return (
     <li aria-label={model.name} className="flex flex-col gap-1.5 px-3 py-2.5">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
             {model.name}
             {model.name !== model.modelId ? <span className="font-normal text-muted">{model.modelId}</span> : null}
