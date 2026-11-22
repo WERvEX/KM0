@@ -4,7 +4,7 @@ KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断�
 
 名字取自“零公里”：所有道路的里程都从这里起算。
 
-> 当前版本 1.2（[发布说明](docs/releases/v1.2.0.md)）。设置环境变量 `KM0_FAKE_LLM=1` 可以用模拟模型体验流程，不需要 API Key。设计见 [docs/DESIGN.md](docs/DESIGN.md)，1.0 与 1.1 的规划见 [docs/ROADMAP-1.0.md](docs/ROADMAP-1.0.md)、[docs/ROADMAP-1.1.md](docs/ROADMAP-1.1.md)。
+> 当前版本 1.2.1（[发布说明](docs/releases/v1.2.1.md)）。设置环境变量 `KM0_FAKE_LLM=1` 可以用模拟模型体验流程，不需要 API Key。设计见 [docs/DESIGN.md](docs/DESIGN.md)，1.0 与 1.1 的规划见 [docs/ROADMAP-1.0.md](docs/ROADMAP-1.0.md)、[docs/ROADMAP-1.1.md](docs/ROADMAP-1.1.md)。
 
 ## 下载
 
@@ -12,12 +12,12 @@ KM0 是编码 Agent 的上游：你用一句话描述要做的事，KM0 判断�
 
 | 平台 | 文件 |
 | --- | --- |
-| Windows (x64) | `KM0-1.2.0-setup-x64.exe` |
-| macOS (Apple 芯片) | `KM0-1.2.0-arm64.dmg` |
-| macOS (Intel) | `KM0-1.2.0-x64.dmg` |
-| Linux (x64) | `KM0-1.2.0-x86_64.AppImage`（先 `chmod +x`） |
+| Windows (x64) | `KM0-1.2.1-setup-x64.exe` |
+| macOS (Apple 芯片) | `KM0-1.2.1-arm64.dmg` |
+| macOS (Intel) | `KM0-1.2.1-x64.dmg` |
+| Linux (x64) | `KM0-1.2.1-x86_64.AppImage`（先 `chmod +x`） |
 
-1.2.0 的安装包没有签名：Windows 首次运行会出现 SmartScreen 提示，点“更多信息 → 仍要运行”；macOS 会提示“无法验证开发者”，在“系统设置 → 隐私与安全性”里点“仍要打开”。装好后在“设置 → 关于”里检查和安装新版本（未签名的 macOS 版本和非 AppImage 的 Linux 安装需要重新下载）。
+1.2.1 的安装包没有签名：Windows 首次运行会出现 SmartScreen 提示，点“更多信息 → 仍要运行”；macOS 会提示“无法验证开发者”，在“系统设置 → 隐私与安全性”里点“仍要打开”。装好后在“设置 → 关于”里检查和安装新版本（未签名的 macOS 版本和非 AppImage 的 Linux 安装需要重新下载）。
 
 ## 截图
 

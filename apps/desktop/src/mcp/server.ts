@@ -148,7 +148,7 @@ function runTests(command: string, cwd: string): Promise<{ code: number; output:
   });
 }
 
-export function createKm0McpServer(inboxDir: string, version = "1.2.0"): McpServer {
+export function createKm0McpServer(inboxDir: string, version = "1.2.1"): McpServer {
   const server = new McpServer({ name: "km0", version });
   const sessionId = randomUUID();
   const taskRef = z.string().describe("The task's ref, as km0_next_task gave it, such as 20261101-120000/02");

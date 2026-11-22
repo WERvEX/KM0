@@ -1,7 +1,7 @@
 {
   "name": "@km0/desktop",
   "productName": "KM0",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "KM0 desktop app",
   "author": "WERvEX",

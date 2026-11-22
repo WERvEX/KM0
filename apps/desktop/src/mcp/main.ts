@@ -12,5 +12,5 @@ if (!dir) {
   process.stderr.write("km0-mcp: pass the dispatch folder with --dir or KM0_DISPATCH_DIR.\n");
   process.exit(2);
 }
-const server = createKm0McpServer(dir, process.env.KM0_VERSION ?? "1.2.0");
+const server = createKm0McpServer(dir, process.env.KM0_VERSION ?? "1.2.1");
 void server.connect(new StdioServerTransport());
