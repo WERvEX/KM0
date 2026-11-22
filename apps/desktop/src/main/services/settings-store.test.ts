@@ -376,6 +376,21 @@ describe("abilities and quotas", () => {
       ReturnType<SettingsStore["pastQuota"]>
     >[0];
     expect(settings.pastQuota()(tier)).toBeNull();
+    // Failed attempts do not count against subscription request quotas.
+    settings.recordCall({
+      profileId: model.id,
+      model: model.modelId,
+      purpose: "triage",
+      projectId: null,
+      mode: "text",
+      attempt: 1,
+      inputTokens: 0,
+      outputTokens: 0,
+      costUsd: 0,
+      latencyMs: 1,
+      error: { kind: "upstream", message: "timeout" },
+    });
+    expect(settings.pastQuota()(tier)).toBeNull();
     settings.recordCall({
       profileId: model.id,
       model: model.modelId,

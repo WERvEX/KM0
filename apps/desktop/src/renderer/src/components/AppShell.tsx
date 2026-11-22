@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/field";
+import { useToast } from "@/components/ui/toast";
 import { ExecutionWatcher } from "@/features/execution/ExecutionWatcher";
 import { UpdateWatcher } from "@/features/settings/UpdateSection";
+import { errorMessage } from "@/lib/ipc";
 import { useIpcMutation, useIpcQuery } from "@/lib/queries";
 
 export function AppShell() {
@@ -86,11 +88,12 @@ type Editing = { mode: "rename" | "delete"; project: ProjectSummary } | null;
 /** A project in the sidebar, with its stage and rename / delete actions on hover. */
 function ProjectItem({ project }: { project: ProjectSummary }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const navigate = useNavigate();
   const params = useParams({ strict: false }) as { projectId?: string };
   const [editing, setEditing] = useState<Editing>(null);
   const [title, setTitle] = useState("");
-  const rename = useIpcMutation("project.rename", ["project.list"]);
+  const rename = useIpcMutation("project.rename", ["project.list", "project.get"]);
   const remove = useIpcMutation("project.delete", ["project.list"]);
   const close = () => setEditing(null);
 
@@ -137,7 +140,15 @@ function ProjectItem({ project }: { project: ProjectSummary }) {
             <Button
               variant="primary"
               disabled={!title.trim() || rename.isPending}
-              onClick={() => rename.mutate({ id: project.id, title: title.trim() }, { onSuccess: close })}
+              onClick={() =>
+                rename.mutate(
+                  { id: project.id, title: title.trim() },
+                  {
+                    onSuccess: close,
+                    onError: (error) => toast({ kind: "error", message: errorMessage(error) }),
+                  },
+                )
+              }
             >
               {t("nav.save")}
             </Button>
@@ -167,6 +178,10 @@ function ProjectItem({ project }: { project: ProjectSummary }) {
               onSuccess: () => {
                 close();
                 if (params.projectId === String(project.id)) void navigate({ to: "/" });
+              },
+              onError: (error) => {
+                close();
+                toast({ kind: "error", message: errorMessage(error) });
               },
             },
           )

@@ -1,12 +1,17 @@
 import { type ChildProcess, spawn as spawnChild } from "node:child_process";
-import { access, mkdir, open, stat, writeFile } from "node:fs/promises";
+import { access, constants, mkdir, open, stat, writeFile } from "node:fs/promises";
 import { delimiter, dirname, join } from "node:path";
+import { killProcessTree } from "./dispatch/claude-code";
 import type { ExecPort, RunningProcess, SpawnOptions } from "./services/exec-port";
 
 /** Longest line kept from a process's output; longer ones are cut. */
 const MAX_LINE = 4000;
 
-function follow(child: ChildProcess, onLine: (line: string) => void): RunningProcess {
+function follow(
+  child: ChildProcess,
+  onLine: (line: string) => void,
+  options: { killOnWin32Terminate?: boolean } = {},
+): RunningProcess {
   for (const stream of [child.stdout, child.stderr]) {
     let buffer = "";
     stream?.setEncoding("utf8");
@@ -30,9 +35,13 @@ function follow(child: ChildProcess, onLine: (line: string) => void): RunningPro
   });
   return {
     terminate: () => {
-      if (process.platform !== "win32") child.kill("SIGTERM");
+      if (process.platform === "win32") {
+        if (options.killOnWin32Terminate) killProcessTree(child, "SIGKILL");
+      } else {
+        killProcessTree(child, "SIGTERM");
+      }
     },
-    kill: () => child.kill("SIGKILL"),
+    kill: () => killProcessTree(child, "SIGKILL"),
     exited,
   };
 }
@@ -48,7 +57,7 @@ function launch(program: string, args: string[], options: Parameters<typeof spaw
     const quote = (part: string) => `"${part.replace(/"/g, '""')}"`;
     return spawnChild([program, ...args].map(quote).join(" "), { ...options, shell: true });
   }
-  return spawnChild(program, args, options);
+  return spawnChild(program, args, { ...options, detached: process.platform !== "win32" });
 }
 
 export function nodeExec(): ExecPort {
@@ -56,14 +65,21 @@ export function nodeExec(): ExecPort {
     platform: process.platform,
     async which(name) {
       const extensions = process.platform === "win32" ? (process.env.PATHEXT ?? ".EXE;.CMD;.BAT").split(";") : [""];
-      for (const dir of (process.env.PATH ?? "").split(delimiter).filter(Boolean)) {
+      for (const rawDir of (process.env.PATH ?? "").split(delimiter).filter(Boolean)) {
+        const dir = process.platform === "win32" ? rawDir.replace(/^"+|"+$/g, "") : rawDir;
+        if (!dir) continue;
         for (const extension of extensions) {
           const candidate = join(dir, name + extension.toLowerCase());
-          const ok = await access(candidate).then(
-            () => true,
-            () => false,
-          );
-          if (ok) return candidate;
+          const info = await stat(candidate).catch(() => null);
+          if (!info?.isFile()) continue;
+          if (process.platform !== "win32") {
+            const executable = await access(candidate, constants.X_OK).then(
+              () => true,
+              () => false,
+            );
+            if (!executable) continue;
+          }
+          return candidate;
         }
       }
       return null;
@@ -79,7 +95,7 @@ export function nodeExec(): ExecPort {
         } catch (error) {
           return resolve({ code: null, output: (error as Error).message });
         }
-        const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
+        const timer = setTimeout(() => killProcessTree(child, "SIGKILL"), timeoutMs);
         child.stdout?.on("data", (chunk) => (output += chunk));
         child.stderr?.on("data", (chunk) => (output += chunk));
         child.on("error", (error) => {
@@ -106,9 +122,10 @@ export function nodeExec(): ExecPort {
         cwd: options.cwd,
         env: environment(options.env),
         shell: true,
+        detached: process.platform !== "win32",
         windowsHide: true,
       });
-      return follow(child, options.onLine);
+      return follow(child, options.onLine, { killOnWin32Terminate: true });
     },
     async writeFile(path, content) {
       await mkdir(dirname(path), { recursive: true });
@@ -125,11 +142,16 @@ export function nodeExec(): ExecPort {
         () => 0,
       );
       if (size <= offset) return { text: "", size };
-      const file = await open(path, "r");
+      let file: Awaited<ReturnType<typeof open>>;
+      try {
+        file = await open(path, "r");
+      } catch {
+        return { text: "", size: 0 };
+      }
       try {
         const buffer = Buffer.alloc(size - offset);
-        await file.read(buffer, 0, buffer.length, offset);
-        return { text: buffer.toString("utf8"), size };
+        const { bytesRead } = await file.read(buffer, 0, buffer.length, offset);
+        return { text: buffer.subarray(0, bytesRead).toString("utf8"), size: offset + bytesRead };
       } finally {
         await file.close();
       }

@@ -118,6 +118,8 @@ export function createMatcher(catalog: CatalogModel[], aliases: Record<string, s
 
   return {
     match(raw) {
+      const trimmed = raw.trim();
+      if (known.has(trimmed)) return { id: trimmed };
       for (const tier of TIERS) {
         const words = nameWords(raw, tier);
         const alias = aliasTable.get(exactKey(words));

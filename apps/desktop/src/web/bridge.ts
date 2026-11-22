@@ -88,7 +88,6 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   const projects = new ProjectService(db, llmFor, language, { searchPort: () => search.activePort(), repo });
   const documents = new DocumentService(db, llmFor, language, emit);
   const agents = new AgentStore(db, () => settings.listModels());
-  const config = new ConfigService(settings, agents, search);
   const routing = new RoutingService(db, llmFor, language, agents, () => settings.getRoutingRules().rules, {
     registry: () => registry.current().registry,
     records,
@@ -100,6 +99,7 @@ export async function createWebBridge({ simulated, version }: WebBridgeOptions):
   );
   // A browser cannot start local programs; the execution service says so instead of running anything.
   const execution = new ExecutionService(db, null, settings, routing, handoff, runner, language, "runs");
+  const config = new ConfigService(settings, agents, search, undefined, { db, execution });
   const dispatch = createDispatcher(
     createHandlers({
       settings,

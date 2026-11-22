@@ -11,6 +11,16 @@ const optionalNumber = z
   .trim()
   .refine((value) => value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0), "invalidNumber");
 
+const boundedOptional = (max: number, positive = false) =>
+  z
+    .string()
+    .trim()
+    .refine((value) => {
+      if (value === "") return true;
+      const n = Number(value);
+      return Number.isFinite(n) && (positive ? n > 0 : n >= 0) && n <= max;
+    }, "invalidNumber");
+
 const FormSchema = z
   .object({
     preset: z.string(),
@@ -22,14 +32,14 @@ const FormSchema = z
       .refine((value) => value === "" || URL.canParse(value), "invalidUrl"),
     apiKey: z.string(),
     mode: z.enum(["token", "relay", "subscription", "free"]),
-    multiplier: optionalNumber,
-    monthlyFee: optionalNumber,
-    quotaAmount: optionalNumber,
+    multiplier: boundedOptional(100, true),
+    monthlyFee: boundedOptional(10_000),
+    quotaAmount: optionalNumber.refine((value) => value === "" || Number(value) > 0, "invalidNumber"),
     quotaUnit: z.enum(["requests", "tokens", "usd"]),
     quotaWindow: z.enum(["5h", "day", "week", "month"]),
     overflow: z.enum(["token", "unavailable"]),
   })
-  .refine((values) => values.mode !== "relay" || Number(values.multiplier) > 0, {
+  .refine((values) => values.mode !== "relay" || (values.multiplier !== "" && Number(values.multiplier) > 0), {
     path: ["multiplier"],
     message: "invalidNumber",
   });
@@ -238,6 +248,9 @@ export function ProviderForm({ provider, submitting, error, onSubmit, onCancel }
                 </option>
               ))}
             </Select>
+            {fieldError("quotaAmount") ? (
+              <p className="col-span-3 text-xs text-danger">{fieldError("quotaAmount")}</p>
+            ) : null}
           </fieldset>
         </>
       ) : null}

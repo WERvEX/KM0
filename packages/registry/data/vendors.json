@@ -33,7 +33,7 @@
     "id": "google",
     "name": "Google",
     "families": ["gemini", "gemma"],
-    "nativeAgents": []
+    "nativeAgents": ["antigravity_cli"]
   },
   {
     "id": "x-ai",
@@ -75,6 +75,12 @@
     "id": "mistralai",
     "name": "Mistral AI",
     "families": ["mistral", "devstral", "codestral"],
+    "nativeAgents": []
+  },
+  {
+    "id": "tencent",
+    "name": "Tencent",
+    "families": ["hy", "hunyuan"],
     "nativeAgents": []
   }
 ]

@@ -649,5 +649,19 @@ describe("progress", () => {
     const checkedOut = await execution.integrate(projectId, started.id, "checkout");
     expect(checkedOut).toMatchObject({ mode: "checkout", branch: finalBranch, targetBranch: finalBranch });
     expect(execSync("git branch --show-current", { cwd: repo, encoding: "utf8" }).trim()).toBe(finalBranch);
+
+    // Blocks deleting a project while a run is active, and stops cleanly on stopAll().
+    process.env.FAKE_CLAUDE_DELAY_MS = "4000";
+    try {
+      const activeRun = await execution.start(projectId);
+      expect(execution.hasRunningForProject(projectId)).toBe(true);
+      expect(() => execution.assertNotRunning(projectId)).toThrow(/正在执行|in progress/);
+      await execution.stopAll(2000);
+      expect(execution.runningCount()).toBe(0);
+      const list = await execution.list(projectId);
+      expect(list.find((r) => r.id === activeRun.id)?.status).toBe("cancelled");
+    } finally {
+      delete process.env.FAKE_CLAUDE_DELAY_MS;
+    }
   });
 });

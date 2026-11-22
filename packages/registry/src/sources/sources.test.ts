@@ -79,7 +79,7 @@ describe("source parsers", () => {
           created: 1_790_000_000,
           contextLength: 1000,
           pricing: { prompt: 0.000001, completion: 0.000002, cacheRead: null },
-          aa: { intelligence: 50, coding: null, agentic: 40 },
+          aa: { intelligence: 50, coding: null, engineering: 55, agentic: 40 },
           designArena: [
             { arena: "models", category: "website", elo: 1300 },
             { arena: "agents", category: "webapps", elo: 1200 },
@@ -89,6 +89,7 @@ describe("source parsers", () => {
     });
     expect(parsed.entries.map((e) => [e.column, e.value])).toEqual([
       ["aa_intelligence", 50],
+      ["aa_engineering", 55],
       ["aa_agentic", 40],
       ["design_arena_frontend", 1250],
     ]);

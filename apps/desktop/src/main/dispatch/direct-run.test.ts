@@ -254,11 +254,54 @@ describe("the MCP server's file tools stay in the worktree", () => {
     const outside = mkdtempSync(join(tmpdir(), "km0-outside-"));
     mkdirSync(join(root, "src"));
     mkdirSync(join(root, ".git"));
-    if (process.platform !== "win32") symlinkSync(outside, join(root, "escape"));
+    if (process.platform !== "win32") {
+      symlinkSync(outside, join(root, "escape"));
+      symlinkSync(join(outside, "dangling.txt"), join(root, "dangling"));
+    }
     expect(await insideWorktree(root, "src/new/file.ts")).toBe(join(root, "src", "new", "file.ts"));
+    expect(await insideWorktree(root, "..env")).toBe(join(root, "..env"));
     expect(await insideWorktree(root, "../x")).toBeNull();
     expect(await insideWorktree(root, ".git/config")).toBeNull();
-    if (process.platform !== "win32") expect(await insideWorktree(root, "escape/secret.txt")).toBeNull();
+    expect(await insideWorktree(root, ".GIT/config")).toBeNull();
+    if (process.platform !== "win32") {
+      expect(await insideWorktree(root, "escape/secret.txt")).toBeNull();
+      expect(await insideWorktree(root, "dangling")).toBeNull();
+    }
+  });
+
+  it("prevents concurrent MCP clients from claiming the same task", async () => {
+    const root = mkdtempSync(join(tmpdir(), "km0-mcp-race-"));
+    const worktree = mkdtempSync(join(tmpdir(), "km0-mcp-wt-"));
+    const { putTask } = await import("./inbox");
+    await putTask(root, {
+      version: 1,
+      ref: "r1/01",
+      runId: "r1",
+      taskId: "01",
+      seq: 1,
+      title: "Solo",
+      projectTitle: "Demo",
+      agent: "claude_desktop",
+      model: null,
+      worktree,
+      branch: "km0/r1/01",
+      prompt: "Do solo task",
+      testCommand: null,
+      acceptance: [],
+      language: "en",
+      state: "waiting",
+      createdAt: new Date().toISOString(),
+      claimedAt: null,
+      report: null,
+    });
+    const clientA = await desktop(root);
+    const clientB = await desktop(root);
+    const [a, b] = await Promise.all([clientA.call("km0_next_task"), clientB.call("km0_next_task")]);
+    const texts = [a.text, b.text];
+    expect(texts.filter((t) => t.includes("Took task r1/01"))).toHaveLength(1);
+    expect(texts.filter((t) => t.includes("No KM0 task is waiting"))).toHaveLength(1);
+    await clientA.close();
+    await clientB.close();
   });
 });
 
@@ -704,6 +747,99 @@ describe("Phase 3: parallel DAG execution, conflict coordination and final integ
       delete process.env.FAKE_CLAUDE_DELAY_MS;
     }
   });
+
+  it("reuses only succeeded uninvalidated branches, halts when budget is exhausted, and cancels cleanly during judge()", async () => {
+    const repo = gitRepo();
+    const sharedRoot = mkdtempSync(join(tmpdir(), "km0-reuse-root-"));
+    const pkg = packageDir();
+    // Run 1: task 1 (passes) -> task 2 (passes); independent task 3 (fails).
+    process.env.FAKE_CLAUDE_FAIL = "03";
+    try {
+      const run1 = new DirectRun({
+        runId: "r1",
+        runDir: join(sharedRoot, "r1"),
+        repo,
+        projectId: 7,
+        projectTitle: "Demo",
+        packageDir: pkg,
+        tasks: [task(1, "claude_code", [], null), task(2, "claude_code", [1], null), task(3, "claude_code", [], null)],
+        seqs: [],
+        reuse: null,
+        inboxDir: join(sharedRoot, "dispatch"),
+        claudeCommand: FAKE_CLAUDE,
+        budget: null,
+        language: "en",
+        version: "1.2.0",
+        onLine: () => undefined,
+        pollMs: 20,
+      });
+      runs.push(run1);
+      expect((await run1.exited).code).toBe(1);
+    } finally {
+      delete process.env.FAKE_CLAUDE_FAIL;
+    }
+
+    // Run 2: re-run only task 1 (with task 2 downstream of 1, and task 3 failed in r1). Neither r1/02 nor r1/03 may pollute final.
+    const argsFile = join(mkdtempSync(join(tmpdir(), "km0-budget-args-")), "args.jsonl");
+    process.env.FAKE_CLAUDE_ARGS = argsFile;
+    try {
+      const run2 = new DirectRun({
+        runId: "r2",
+        runDir: join(sharedRoot, "r2"),
+        repo,
+        projectId: 7,
+        projectTitle: "Demo",
+        packageDir: pkg,
+        tasks: [task(1, "claude_code", [], null), task(2, "claude_code", [1], null), task(3, "claude_code", [], null)],
+        seqs: [1],
+        reuse: "r1",
+        inboxDir: join(sharedRoot, "dispatch"),
+        claudeCommand: FAKE_CLAUDE,
+        budget: 0.01,
+        language: "en",
+        version: "1.2.0",
+        onLine: () => undefined,
+        pollMs: 20,
+      });
+      runs.push(run2);
+      expect((await run2.exited).code).toBe(0);
+      const summary2 = JSON.parse(readFileSync(join(sharedRoot, "r2", "summary.json"), "utf8"));
+      expect(summary2.integration).toMatchObject({ branch: "km0/r2/final", status: "ready" });
+      expect(() =>
+        execSync("git show km0/r2/final:claude-03.txt", { cwd: repo, stdio: ["ignore", "pipe", "pipe"] }),
+      ).toThrow();
+      expect(() =>
+        execSync("git show km0/r2/final:claude-02.txt", { cwd: repo, stdio: ["ignore", "pipe", "pipe"] }),
+      ).toThrow();
+    } finally {
+      delete process.env.FAKE_CLAUDE_ARGS;
+    }
+
+    // Budget exhaustion stops before spawning task 2; cancellation during judge cancels cleanly.
+    const budgetArgs = join(mkdtempSync(join(tmpdir(), "km0-budget2-args-")), "args.jsonl");
+    process.env.FAKE_CLAUDE_ARGS = budgetArgs;
+    try {
+      const budgetRun = start(gitRepo(), [task(1, "claude_code", [], null), task(2, "claude_code", [1], null)], {
+        budget: 0.01,
+      });
+      expect((await budgetRun.run.exited).code).toBe(1);
+      expect(report(budgetRun.runDir, "02")).toMatchObject({ failure_category: "budget_exhausted" });
+      expect(readFileSync(budgetArgs, "utf8").trim().split("\n")).toHaveLength(1);
+    } finally {
+      delete process.env.FAKE_CLAUDE_ARGS;
+    }
+
+    let judgeRun!: DirectRun;
+    const cancelDuringJudge = start(gitRepo(), [task(1, "claude_code", [], null)], {
+      judge: async () => {
+        judgeRun.terminate();
+        return { accepted: false, reason: "should be ignored on cancel", judgedBy: "test" };
+      },
+    });
+    judgeRun = cancelDuringJudge.run;
+    expect((await cancelDuringJudge.run.exited).code).toBe(3);
+    expect(report(cancelDuringJudge.runDir, "01")).toMatchObject({ failure_category: "cancelled" });
+  }, 15_000);
 });
 
 // With KM0_CODEX_REAL=1, the real `codex` on PATH does one small task (it spends a little of the account's quota).

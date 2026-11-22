@@ -392,7 +392,7 @@ export const zhCN = {
         export: "导出配置",
         import: "导入配置",
         imported:
-          "导入完成：新增 {{profilesCreated}} 个、更新 {{profilesUpdated}} 个模型；新增 {{searchCreated}} 个、更新 {{searchUpdated}} 个搜索服务；更新 {{agentsUpdated}} 个 Agent。",
+          "导入完成：服务商新增 {{providersCreated}} 个、更新 {{providersUpdated}} 个；模型新增 {{modelsCreated}} 个、更新 {{modelsUpdated}} 个；Agent 新增 {{agentsCreated}} 个、更新 {{agentsUpdated}} 个；搜索服务新增 {{searchCreated}} 个、更新 {{searchUpdated}} 个。",
         localDisabled:
           "{{count}} 个本地 MCP 服务器会在你电脑上运行命令，已导入但暂未启用，请在“搜索服务”里确认命令后再启用。",
         invalid: "这个文件不是有效的 KM0 配置。",

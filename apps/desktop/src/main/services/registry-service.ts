@@ -88,12 +88,13 @@ export class RegistryService {
     return { status: "updated", info: this.info() };
   }
 
-  /** Use a registry from a file, even an older one: the user chose it. */
+  /** Use a registry from a file, rejecting one older than the bundled registry before overwriting stored data. */
   import(text: string): RegistryInfo {
-    this.store(parse(text), "imported");
-    if (this.current().origin !== "imported") {
+    const parsed = parse(text);
+    if (parsed.dataDate < this.bundled.dataDate) {
       throw new AppError("validation", "This registry is older than the one shipped with KM0, so it is not used.");
     }
+    this.store(parsed, "imported");
     return this.info();
   }
 

@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { openDatabase } from "../db/database";
 import { AgentStore } from "./agent-store";
 import { ConfigService } from "./config-service";
+import { ExecutionService } from "./execution-service";
+import { HandoffService } from "./handoff-service";
+import { RoutingService } from "./routing-service";
+import { RunnerService } from "./runner-service";
 import { SearchStore } from "./search-store";
 import { PlainSecretStore } from "./secrets";
 import { SettingsStore } from "./settings-store";
@@ -14,6 +18,7 @@ function install() {
   const agents = new AgentStore(db, () => settings.listModels());
   const search = new SearchStore(db, secrets, {});
   return {
+    db,
     settings,
     agents,
     search,
@@ -192,5 +197,73 @@ describe("ConfigService", () => {
     const changed = { ...local, config: { ...local.config, args: ["-y", "something-else"] } };
     expect(app.config.import({ ...bundle, searchServices: [changed] }).localServersDisabled).toBe(1);
     expect(app.search.list()[0]?.enabled).toBe(false);
+  });
+
+  it("preserves contextWindow, routingRules and execution settings, and matches custom agents case-insensitively", () => {
+    const app = configured();
+    const fast = app.settings.listModels().find((m) => m.name === "Fast");
+    if (!fast) throw new Error("missing Fast model");
+    app.settings.updateModel(fast.id, {
+      providerId: fast.providerId,
+      modelId: fast.modelId,
+      name: fast.name,
+      contextWindow: 128_000,
+    });
+    const routing = new RoutingService(
+      app.db,
+      () => {
+        throw new Error("unused");
+      },
+      () => "en",
+      app.agents,
+    );
+    const runner = new RunnerService(
+      app.db,
+      {
+        pick: async () => null,
+        open: async () => {
+          throw new Error("unused");
+        },
+      },
+      routing,
+      () => {
+        throw new Error("unused");
+      },
+      () => "en",
+      () => "x",
+    );
+    const execution = new ExecutionService(
+      app.db,
+      null,
+      app.settings,
+      routing,
+      new HandoffService(app.db, routing, () => "en"),
+      runner,
+      () => "en",
+      "runs",
+    );
+    execution.setSettings({ ...execution.getSettings(), kind: "direct", directConcurrency: 4 });
+    const rules = {
+      ...app.settings.getRoutingRules().rules,
+      tierLimits: { T1: 2, T2: 6 },
+    };
+    app.settings.setRoutingRules(rules);
+
+    const fullConfig = new ConfigService(app.settings, app.agents, app.search, () => "2026-10-18T00:00:00Z", {
+      db: app.db,
+      execution,
+    });
+    const bundle = fullConfig.export(true);
+    expect(bundle.models.find((m) => m.name === "Fast")?.contextWindow).toBe(128_000);
+    expect(bundle.routingRules).toEqual(rules);
+    expect(bundle.execution?.directConcurrency).toBe(4);
+
+    // Case-insensitive custom agent match updates existing agent instead of crashing, and increments agentsUpdated.
+    const customAgent = bundle.agents.find((a) => a.kind === "custom");
+    if (customAgent) customAgent.name = "gemini cli";
+    const secondSummary = fullConfig.import(bundle);
+    expect(secondSummary.agentsCreated).toBe(0);
+    expect(secondSummary.agentsUpdated).toBe(bundle.agents.length);
+    expect(app.settings.listModels().find((m) => m.name === "Fast")?.contextWindowOverride).toBe(128_000);
   });
 });

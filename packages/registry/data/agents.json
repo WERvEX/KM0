@@ -59,5 +59,11 @@
     "name": "Muse Code",
     "labels": ["Muse Code"],
     "nativeVendors": ["meta"]
+  },
+  {
+    "id": "antigravity_cli",
+    "name": "Antigravity CLI",
+    "labels": ["Antigravity CLI"],
+    "nativeVendors": ["google"]
   }
 ]

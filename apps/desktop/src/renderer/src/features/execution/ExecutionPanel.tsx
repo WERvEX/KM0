@@ -100,6 +100,10 @@ export function ExecutionPanel({ projectId }: { projectId: number }) {
   const stop = useMutation({
     mutationFn: (runRef: number) => call("execution.stop", { projectId, runRef }),
     onSuccess: () => setStopTarget(null),
+    onError: (error) => {
+      setStopTarget(null);
+      toast({ kind: "error", message: errorMessage(error) });
+    },
   });
   const integrate = useMutation({
     mutationFn: (input: { runRef: number; mode: "merge" | "checkout" }) =>

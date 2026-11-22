@@ -10,7 +10,7 @@ import {
 } from "@km0/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Loader2, Pencil, Plus, RefreshCw, RotateCcw, Trash2, Upload } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, TierBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,14 +35,23 @@ export function AgentsTab() {
   const [editing, setEditing] = useState<{ agent: AgentConfig | null } | null>(null);
   const [deleting, setDeleting] = useState<AgentConfig | null>(null);
   const list = agents.data ?? [];
-  const close = () => setEditing(null);
+  const openEdit = (agent: AgentConfig | null) => {
+    create.reset();
+    redefine.reset();
+    setEditing({ agent });
+  };
+  const close = () => {
+    create.reset();
+    redefine.reset();
+    setEditing(null);
+  };
   const saveError = create.error ?? redefine.error;
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <p className="min-w-0 flex-1 text-sm text-muted">{t("settings.agents.intro")}</p>
-        <Button size="sm" onClick={() => setEditing({ agent: null })}>
+        <Button size="sm" onClick={() => openEdit(null)}>
           <Plus />
           {t("settings.agents.addCustom")}
         </Button>
@@ -55,7 +64,7 @@ export function AgentsTab() {
           first={index === 0}
           last={index === list.length - 1}
           onMove={(direction) => move.mutate({ id: agent.id, direction })}
-          onEdit={() => setEditing({ agent })}
+          onEdit={() => openEdit(agent)}
           onDelete={() => setDeleting(agent)}
         />
       ))}
@@ -103,7 +112,13 @@ function RegistrySection() {
   const files = useFiles();
   const queryClient = useQueryClient();
   const info = useIpcQuery("registry.info");
-  const refresh = (next: RegistryInfo) => queryClient.setQueryData(["registry.info"], next);
+  const refresh = (next: RegistryInfo) => {
+    queryClient.setQueryData(["registry.info"], next);
+    void queryClient.invalidateQueries({ queryKey: ["settings.models.list"] });
+    void queryClient.invalidateQueries({ queryKey: ["settings.agents.list"] });
+    void queryClient.invalidateQueries({ queryKey: ["registry.vendors"] });
+    void queryClient.invalidateQueries({ queryKey: ["routing.get"] });
+  };
   const update = useMutation({
     mutationFn: () => call("registry.update", undefined),
     onSuccess: ({ status, info: next }) => {
@@ -280,6 +295,17 @@ function AgentCard({
   const [enabled, setEnabled] = useState(agent.enabled);
   const [draft, setDraft] = useState<Draft>(() => toDraft(agent));
   const [capabilities, setCapabilities] = useState<Capability[]>(agent.capabilities);
+  const serverSignature = JSON.stringify({
+    enabled: agent.enabled,
+    models: toDraft(agent),
+    capabilities: agent.capabilities,
+  });
+  useEffect(() => {
+    const next = JSON.parse(serverSignature) as { enabled: boolean; models: number[]; capabilities: Capability[] };
+    setEnabled(next.enabled);
+    setDraft(next.models);
+    setCapabilities(next.capabilities);
+  }, [serverSignature]);
   const name = agent.id === "generic" ? t("settings.agents.generic") : agent.name;
   const sameCapabilities =
     capabilities.length === agent.capabilities.length &&
@@ -291,9 +317,13 @@ function AgentCard({
   // Native models first, then the rest; models of another API format cannot be chosen.
   const options = [...models].sort((a, b) => Number(native(b)) - Number(native(a)) || a.name.localeCompare(b.name));
 
-  const save = () =>
+  const save = () => {
+    const usableRefs = draft.filter((id) => {
+      const model = models.find((item) => item.id === id);
+      return model ? usable(model) : false;
+    });
     update.mutate(
-      { id: agent.id, enabled, models: draft, capabilities },
+      { id: agent.id, enabled, models: usableRefs, capabilities },
       {
         onSuccess: (list) => {
           const saved = list.find((item) => item.id === agent.id);
@@ -304,6 +334,7 @@ function AgentCard({
         },
       },
     );
+  };
   const toggle = (capability: Capability, on: boolean) =>
     setCapabilities((current) =>
       on
@@ -402,7 +433,7 @@ function AgentCard({
                 <label className={cn("flex min-w-0 items-center gap-1.5", !usable(model) && "text-muted")}>
                   <input
                     type="checkbox"
-                    disabled={!usable(model)}
+                    disabled={!usable(model) && !draft.includes(model.id)}
                     checked={draft.includes(model.id)}
                     onChange={(event) =>
                       setDraft((current) =>

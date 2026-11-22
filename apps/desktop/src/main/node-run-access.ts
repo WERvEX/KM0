@@ -14,16 +14,17 @@ export function nodeRunAccess(pickFolder: () => Promise<string | null>): RunAcce
       const info = await stat(root).catch(() => null);
       if (!info?.isDirectory()) throw new AppError("validation", `The folder ${root} does not exist.`);
       const files = nodeRepoFs(root);
-      const inside = (relative: string) => {
+      const inside = (relative: string, allowRoot = false) => {
         const full = resolve(root, ...relative.split("/").filter(Boolean));
-        if (!full.startsWith(root.endsWith(sep) ? root : root + sep)) {
+        const within = (allowRoot && full === root) || full.startsWith(root.endsWith(sep) ? root : root + sep);
+        if (!within) {
           throw new AppError("validation", `Path escapes the run folder: ${relative}`);
         }
         return full;
       };
       return {
         async list(dir) {
-          const entries = await readdir(inside(dir), { withFileTypes: true }).catch(() => []);
+          const entries = await readdir(inside(dir, true), { withFileTypes: true }).catch(() => []);
           return entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
         },
         read: (file, maxBytes) => files.read(file, maxBytes),

@@ -51,7 +51,20 @@ export function ModelsTab() {
 
   const providerList = providers.data ?? [];
   const modelList = models.data ?? [];
-  const close = () => setEditing(null);
+  const resetErrors = () => {
+    createProvider.reset();
+    updateProvider.reset();
+    createModel.reset();
+    updateModel.reset();
+  };
+  const openEdit = (next: Editing) => {
+    resetErrors();
+    setEditing(next);
+  };
+  const close = () => {
+    resetErrors();
+    setEditing(null);
+  };
   const mutations = [createProvider, updateProvider, createModel, updateModel];
   const saving = mutations.some((mutation) => mutation.isPending);
   const saveError = mutations.find((mutation) => mutation.error)?.error;
@@ -130,7 +143,7 @@ export function ModelsTab() {
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">{t("settings.tabs.models")}</h2>
-          <Button variant="primary" size="sm" onClick={() => setEditing({ kind: "provider", provider: null })}>
+          <Button variant="primary" size="sm" onClick={() => openEdit({ kind: "provider", provider: null })}>
             <Plus />
             {t("settings.models.addProvider")}
           </Button>
@@ -158,10 +171,7 @@ export function ModelsTab() {
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-1">
-                    <Button
-                      size="sm"
-                      onClick={() => setEditing({ kind: "model", model: null, providerId: provider.id })}
-                    >
+                    <Button size="sm" onClick={() => openEdit({ kind: "model", model: null, providerId: provider.id })}>
                       <Plus />
                       {t("settings.models.addModel")}
                     </Button>
@@ -169,7 +179,7 @@ export function ModelsTab() {
                       size="icon"
                       variant="ghost"
                       aria-label={`${t("settings.models.edit")} ${provider.name}`}
-                      onClick={() => setEditing({ kind: "provider", provider })}
+                      onClick={() => openEdit({ kind: "provider", provider })}
                     >
                       <Pencil />
                     </Button>
@@ -195,7 +205,7 @@ export function ModelsTab() {
                           model={model}
                           result={tests[model.id]}
                           onTest={() => void test(model)}
-                          onEdit={() => setEditing({ kind: "model", model, providerId: model.providerId })}
+                          onEdit={() => openEdit({ kind: "model", model, providerId: model.providerId })}
                           onDelete={() => setDeleting({ kind: "model", model })}
                           onClearRecords={() => setDeleting({ kind: "records", model })}
                         />

@@ -27,11 +27,27 @@ export interface ParsedSource {
 }
 
 const USER_AGENT = "KM0-registry/1.0 (+https://github.com/WERvEX/KM0)";
+const FETCH_TIMEOUT_MS = 30_000;
+const FETCH_ATTEMPTS = 3;
 
 export async function fetchText(url: string): Promise<string> {
-  const response = await fetch(url, { headers: { "user-agent": USER_AGENT }, redirect: "follow" });
-  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-  return response.text();
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        headers: { "user-agent": USER_AGENT },
+        redirect: "follow",
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (response.ok) return await response.text();
+      lastError = new Error(`${url}: HTTP ${response.status}`);
+      if (response.status !== 429 && response.status < 500) break;
+    } catch (error) {
+      lastError = error;
+    }
+    if (attempt < FETCH_ATTEMPTS) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+  }
+  throw lastError instanceof Error ? lastError : new Error(`${url}: fetch failed`);
 }
 
 export async function fetchJson<T>(url: string): Promise<T> {

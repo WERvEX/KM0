@@ -1,6 +1,7 @@
 import { exec } from "node:child_process";
-import { mkdir, readdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { randomUUID } from "node:crypto";
+import { lstat, mkdir, readdir, readFile, readlink, realpath, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { type InboxTask, readInbox, updateTask } from "../main/dispatch/inbox";
@@ -79,18 +80,36 @@ const TEXT = {
 
 const reply = (text: string, isError = false) => ({ content: [{ type: "text" as const, text }], isError });
 
+const isOutside = (rel: string) => rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel);
+
+async function realTarget(target: string): Promise<string> {
+  return realpath(target).catch(async () => {
+    const parent = dirname(target);
+    if (parent === target) return target;
+    return resolve(await realTarget(parent), basename(target));
+  });
+}
+
 /** A path inside the worktree, never `.git` or outside it (symbolic links included); null otherwise. */
 export async function insideWorktree(root: string, path: string): Promise<string | null> {
   const full = resolve(root, path);
   const rel = relative(root, full);
-  if (rel.startsWith("..") || isAbsolute(rel) || rel.split(sep)[0] === ".git") return null;
-  const realRoot = await realpath(root);
-  // The nearest part of the path that exists decides where a link would really lead.
+  if (isOutside(rel) || rel.split(sep)[0]?.toLowerCase() === ".git") return null;
+  const realRoot = await realpath(root).catch(() => null);
+  if (!realRoot) return null;
+  // Walk up from `full` with lstat so symlinks (even dangling ones) are detected rather than skipped.
   let existing = full;
-  while (!(await stat(existing).catch(() => null)) && dirname(existing) !== existing) existing = dirname(existing);
-  const real = await realpath(existing);
+  let info = await lstat(existing).catch(() => null);
+  while (!info && dirname(existing) !== existing) {
+    existing = dirname(existing);
+    info = await lstat(existing).catch(() => null);
+  }
+  if (!info) return null;
+  const real = info.isSymbolicLink()
+    ? await realpath(existing).catch(async () => realTarget(resolve(dirname(existing), await readlink(existing))))
+    : await realpath(existing);
   const realRel = relative(realRoot, real);
-  if (realRel.startsWith("..") || isAbsolute(realRel)) return null;
+  if (isOutside(realRel) || realRel.split(sep)[0]?.toLowerCase() === ".git") return null;
   return full;
 }
 
@@ -131,6 +150,7 @@ function runTests(command: string, cwd: string): Promise<{ code: number; output:
 
 export function createKm0McpServer(inboxDir: string, version = "1.2.0"): McpServer {
   const server = new McpServer({ name: "km0", version });
+  const sessionId = randomUUID();
   const taskRef = z.string().describe("The task's ref, as km0_next_task gave it, such as 20261101-120000/02");
 
   /** The task, claimed and still open, or the reason it cannot be used. */
@@ -160,13 +180,16 @@ export function createKm0McpServer(inboxDir: string, version = "1.2.0"): McpServ
     },
     async () => {
       const tasks = await readInbox(inboxDir);
-      const open = tasks.find((task) => task.state === "claimed");
+      const open = tasks.find((task) => task.state === "claimed" && (task.claimedBy === sessionId || !task.claimedBy));
       if (open) return reply(TEXT[open.language].task(open, true));
       for (const waiting of tasks.filter((task) => task.state === "waiting")) {
-        const claimed = await updateTask(inboxDir, waiting.ref, (task) =>
-          task.state === "waiting" ? { ...task, state: "claimed", claimedAt: new Date().toISOString() } : null,
-        );
-        if (claimed?.state === "claimed") return reply(TEXT[claimed.language].task(claimed, false));
+        let didClaim = false;
+        const claimed = await updateTask(inboxDir, waiting.ref, (task) => {
+          if (task.state !== "waiting") return null;
+          didClaim = true;
+          return { ...task, state: "claimed", claimedAt: new Date().toISOString(), claimedBy: sessionId };
+        });
+        if (didClaim && claimed) return reply(TEXT[claimed.language].task(claimed, false));
       }
       return reply(TEXT[tasks[0]?.language ?? "en"].none);
     },

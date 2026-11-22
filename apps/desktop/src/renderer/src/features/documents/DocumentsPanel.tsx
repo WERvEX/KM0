@@ -174,19 +174,21 @@ function DocumentPane({ projectId, kind, actions, streamText }: PaneProps) {
     doc.sections.filter((section) => section.edited && (!ids || ids.includes(section.id))).map((s) => s.title);
 
   /** AI rewrites of sections the user wrote by hand are confirmed first. */
-  const revise = (sectionIds: string[], instruction: string | null) => {
-    const start = () =>
-      void actions.run(
+  const revise = (sectionIds: string[], instruction: string | null, onDone?: () => void) => {
+    const start = async () => {
+      const view = await actions.run(
         "document.revise",
         { projectId, kind, baseVersion: doc.version, sectionIds, instruction },
         sectionIds.length === 1 ? `revise:${sectionIds[0]}` : "revise",
       );
+      if (view) onDone?.();
+    };
     const edited = editedTitles(sectionIds);
-    if (edited.length === 0) return start();
+    if (edited.length === 0) return void start();
     setConfirm({
       title: t("documents.confirm.overwriteTitle"),
       body: t("documents.confirm.overwriteBody", { sections: edited.join("、") }),
-      choices: [{ label: t("documents.confirm.continue"), primary: true, run: start }],
+      choices: [{ label: t("documents.confirm.continue"), primary: true, run: () => void start() }],
     });
   };
 
@@ -362,14 +364,16 @@ function DocumentPane({ projectId, kind, actions, streamText }: PaneProps) {
           readOnly={readOnly}
           busy={Boolean(pending)}
           working={pending === `revise:${section.id}` || (pending === "revise" && section.staleKeys.length > 0)}
-          onSave={(body) =>
-            void actions.run(
-              "document.saveSection",
-              { projectId, kind, baseVersion: doc.version, sectionId: section.id, body },
-              `save:${section.id}`,
+          onSave={async (body) =>
+            Boolean(
+              await actions.run(
+                "document.saveSection",
+                { projectId, kind, baseVersion: doc.version, sectionId: section.id, body },
+                `save:${section.id}`,
+              ),
             )
           }
-          onRevise={(instruction) => revise([section.id], instruction)}
+          onRevise={(instruction, onAccepted) => revise([section.id], instruction, onAccepted)}
           onRegenerate={() => revise([section.id], null)}
         />
       ))}
@@ -391,9 +395,11 @@ function DocumentPane({ projectId, kind, actions, streamText }: PaneProps) {
                 revise(
                   doc.sections.map((section) => section.id),
                   t("documents.openQuestions.note", { answers: answers.trim() }),
+                  () => {
+                    setAnswering(false);
+                    setAnswers("");
+                  },
                 );
-                setAnswering(false);
-                setAnswers("");
               }}
             >
               {t("documents.openQuestions.submit")}
@@ -404,6 +410,7 @@ function DocumentPane({ projectId, kind, actions, streamText }: PaneProps) {
         <Textarea
           aria-label={t("documents.openQuestions.title")}
           rows={6}
+          maxLength={1800}
           value={answers}
           placeholder={t("documents.openQuestions.placeholder")}
           onChange={(event) => setAnswers(event.target.value)}

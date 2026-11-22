@@ -37,6 +37,7 @@ export type UnsupportedReason = "development" | "web" | "linux" | "unsigned";
  */
 export class UpdateService {
   private current: UpdateState;
+  private readonly unsupported: UnsupportedReason;
 
   constructor(
     private readonly port: UpdaterPort | null,
@@ -47,6 +48,7 @@ export class UpdateService {
     unsupported: UnsupportedReason = "development",
     private readonly now: () => string = () => new Date().toISOString(),
   ) {
+    this.unsupported = unsupported;
     this.current = {
       status: port ? "idle" : "unsupported",
       currentVersion,
@@ -60,7 +62,9 @@ export class UpdateService {
   }
 
   state(): UpdateState {
-    return this.current;
+    return this.current.status === "unsupported"
+      ? { ...this.current, detail: TEXT[this.language()][this.unsupported] }
+      : this.current;
   }
 
   async check(): Promise<UpdateState> {

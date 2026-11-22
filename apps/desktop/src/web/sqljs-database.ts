@@ -16,6 +16,7 @@ const SAVE_DELAY_MS = 300;
 export class SqlJsAdapter implements Database {
   private dirty = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private flushing: Promise<void> = Promise.resolve();
 
   private constructor(
     private readonly db: SqlJsDatabase,
@@ -43,19 +44,28 @@ export class SqlJsAdapter implements Database {
   }
 
   close(): void {
-    void this.flush();
+    void this.flush().catch(() => undefined);
   }
 
-  /** Write pending changes now, e.g. when the page is hidden. */
-  async flush(): Promise<void> {
+  /** Write pending changes now, serialized so concurrent flushes never race on IndexedDB. */
+  flush(): Promise<void> {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
-    if (!this.dirty) return;
-    this.dirty = false;
-    // export() closes and reopens the connection, which resets per-connection pragmas.
-    const bytes = this.db.export();
-    this.applyPragmas();
-    await this.store.save(bytes);
+    const run = this.flushing.then(async () => {
+      if (!this.dirty) return;
+      this.dirty = false;
+      // export() closes and reopens the connection, which resets per-connection pragmas.
+      const bytes = this.db.export();
+      this.applyPragmas();
+      try {
+        await this.store.save(bytes);
+      } catch (error) {
+        this.dirty = true;
+        throw error;
+      }
+    });
+    this.flushing = run.catch(() => undefined);
+    return run;
   }
 
   private run(sql: string, params: SqlValue[]): RunResult {
@@ -88,7 +98,11 @@ export class SqlJsAdapter implements Database {
   private markDirty(): void {
     this.dirty = true;
     // Transactions run synchronously, so a deferred save never lands in the middle of one.
-    if (!this.timer) this.timer = setTimeout(() => void this.flush(), SAVE_DELAY_MS);
+    if (!this.timer) {
+      this.timer = setTimeout(() => {
+        void this.flush().catch(() => undefined);
+      }, SAVE_DELAY_MS);
+    }
   }
 }
 

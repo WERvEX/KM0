@@ -1,5 +1,5 @@
 {
- "fetchedAt": "2026-10-26T06:09:08.225Z",
+ "fetchedAt": "2026-11-22T07:58:39.959Z",
  "models": [
   {
    "id": "~anthropic/claude-fable-latest",
@@ -7,13 +7,14 @@
    "created": 1781029944,
    "contextLength": 1000000,
    "pricing": {
-    "prompt": 0.00001,
-    "completion": 0.00005,
-    "cacheRead": 2.5e-7
+    "prompt": 0.000008,
+    "completion": 0.00004,
+    "cacheRead": 2e-7
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -31,6 +32,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -48,6 +50,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -65,6 +68,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -75,13 +79,14 @@
    "created": 1789399150,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 2e-8,
-    "completion": 0.000001,
-    "cacheRead": 1.5e-8
+    "prompt": 3.6e-8,
+    "completion": 5e-7,
+    "cacheRead": 1e-8
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -92,13 +97,14 @@
    "created": 1789399174,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 2.565e-7,
+    "prompt": 9.99e-8,
     "completion": 0.000008,
-    "cacheRead": 2.6e-7
+    "cacheRead": 9.99e-8
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -109,13 +115,14 @@
    "created": 1785606009,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 4.75e-8,
-    "completion": 1.568e-7,
-    "cacheRead": 2.8e-8
+    "prompt": 4.4e-8,
+    "completion": 1.32e-7,
+    "cacheRead": 1.4e-9
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -126,13 +133,14 @@
    "created": 1777318398,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 7.5e-7,
-    "completion": 0.00000375,
+    "prompt": 0.0000015,
+    "completion": 0.0000075,
     "cacheRead": 7.5e-8
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -150,6 +158,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -160,13 +169,14 @@
    "created": 1777318428,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 2.033e-7,
-    "completion": 0.0000081113,
-    "cacheRead": 2e-7
+    "prompt": 1.824e-7,
+    "completion": 0.0000110055,
+    "cacheRead": 1.8e-7
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -177,13 +187,14 @@
    "created": 1789130932,
    "contextLength": 1050000,
    "pricing": {
-    "prompt": 0.00001,
-    "completion": 0.00005,
-    "cacheRead": 0.000001
+    "prompt": 0.000008,
+    "completion": 0.00004,
+    "cacheRead": 4e-7
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -201,6 +212,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -218,6 +230,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -235,6 +248,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -245,13 +259,14 @@
    "created": 1789130925,
    "contextLength": 1050000,
    "pricing": {
-    "prompt": 0.000002,
-    "completion": 0.000012,
-    "cacheRead": 2e-7
+    "prompt": 0.000001,
+    "completion": 0.000005,
+    "cacheRead": 5e-8
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -269,6 +284,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -286,6 +302,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -296,13 +313,14 @@
    "created": 1787817633,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 4.13e-8,
-    "completion": 7.58e-8,
+    "prompt": 4.75e-8,
+    "completion": 7.29e-8,
     "cacheRead": 3e-8
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -320,6 +338,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -337,6 +356,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -354,6 +374,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -371,6 +392,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -388,6 +410,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -405,6 +428,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -422,6 +446,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -437,8 +462,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 13.4,
-    "coding": 23,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -454,8 +480,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 6.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -471,8 +498,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 5.9,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -488,17 +516,12 @@
     "cacheRead": 6.25e-7
    },
    "aa": {
-    "intelligence": 9.2,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
-   "designArena": [
-    {
-     "arena": "models",
-     "category": "website",
-     "elo": 835
-    }
-   ]
+   "designArena": []
   },
   {
    "id": "amazon/nova-pro-v1",
@@ -511,17 +534,12 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
-   "designArena": [
-    {
-     "arena": "models",
-     "category": "website",
-     "elo": 796
-    }
-   ]
+   "designArena": []
   },
   {
    "id": "anthracite-org/magnum-v4-72b",
@@ -531,11 +549,12 @@
    "pricing": {
     "prompt": 0.0000025,
     "completion": 0.000005,
-    "cacheRead": null
+    "cacheRead": 0.0000025
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -551,35 +570,36 @@
     "cacheRead": 0.000001
    },
    "aa": {
-    "intelligence": 49.6,
-    "coding": 76.5,
-    "agentic": 50.7
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1280
+     "elo": 1255
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1261
+     "elo": 1230
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1310
+     "elo": 1293
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1313
+     "elo": 1303
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1294
+     "elo": 1283
     }
    ]
   },
@@ -594,35 +614,75 @@
     "cacheRead": 2.5e-7
    },
    "aa": {
-    "intelligence": 53.4,
-    "coding": 81.6,
-    "agentic": 57.9
+    "intelligence": 50,
+    "coding": null,
+    "engineering": 57.2,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1326
+     "elo": 1300
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1318
+     "elo": 1308
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1335
+     "elo": 1322
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1333
+     "elo": 1325
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1312
+     "elo": 1300
+    }
+   ]
+  },
+  {
+   "id": "anthropic/claude-fable-5.2",
+   "name": "Anthropic: Claude Fable 5.2",
+   "created": 1794253781,
+   "contextLength": 1000000,
+   "pricing": {
+    "prompt": 0.000008,
+    "completion": 0.00004,
+    "cacheRead": 2e-7
+   },
+   "aa": {
+    "intelligence": 64.6,
+    "coding": null,
+    "engineering": 72.6,
+    "agentic": null
+   },
+   "designArena": [
+    {
+     "arena": "agents",
+     "category": "fullstack",
+     "elo": 1411
+    },
+    {
+     "arena": "models",
+     "category": "codecategories",
+     "elo": 1391
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1377
+    },
+    {
+     "arena": "models",
+     "category": "website",
+     "elo": 1348
     }
    ]
   },
@@ -637,25 +697,26 @@
     "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 16.9,
-    "coding": 43.9,
-    "agentic": 8
+    "intelligence": 7.4,
+    "coding": null,
+    "engineering": 17,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1113
+     "elo": 1096
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1095
+     "elo": 1083
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1122
+     "elo": 1109
     }
    ]
   },
@@ -670,25 +731,26 @@
     "cacheRead": 1e-8
    },
    "aa": {
-    "intelligence": 43.4,
+    "intelligence": 36.5,
     "coding": null,
+    "engineering": 42.5,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1281
+     "elo": 1273
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1278
+     "elo": 1259
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1262
+     "elo": 1248
     }
    ]
   },
@@ -703,25 +765,26 @@
     "cacheRead": 0.0000015
    },
    "aa": {
-    "intelligence": 22.8,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1169
+     "elo": 1152
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1159
+     "elo": 1148
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1175
+     "elo": 1164
     }
    ]
   },
@@ -736,35 +799,36 @@
     "cacheRead": 5e-7
    },
    "aa": {
-    "intelligence": 29.1,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1242
+     "elo": 1224
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1233
+     "elo": 1222
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1245
+     "elo": 1234
     },
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1156
+     "elo": 1131
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1159
+     "elo": 1127
     }
    ]
   },
@@ -779,35 +843,36 @@
     "cacheRead": 5e-7
    },
    "aa": {
-    "intelligence": 31.9,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1220
+     "elo": 1194
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1206
+     "elo": 1174
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1288
+     "elo": 1270
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1280
+     "elo": 1268
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1289
+     "elo": 1278
     }
    ]
   },
@@ -822,9 +887,10 @@
     "cacheRead": 5e-7
    },
    "aa": {
-    "intelligence": 40.7,
-    "coding": 73.6,
-    "agentic": 38.6
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -839,35 +905,36 @@
     "cacheRead": 5e-7
    },
    "aa": {
-    "intelligence": 41.8,
-    "coding": 74.3,
-    "agentic": 41.9
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1249
+     "elo": 1224
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1233
+     "elo": 1200
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1254
+     "elo": 1236
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1253
+     "elo": 1241
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1257
+     "elo": 1246
     }
    ]
   },
@@ -882,35 +949,36 @@
     "cacheRead": 5e-7
    },
    "aa": {
-    "intelligence": 50.8,
-    "coding": 78,
-    "agentic": 56.5
+    "intelligence": 44.2,
+    "coding": null,
+    "engineering": 51.3,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1306
+     "elo": 1282
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1266
+     "elo": 1236
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1323
+     "elo": 1309
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1345
+     "elo": 1335
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1309
+     "elo": 1299
     }
    ]
   },
@@ -925,30 +993,36 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 57.6,
+    "intelligence": 59.1,
     "coding": null,
+    "engineering": 65.3,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
+     "category": "fullstack",
+     "elo": 1386
+    },
+    {
+     "arena": "agents",
      "category": "webapps",
-     "elo": 1319
+     "elo": 1307
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1392
+     "elo": 1382
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1377
+     "elo": 1367
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1331
+     "elo": 1321
     }
    ]
   },
@@ -963,35 +1037,36 @@
     "cacheRead": 3e-7
    },
    "aa": {
-    "intelligence": 20.7,
-    "coding": 52.1,
-    "agentic": 15.8
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1181
+     "elo": 1164
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1167
+     "elo": 1156
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1188
+     "elo": 1177
     },
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1050
+     "elo": 1025
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1059
+     "elo": 1028
     }
    ]
   },
@@ -1006,35 +1081,36 @@
     "cacheRead": 3e-7
    },
    "aa": {
-    "intelligence": 30.1,
-    "coding": 63,
-    "agentic": 31.8
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1213
+     "elo": 1187
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1190
+     "elo": 1158
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1275
+     "elo": 1258
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1266
+     "elo": 1255
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1283
+     "elo": 1272
     }
    ]
   },
@@ -1049,35 +1125,36 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 38.2,
-    "coding": 71.5,
-    "agentic": 43.6
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1249
+     "elo": 1224
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1244
+     "elo": 1210
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1274
+     "elo": 1260
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1273
+     "elo": 1260
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1273
+     "elo": 1263
     }
    ]
   },
@@ -1092,96 +1169,53 @@
     "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 56,
+    "intelligence": 54.5,
     "coding": null,
+    "engineering": 58.5,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
+     "category": "fullstack",
+     "elo": 1349
+    },
+    {
+     "arena": "agents",
      "category": "webapps",
-     "elo": 1305
+     "elo": 1287
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1357
+     "elo": 1352
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1370
+     "elo": 1377
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1329
+     "elo": 1303
     }
    ]
   },
   {
-   "id": "arcee-ai/trinity-large-thinking",
-   "name": "Arcee AI: Trinity Large Thinking",
-   "created": 1775058318,
-   "contextLength": 262144,
+   "id": "baidu/ernie-light-dt-1.0-intl",
+   "name": "Baidu: ERNIE-Light-DT-1.0",
+   "created": 1794331260,
+   "contextLength": 1024000,
    "pricing": {
-    "prompt": 2.5e-7,
-    "completion": 8e-7,
-    "cacheRead": 6e-8
-   },
-   "aa": {
-    "intelligence": 10.8,
-    "coding": 25.8,
-    "agentic": 1
-   },
-   "designArena": [
-    {
-     "arena": "models",
-     "category": "codecategories",
-     "elo": 1116
-    },
-    {
-     "arena": "models",
-     "category": "uicomponent",
-     "elo": 1040
-    },
-    {
-     "arena": "models",
-     "category": "website",
-     "elo": 1137
-    }
-   ]
-  },
-  {
-   "id": "bytedance-seed/seed-1.6",
-   "name": "ByteDance Seed: Seed 1.6",
-   "created": 1766504997,
-   "contextLength": 262144,
-   "pricing": {
-    "prompt": 2.5e-7,
-    "completion": 0.000002,
-    "cacheRead": null
+    "prompt": 0.00000113,
+    "completion": 0.00000394,
+    "cacheRead": 1.13e-7
    },
    "aa": {
     "intelligence": null,
     "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "bytedance-seed/seed-1.6-flash",
-   "name": "ByteDance Seed: Seed 1.6 Flash",
-   "created": 1766505011,
-   "contextLength": 262144,
-   "pricing": {
-    "prompt": 7.5e-8,
-    "completion": 3e-7,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": null,
-    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1199,23 +1233,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "bytedance-seed/seed-2.0-code",
-   "name": "ByteDance Seed: Seed-2.0-Code",
-   "created": 1786550701,
-   "contextLength": 262144,
-   "pricing": {
-    "prompt": 5e-7,
-    "completion": 0.000003,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": null,
-    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1233,6 +1251,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1250,6 +1269,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1267,6 +1287,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1284,6 +1305,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1299,9 +1321,10 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 13.1,
-    "coding": 27.8,
-    "agentic": 1
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -1316,8 +1339,9 @@
     "cacheRead": 1.5e-7
    },
    "aa": {
-    "intelligence": null,
+    "intelligence": 6.2,
     "coding": null,
+    "engineering": 16.4,
     "agentic": null
    },
    "designArena": []
@@ -1335,6 +1359,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1352,6 +1377,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1369,6 +1395,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1386,23 +1413,24 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1108
+     "elo": 1090
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1088
+     "elo": 1077
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1118
+     "elo": 1107
     }
    ]
   },
@@ -1412,14 +1440,15 @@
    "created": 1742824755,
    "contextLength": 163840,
    "pricing": {
-    "prompt": 2.9e-7,
-    "completion": 0.00000114,
-    "cacheRead": 1.1e-7
+    "prompt": 2.5e-7,
+    "completion": 0.000001,
+    "cacheRead": null
    },
    "aa": {
-    "intelligence": 9.7,
-    "coding": 21.2,
-    "agentic": 0.8
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -1434,25 +1463,26 @@
     "cacheRead": 1.3e-7
    },
    "aa": {
-    "intelligence": 13.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1110
+     "elo": 1093
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1080
+     "elo": 1069
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1122
+     "elo": 1110
     }
    ]
   },
@@ -1462,30 +1492,31 @@
    "created": 1748455170,
    "contextLength": 163840,
    "pricing": {
-    "prompt": 5e-7,
-    "completion": 0.00000215,
-    "cacheRead": 3.5e-7
+    "prompt": 5.71e-7,
+    "completion": 0.000002286,
+    "cacheRead": null
    },
    "aa": {
-    "intelligence": 13.1,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1137
+     "elo": 1120
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1097
+     "elo": 1086
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1149
+     "elo": 1136
     }
    ]
   },
@@ -1500,25 +1531,26 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 14.8,
-    "coding": 43.5,
-    "agentic": 6.8
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1175
+     "elo": 1157
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1177
+     "elo": 1166
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1185
+     "elo": 1174
     }
    ]
   },
@@ -1528,30 +1560,31 @@
    "created": 1764594642,
    "contextLength": 163840,
    "pricing": {
-    "prompt": 2.8e-7,
-    "completion": 4.2e-7,
-    "cacheRead": 2.8e-8
+    "prompt": 2.6e-7,
+    "completion": 3.8e-7,
+    "cacheRead": 1.3e-7
    },
    "aa": {
-    "intelligence": 21.5,
-    "coding": 44.2,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1162
+     "elo": 1145
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1144
+     "elo": 1132
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1173
+     "elo": 1162
     }
    ]
   },
@@ -1566,25 +1599,26 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 16.6,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1170
+     "elo": 1152
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1161
+     "elo": 1150
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1177
+     "elo": 1166
     }
    ]
   },
@@ -1594,30 +1628,31 @@
    "created": 1777000666,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 9.1e-8,
-    "completion": 1.82e-7,
-    "cacheRead": 1.82e-8
+    "prompt": 9e-8,
+    "completion": 1.8e-7,
+    "cacheRead": 1.8e-8
    },
    "aa": {
-    "intelligence": 24.4,
-    "coding": 52,
-    "agentic": 26.3
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1204
+     "elo": 1187
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1159
+     "elo": 1148
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1206
+     "elo": 1195
     }
    ]
   },
@@ -1627,30 +1662,31 @@
    "created": 1785478908,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 4.4e-7,
-    "completion": 0.00000132,
-    "cacheRead": 1.4e-8
+    "prompt": 4.43e-8,
+    "completion": 3e-7,
+    "cacheRead": 3.5e-8
    },
    "aa": {
-    "intelligence": 34.3,
-    "coding": 69.1,
-    "agentic": 41
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1228
+     "elo": 1211
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1230
+     "elo": 1220
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1236
+     "elo": 1225
     }
    ]
   },
@@ -1665,9 +1701,10 @@
     "cacheRead": 6.86e-9
    },
    "aa": {
-    "intelligence": 34.8,
-    "coding": 65,
-    "agentic": 47.5
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -1677,14 +1714,15 @@
    "created": 1777000679,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 9.5526e-7,
-    "completion": 0.00000191052,
-    "cacheRead": 7.9605e-8
+    "prompt": 9e-7,
+    "completion": 0.0000015,
+    "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 30.4,
-    "coding": 59.4,
-    "agentic": 26.3
+    "intelligence": 20.8,
+    "coding": null,
+    "engineering": 28.7,
+    "agentic": null
    },
    "designArena": [
     {
@@ -1700,17 +1738,17 @@
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1239
+     "elo": 1223
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1216
+     "elo": 1205
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1233
+     "elo": 1222
     }
    ]
   },
@@ -1725,9 +1763,10 @@
     "cacheRead": 4.4e-8
    },
    "aa": {
-    "intelligence": 36,
-    "coding": 68.8,
-    "agentic": 41.3
+    "intelligence": 23.1,
+    "coding": null,
+    "engineering": 29.8,
+    "agentic": null
    },
    "designArena": []
   },
@@ -1737,13 +1776,14 @@
    "created": 1789021285,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 2e-8,
-    "completion": 0.000001,
-    "cacheRead": 1.5e-8
+    "prompt": 4.98e-8,
+    "completion": 1.992e-7,
+    "cacheRead": 9.96e-10
    },
    "aa": {
-    "intelligence": 24.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1754,30 +1794,31 @@
    "created": 1792225624,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 3e-7,
-    "completion": 0.0000012,
-    "cacheRead": 6e-9
+    "prompt": 1.5e-7,
+    "completion": 6e-7,
+    "cacheRead": 3e-9
    },
    "aa": {
-    "intelligence": 39.5,
+    "intelligence": 32.6,
     "coding": null,
+    "engineering": 37.6,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1289
+     "elo": 1281
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1301
+     "elo": 1271
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1306
+     "elo": 1289
     }
    ]
   },
@@ -1794,6 +1835,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1811,6 +1853,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1826,25 +1869,26 @@
     "cacheRead": 3e-8
    },
    "aa": {
-    "intelligence": 15.5,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1104
+     "elo": 1086
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1087
+     "elo": 1076
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1113
+     "elo": 1102
     }
    ]
   },
@@ -1861,6 +1905,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1876,8 +1921,9 @@
     "cacheRead": 1e-8
    },
    "aa": {
-    "intelligence": 10.4,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1893,25 +1939,26 @@
     "cacheRead": 1.25e-7
    },
    "aa": {
-    "intelligence": 16.1,
-    "coding": 33.3,
-    "agentic": 1.6
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1152
-    },
-    {
-     "arena": "models",
-     "category": "uicomponent",
      "elo": 1134
     },
     {
      "arena": "models",
+     "category": "uicomponent",
+     "elo": 1123
+    },
+    {
+     "arena": "models",
      "category": "website",
-     "elo": 1165
+     "elo": 1154
     }
    ]
   },
@@ -1928,6 +1975,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -1943,30 +1991,31 @@
     "cacheRead": 5e-8
    },
    "aa": {
-    "intelligence": 26.3,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1063
+     "elo": 1038
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1110
+     "elo": 1078
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1189
+     "elo": 1171
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1196
+     "elo": 1183
     }
    ]
   },
@@ -1983,6 +2032,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2000,6 +2050,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2017,6 +2068,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2034,6 +2086,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2051,6 +2104,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2068,6 +2122,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2083,25 +2138,26 @@
     "cacheRead": 2.5e-8
    },
    "aa": {
-    "intelligence": 15.6,
-    "coding": 34.7,
-    "agentic": 1.6
+    "intelligence": 6.2,
+    "coding": null,
+    "engineering": 14.6,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1072
+     "elo": 1054
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1066
+     "elo": 1055
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1081
+     "elo": 1070
     }
    ]
   },
@@ -2116,35 +2172,36 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 29.7,
-    "coding": 68.8,
-    "agentic": 8.2
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1068
+     "elo": 1043
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1125
+     "elo": 1094
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1242
+     "elo": 1225
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1275
+     "elo": 1263
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1251
+     "elo": 1240
     }
    ]
   },
@@ -2161,6 +2218,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2176,35 +2234,36 @@
     "cacheRead": 1.5e-7
    },
    "aa": {
-    "intelligence": 33.6,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1197
+     "elo": 1171
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1202
+     "elo": 1169
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1265
+     "elo": 1249
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1267
+     "elo": 1259
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1267
+     "elo": 1255
     }
    ]
   },
@@ -2219,9 +2278,10 @@
     "cacheRead": 3e-8
    },
    "aa": {
-    "intelligence": 22.2,
-    "coding": 49.3,
-    "agentic": 14.3
+    "intelligence": 11.7,
+    "coding": null,
+    "engineering": 21.2,
+    "agentic": null
    },
    "designArena": []
   },
@@ -2236,35 +2296,36 @@
     "cacheRead": 7.5e-8
    },
    "aa": {
-    "intelligence": 34,
-    "coding": 69.2,
-    "agentic": 29
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1181
+     "elo": 1154
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1197
+     "elo": 1166
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1288
+     "elo": 1272
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1292
+     "elo": 1282
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1299
+     "elo": 1287
     }
    ]
   },
@@ -2279,35 +2340,36 @@
     "cacheRead": 7.5e-8
    },
    "aa": {
-    "intelligence": 39.6,
-    "coding": 71.5,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1208
+     "elo": 1180
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1222
+     "elo": 1197
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1307
+     "elo": 1290
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1292
+     "elo": 1281
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1302
+     "elo": 1291
     }
    ]
   },
@@ -2322,35 +2384,36 @@
     "cacheRead": 8.25e-8
    },
    "aa": {
-    "intelligence": 40.9,
-    "coding": 76.3,
-    "agentic": 40.2
+    "intelligence": 30.8,
+    "coding": null,
+    "engineering": 38.8,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1244
+     "elo": 1216
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1238
+     "elo": 1204
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1302
+     "elo": 1285
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1313
+     "elo": 1298
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1300
+     "elo": 1287
     }
    ]
   },
@@ -2365,25 +2428,133 @@
     "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 52.6,
+    "intelligence": 50.4,
     "coding": null,
+    "engineering": 57.3,
+    "agentic": null
+   },
+   "designArena": [
+    {
+     "arena": "agents",
+     "category": "webapps",
+     "elo": 1277
+    },
+    {
+     "arena": "models",
+     "category": "codecategories",
+     "elo": 1319
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1326
+    },
+    {
+     "arena": "models",
+     "category": "website",
+     "elo": 1311
+    }
+   ]
+  },
+  {
+   "id": "google/gemini-4-carbon",
+   "name": "Google: Gemini 4 Carbon",
+   "created": 1794326871,
+   "contextLength": 1048576,
+   "pricing": {
+    "prompt": 0.000002,
+    "completion": 0.00001,
+    "cacheRead": 1e-7
+   },
+   "aa": {
+    "intelligence": 60,
+    "coding": null,
+    "engineering": 65.3,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1329
+     "elo": 1350
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1332
+     "elo": 1345
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1315
+     "elo": 1304
+    }
+   ]
+  },
+  {
+   "id": "google/gemini-4-hydrogen",
+   "name": "Google: Gemini 4 Hydrogen",
+   "created": 1794506460,
+   "contextLength": 1048576,
+   "pricing": {
+    "prompt": 0.0000015,
+    "completion": 0.0000075,
+    "cacheRead": 7.5e-8
+   },
+   "aa": {
+    "intelligence": 53.9,
+    "coding": null,
+    "engineering": 60.1,
+    "agentic": null
+   },
+   "designArena": [
+    {
+     "arena": "models",
+     "category": "codecategories",
+     "elo": 1330
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1337
+    },
+    {
+     "arena": "models",
+     "category": "website",
+     "elo": 1325
+    }
+   ]
+  },
+  {
+   "id": "google/gemini-4-neon",
+   "name": "Google: Gemini 4 Neon",
+   "created": 1795006977,
+   "contextLength": 1048576,
+   "pricing": {
+    "prompt": 0.000003,
+    "completion": 0.000015,
+    "cacheRead": 1.5e-7
+   },
+   "aa": {
+    "intelligence": 61.4,
+    "coding": null,
+    "engineering": 66.8,
+    "agentic": null
+   },
+   "designArena": [
+    {
+     "arena": "models",
+     "category": "codecategories",
+     "elo": 1391
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1349
+    },
+    {
+     "arena": "models",
+     "category": "website",
+     "elo": 1347
     }
    ]
   },
@@ -2400,6 +2571,43 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "google/gemini-omni-1.1-flash",
+   "name": "Google: Gemini Omni 1.1 Flash",
+   "created": 1793825668,
+   "contextLength": 131072,
+   "pricing": {
+    "prompt": 0.0000015,
+    "completion": 0.000009,
+    "cacheRead": null
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "google/gemini-omni-1.2-flash",
+   "name": "Google: Gemini Omni 1.2 Flash",
+   "created": 1793898961,
+   "contextLength": 131072,
+   "pricing": {
+    "prompt": 0.0000015,
+    "completion": 0.000009,
+    "cacheRead": null
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2417,6 +2625,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2432,9 +2641,10 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 3.8,
-    "coding": 5.8,
-    "agentic": 0.1
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -2445,13 +2655,14 @@
    "contextLength": 131072,
    "pricing": {
     "prompt": 8e-8,
-    "completion": 3.5e-7,
+    "completion": 4.5e-7,
     "cacheRead": 4e-8
    },
    "aa": {
-    "intelligence": 4.9,
-    "coding": 10.1,
-    "agentic": 0.1
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -2466,8 +2677,9 @@
     "cacheRead": 2e-8
    },
    "aa": {
-    "intelligence": 4.8,
-    "coding": 2.7,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2478,14 +2690,15 @@
    "created": 1775227989,
    "contextLength": 262144,
    "pricing": {
-    "prompt": 9e-8,
-    "completion": 3e-7,
-    "cacheRead": 5e-8
+    "prompt": 6.75e-8,
+    "completion": 2.25e-7,
+    "cacheRead": 3.75e-8
    },
    "aa": {
-    "intelligence": 16.7,
-    "coding": 39.3,
-    "agentic": 2.9
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -2495,14 +2708,15 @@
    "created": 1775148486,
    "contextLength": 262144,
    "pricing": {
-    "prompt": 1e-7,
-    "completion": 3.4e-7,
-    "cacheRead": 1e-7
+    "prompt": 2e-7,
+    "completion": 4e-7,
+    "cacheRead": null
    },
    "aa": {
-    "intelligence": 14.7,
-    "coding": 43.4,
-    "agentic": 4.2
+    "intelligence": 4.4,
+    "coding": null,
+    "engineering": 11.9,
+    "agentic": null
    },
    "designArena": []
   },
@@ -2519,6 +2733,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2536,6 +2751,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2546,30 +2762,14 @@
    "created": 1688256000,
    "contextLength": 8192,
    "pricing": {
-    "prompt": 8e-8,
-    "completion": 1.1e-7,
-    "cacheRead": null
+    "prompt": 3e-7,
+    "completion": 5e-7,
+    "cacheRead": 2e-7
    },
    "aa": {
     "intelligence": null,
     "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "ibm-granite/granite-4.0-h-micro",
-   "name": "IBM: Granite 4.0 Micro",
-   "created": 1760927695,
-   "contextLength": 131000,
-   "pricing": {
-    "prompt": 1.7e-8,
-    "completion": 1.12e-7,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": 5.1,
-    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2581,98 +2781,16 @@
    "contextLength": 131072,
    "pricing": {
     "prompt": 6e-8,
-    "completion": 2.5e-7,
+    "completion": 1.5e-7,
     "cacheRead": 1.5e-8
    },
    "aa": {
-    "intelligence": 11.1,
-    "coding": 22.4,
-    "agentic": 1.3
-   },
-   "designArena": []
-  },
-  {
-   "id": "inception/mercury-2",
-   "name": "Inception: Mercury 2",
-   "created": 1772636275,
-   "contextLength": 128000,
-   "pricing": {
-    "prompt": 2.5e-7,
-    "completion": 7.5e-7,
-    "cacheRead": 2.5e-8
-   },
-   "aa": {
-    "intelligence": 10.8,
-    "coding": 31.1,
-    "agentic": 1.6
-   },
-   "designArena": [
-    {
-     "arena": "models",
-     "category": "codecategories",
-     "elo": 1018
-    },
-    {
-     "arena": "models",
-     "category": "uicomponent",
-     "elo": 990
-    },
-    {
-     "arena": "models",
-     "category": "website",
-     "elo": 1035
-    }
-   ]
-  },
-  {
-   "id": "inception/mercury-2.5",
-   "name": "Inception: Mercury 2.5",
-   "created": 1788892137,
-   "contextLength": 260000,
-   "pricing": {
-    "prompt": 4e-8,
-    "completion": 1.5e-7,
-    "cacheRead": 4e-9
-   },
-   "aa": {
-    "intelligence": 12.3,
+    "intelligence": 5.1,
     "coding": null,
+    "engineering": 14.6,
     "agentic": null
    },
    "designArena": []
-  },
-  {
-   "id": "inception/mercury-3",
-   "name": "Inception: Mercury 3",
-   "created": 1792158337,
-   "contextLength": 1000000,
-   "pricing": {
-    "prompt": 1e-7,
-    "completion": 3.5e-7,
-    "cacheRead": 1e-8
-   },
-   "aa": {
-    "intelligence": null,
-    "coding": null,
-    "agentic": null
-   },
-   "designArena": [
-    {
-     "arena": "models",
-     "category": "codecategories",
-     "elo": 1228
-    },
-    {
-     "arena": "models",
-     "category": "uicomponent",
-     "elo": 1231
-    },
-    {
-     "arena": "models",
-     "category": "website",
-     "elo": 1230
-    }
-   ]
   },
   {
    "id": "inclusionai/ling-3.0-flash",
@@ -2685,9 +2803,10 @@
     "cacheRead": 4.2e-9
    },
    "aa": {
-    "intelligence": 20.1,
-    "coding": 50.6,
-    "agentic": 19.3
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -2702,9 +2821,28 @@
     "cacheRead": 1.2e-8
    },
    "aa": {
-    "intelligence": 24.6,
-    "coding": 57,
-    "agentic": 28.7
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "inclusionai/ling-3.0-tiny",
+   "name": "inclusionAI: Ling 3.0 Tiny",
+   "created": 1786034890,
+   "contextLength": 262144,
+   "pricing": {
+    "prompt": 1.5e-8,
+    "completion": 4.5e-8,
+    "cacheRead": 3e-9
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -2712,15 +2850,16 @@
    "id": "inclusionai/ling-3.1-flash",
    "name": "inclusionAI: Ling 3.1 Flash",
    "created": 1790950024,
-   "contextLength": 262144,
+   "contextLength": 1000000,
    "pricing": {
-    "prompt": 7.5e-8,
-    "completion": 2.25e-7,
-    "cacheRead": 1.5e-8
+    "prompt": 6e-8,
+    "completion": 1.8e-7,
+    "cacheRead": 1.2e-8
    },
    "aa": {
-    "intelligence": 41.1,
+    "intelligence": 29.6,
     "coding": null,
+    "engineering": 35.5,
     "agentic": null
    },
    "designArena": []
@@ -2738,6 +2877,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2755,23 +2895,25 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
   },
   {
-   "id": "liquid/lfm-2.5-2.6b",
-   "name": "LiquidAI: LFM2.5-2.6B",
-   "created": 1786470519,
-   "contextLength": 128000,
+   "id": "kt/midm-k-3.0-pro",
+   "name": "KT: Mi:dm K 3.0 Pro",
+   "created": 1793897701,
+   "contextLength": 261795,
    "pricing": {
-    "prompt": 3.5e-7,
-    "completion": 5e-7,
+    "prompt": 2e-7,
+    "completion": 8e-7,
     "cacheRead": 4e-8
    },
    "aa": {
-    "intelligence": 8.4,
-    "coding": 7.7,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2789,6 +2931,25 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "liquid/lfm-3-1.7b",
+   "name": "LiquidAI: LFM3-1.7B",
+   "created": 1794009477,
+   "contextLength": 262144,
+   "pricing": {
+    "prompt": 8e-8,
+    "completion": 2e-7,
+    "cacheRead": 2e-8
+   },
+   "aa": {
+    "intelligence": 6,
+    "coding": null,
+    "engineering": 16.3,
     "agentic": null
    },
    "designArena": []
@@ -2799,31 +2960,15 @@
    "created": 1690934400,
    "contextLength": 8000,
    "pricing": {
-    "prompt": 4e-7,
-    "completion": 7.5e-7,
-    "cacheRead": null
+    "prompt": 3e-7,
+    "completion": 5e-7,
+    "cacheRead": 3e-7
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "meituan/longcat-2.0",
-   "name": "Meituan: LongCat 2.0",
-   "created": 1784554658,
-   "contextLength": 1048756,
-   "pricing": {
-    "prompt": 3e-7,
-    "completion": 0.0000012,
-    "cacheRead": 6e-9
-   },
-   "aa": {
-    "intelligence": 19.1,
-    "coding": 45.3,
-    "agentic": 14
    },
    "designArena": []
   },
@@ -2833,13 +2978,14 @@
    "created": 1721692800,
    "contextLength": 131072,
    "pricing": {
-    "prompt": 4e-7,
-    "completion": 4e-7,
+    "prompt": 7.2e-7,
+    "completion": 7.2e-7,
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 6.6,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2850,30 +2996,14 @@
    "created": 1721692800,
    "contextLength": 131072,
    "pricing": {
-    "prompt": 5e-8,
-    "completion": 8e-8,
-    "cacheRead": 2.5e-8
-   },
-   "aa": {
-    "intelligence": 6.9,
-    "coding": 5.4,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "meta-llama/llama-3.2-1b-instruct",
-   "name": "Meta: Llama 3.2 1B Instruct",
-   "created": 1727222400,
-   "contextLength": 60000,
-   "pricing": {
-    "prompt": 2.7e-8,
-    "completion": 2.01e-7,
+    "prompt": 2e-8,
+    "completion": 4e-8,
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 4.8,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2889,8 +3019,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 5.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2901,13 +3032,14 @@
    "created": 1733506137,
    "contextLength": 131072,
    "pricing": {
-    "prompt": 1e-7,
-    "completion": 3.2e-7,
-    "cacheRead": null
+    "prompt": 7.1e-7,
+    "completion": 7.1e-7,
+    "cacheRead": 7.1e-7
    },
    "aa": {
-    "intelligence": 7.7,
-    "coding": 11.9,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -2918,30 +3050,31 @@
    "created": 1743881822,
    "contextLength": 524288,
    "pricing": {
-    "prompt": 1.875e-7,
-    "completion": 6.525e-7,
-    "cacheRead": 5e-8
+    "prompt": 3.5e-7,
+    "completion": 0.000001,
+    "cacheRead": 1.7e-7
    },
    "aa": {
-    "intelligence": 9.3,
-    "coding": 16.3,
-    "agentic": 0.6
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 878
+     "elo": 861
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 894
+     "elo": 883
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 869
+     "elo": 858
     }
    ]
   },
@@ -2956,25 +3089,26 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 6.5,
-    "coding": 8.2,
-    "agentic": 0.5
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 788
+     "elo": 771
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 762
+     "elo": 751
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 750
+     "elo": 737
     }
    ]
   },
@@ -2991,9 +3125,44 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
+  },
+  {
+   "id": "meta/muse-ember",
+   "name": "Meta: Muse Ember",
+   "created": 1794247648,
+   "contextLength": 1048576,
+   "pricing": {
+    "prompt": 1e-7,
+    "completion": 5e-7,
+    "cacheRead": 4e-9
+   },
+   "aa": {
+    "intelligence": 36,
+    "coding": null,
+    "engineering": 41.8,
+    "agentic": null
+   },
+   "designArena": [
+    {
+     "arena": "models",
+     "category": "codecategories",
+     "elo": 1340
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1305
+    },
+    {
+     "arena": "models",
+     "category": "website",
+     "elo": 1325
+    }
+   ]
   },
   {
    "id": "meta/muse-glimmer-30b",
@@ -3001,20 +3170,31 @@
    "created": 1786302394,
    "contextLength": 131072,
    "pricing": {
-    "prompt": 3e-7,
-    "completion": 0.0000012,
+    "prompt": 3.5e-7,
+    "completion": 0.0000015,
     "cacheRead": 4e-8
    },
    "aa": {
-    "intelligence": 17.5,
-    "coding": 49,
-    "agentic": 8.5
+    "intelligence": 6.3,
+    "coding": null,
+    "engineering": 15.4,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
+     "category": "codecategories",
+     "elo": 1147
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1200
+    },
+    {
+     "arena": "models",
      "category": "website",
-     "elo": 1154
+     "elo": 1175
     }
    ]
   },
@@ -3029,35 +3209,36 @@
     "cacheRead": 1.5e-7
    },
    "aa": {
-    "intelligence": 33.7,
-    "coding": 71.3,
-    "agentic": 25.8
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1199
+     "elo": 1171
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1207
+     "elo": 1174
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1275
+     "elo": 1258
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1283
+     "elo": 1273
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1269
+     "elo": 1259
     }
    ]
   },
@@ -3072,35 +3253,36 @@
     "cacheRead": 1.5e-7
    },
    "aa": {
-    "intelligence": 39.6,
-    "coding": 72.2,
-    "agentic": 43.2
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1210
+     "elo": 1183
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1221
+     "elo": 1191
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1312
+     "elo": 1298
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1295
+     "elo": 1291
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1312
+     "elo": 1304
     }
    ]
   },
@@ -3117,6 +3299,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -3132,30 +3315,31 @@
     "cacheRead": 1.5e-7
    },
    "aa": {
-    "intelligence": 48.1,
-    "coding": 75.8,
-    "agentic": 55.5
+    "intelligence": 36.6,
+    "coding": null,
+    "engineering": 44.1,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1312
+     "elo": 1288
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1297
+     "elo": 1275
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1351
+     "elo": 1345
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1344
+     "elo": 1343
     },
     {
      "arena": "models",
@@ -3177,6 +3361,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -3192,20 +3377,26 @@
     "cacheRead": 1.5e-7
    },
    "aa": {
-    "intelligence": null,
+    "intelligence": 24.9,
     "coding": null,
+    "engineering": 35.1,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1297
+     "elo": 1289
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1296
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1306
+     "elo": 1300
     }
    ]
   },
@@ -3220,25 +3411,26 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": null,
+    "intelligence": 43.6,
     "coding": null,
+    "engineering": 49.6,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1380
+     "elo": 1384
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1377
+     "elo": 1357
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1362
+     "elo": 1374
     }
    ]
   },
@@ -3253,159 +3445,44 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 5.9,
-    "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "minimax/minimax-01",
-   "name": "MiniMax: MiniMax-01",
-   "created": 1736915462,
-   "contextLength": 1000192,
-   "pricing": {
-    "prompt": 2e-7,
-    "completion": 0.0000011,
-    "cacheRead": null
-   },
-   "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
-  },
-  {
-   "id": "minimax/minimax-m1",
-   "name": "MiniMax: MiniMax M1",
-   "created": 1750200414,
-   "contextLength": 1000000,
-   "pricing": {
-    "prompt": 5.5e-7,
-    "completion": 0.0000022,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": 11.7,
-    "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "minimax/minimax-m2",
-   "name": "MiniMax: MiniMax M2",
-   "created": 1761252093,
-   "contextLength": 204800,
-   "pricing": {
-    "prompt": 2.55e-7,
-    "completion": 0.00000102,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": 18.6,
-    "coding": null,
-    "agentic": null
-   },
-   "designArena": [
-    {
-     "arena": "models",
-     "category": "codecategories",
-     "elo": 1133
-    },
-    {
-     "arena": "models",
-     "category": "uicomponent",
-     "elo": 1131
-    },
-    {
-     "arena": "models",
-     "category": "website",
-     "elo": 1141
-    }
-   ]
-  },
-  {
-   "id": "minimax/minimax-m2-her",
-   "name": "MiniMax: MiniMax M2-her",
-   "created": 1769177239,
-   "contextLength": 65536,
-   "pricing": {
-    "prompt": 3e-7,
-    "completion": 0.0000012,
-    "cacheRead": 3e-8
-   },
-   "aa": {
-    "intelligence": null,
-    "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "minimax/minimax-m2.1",
-   "name": "MiniMax: MiniMax M2.1",
-   "created": 1766454997,
-   "contextLength": 204800,
-   "pricing": {
-    "prompt": 3e-7,
-    "completion": 0.0000012,
-    "cacheRead": 3e-8
-   },
-   "aa": {
-    "intelligence": 20.9,
-    "coding": null,
-    "agentic": null
-   },
-   "designArena": [
-    {
-     "arena": "models",
-     "category": "codecategories",
-     "elo": 1190
-    },
-    {
-     "arena": "models",
-     "category": "uicomponent",
-     "elo": 1218
-    },
-    {
-     "arena": "models",
-     "category": "website",
-     "elo": 1201
-    }
-   ]
   },
   {
    "id": "minimax/minimax-m2.5",
    "name": "MiniMax: MiniMax M2.5",
    "created": 1770908502,
-   "contextLength": 204800,
+   "contextLength": 198000,
    "pricing": {
-    "prompt": 3e-7,
-    "completion": 0.0000012,
+    "prompt": 2.7e-7,
+    "completion": 9.5e-7,
     "cacheRead": 3e-8
    },
    "aa": {
-    "intelligence": 22.8,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1205
+     "elo": 1189
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1167
+     "elo": 1156
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1222
+     "elo": 1209
     }
    ]
   },
@@ -3413,32 +3490,33 @@
    "id": "minimax/minimax-m2.7",
    "name": "MiniMax: MiniMax M2.7",
    "created": 1773836697,
-   "contextLength": 204800,
+   "contextLength": 196608,
    "pricing": {
-    "prompt": 3e-7,
-    "completion": 0.0000012,
-    "cacheRead": 6e-8
+    "prompt": 6e-7,
+    "completion": 0.0000018,
+    "cacheRead": null
    },
    "aa": {
-    "intelligence": 22.8,
-    "coding": 52.6,
-    "agentic": 15.3
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1232
+     "elo": 1215
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1206
+     "elo": 1195
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1241
+     "elo": 1230
     }
    ]
   },
@@ -3453,35 +3531,36 @@
     "cacheRead": 6e-8
    },
    "aa": {
-    "intelligence": 29.2,
-    "coding": 58.6,
-    "agentic": 29.5
+    "intelligence": 18.9,
+    "coding": null,
+    "engineering": 26.2,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1197
+     "elo": 1177
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1201
+     "elo": 1179
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1245
+     "elo": 1228
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1240
+     "elo": 1228
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1256
+     "elo": 1244
     }
    ]
   },
@@ -3496,8 +3575,9 @@
     "cacheRead": 1.5e-8
    },
    "aa": {
-    "intelligence": 42.7,
+    "intelligence": 29.1,
     "coding": null,
+    "engineering": 34.3,
     "agentic": null
    },
    "designArena": []
@@ -3515,23 +3595,24 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1007
+     "elo": 989
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1012
+     "elo": 1001
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1011
+     "elo": 1000
     }
    ]
   },
@@ -3546,9 +3627,10 @@
     "cacheRead": 4e-8
    },
    "aa": {
-    "intelligence": 8.6,
-    "coding": 31.3,
-    "agentic": 2.3
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -3563,20 +3645,21 @@
     "cacheRead": 2e-8
    },
    "aa": {
-    "intelligence": 6,
-    "coding": 14.4,
-    "agentic": 1.1
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1063
+     "elo": 1046
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1081
+     "elo": 1068
     }
    ]
   },
@@ -3591,20 +3674,21 @@
     "cacheRead": 1e-8
    },
    "aa": {
-    "intelligence": 4.8,
-    "coding": 4.8,
-    "agentic": 0.8
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1010
+     "elo": 992
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1026
+     "elo": 1015
     }
    ]
   },
@@ -3619,20 +3703,21 @@
     "cacheRead": 1.5e-8
    },
    "aa": {
-    "intelligence": 5.5,
-    "coding": 9.7,
-    "agentic": 0.6
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1053
+     "elo": 1035
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1063
+     "elo": 1052
     }
    ]
   },
@@ -3647,8 +3732,9 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 5.8,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -3664,8 +3750,9 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 7.6,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -3681,25 +3768,26 @@
     "cacheRead": 5e-8
    },
    "aa": {
-    "intelligence": 9.3,
-    "coding": 20.1,
-    "agentic": 1
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1140
+     "elo": 1123
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1097
+     "elo": 1085
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1162
+     "elo": 1149
     }
    ]
   },
@@ -3709,30 +3797,31 @@
    "created": 1791294122,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 0.00000136,
-    "completion": 0.00000418,
-    "cacheRead": 1.4e-7
+    "prompt": 7e-7,
+    "completion": 0.0000021,
+    "cacheRead": 7e-8
    },
    "aa": {
-    "intelligence": 38.4,
+    "intelligence": 26.1,
     "coding": null,
+    "engineering": 33.4,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1258
+     "elo": 1247
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1269
+     "elo": 1272
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1257
+     "elo": 1253
     }
    ]
   },
@@ -3742,30 +3831,31 @@
    "created": 1746627341,
    "contextLength": 131072,
    "pricing": {
-    "prompt": 4e-7,
-    "completion": 0.000002,
-    "cacheRead": 4e-8
+    "prompt": 4.4e-7,
+    "completion": 0.0000022,
+    "cacheRead": 4.4e-8
    },
    "aa": {
-    "intelligence": 9,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1067
+     "elo": 1050
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1019
+     "elo": 1008
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1077
+     "elo": 1066
     }
    ]
   },
@@ -3780,9 +3870,10 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 14.2,
-    "coding": 46.9,
-    "agentic": 7
+    "intelligence": 4.6,
+    "coding": null,
+    "engineering": 12.2,
+    "agentic": null
    },
    "designArena": []
   },
@@ -3792,30 +3883,31 @@
    "created": 1755095639,
    "contextLength": 131072,
    "pricing": {
-    "prompt": 4e-7,
-    "completion": 0.000002,
-    "cacheRead": 4e-8
+    "prompt": 4.4e-7,
+    "completion": 0.0000022,
+    "cacheRead": 4.4e-8
    },
    "aa": {
-    "intelligence": 9.2,
-    "coding": 20.5,
-    "agentic": 1.9
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1120
+     "elo": 1102
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1094
+     "elo": 1083
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1131
+     "elo": 1120
     }
    ]
   },
@@ -3832,6 +3924,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -3847,8 +3940,9 @@
     "cacheRead": 2e-8
    },
    "aa": {
-    "intelligence": 6.5,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -3864,8 +3958,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 6.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -3881,9 +3976,10 @@
     "cacheRead": 1.5e-8
    },
    "aa": {
-    "intelligence": 11.3,
-    "coding": 26.6,
-    "agentic": 0.8
+    "intelligence": 4.3,
+    "coding": null,
+    "engineering": 13.3,
+    "agentic": null
    },
    "designArena": []
   },
@@ -3900,6 +3996,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -3917,23 +4014,24 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 905
+     "elo": 888
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 902
+     "elo": 890
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 894
+     "elo": 883
     }
    ]
   },
@@ -3948,8 +4046,27 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 5.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "mistralai/pixtral-large-2502",
+   "name": "Mistral: Pixtral Large 2502",
+   "created": 1795135865,
+   "contextLength": 128000,
+   "pricing": {
+    "prompt": 0.000002,
+    "completion": 0.000006,
+    "cacheRead": null
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -3967,6 +4084,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -3984,6 +4102,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4001,6 +4120,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4016,25 +4136,26 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 12.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1032
+     "elo": 1015
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1025
+     "elo": 1014
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1050
+     "elo": 1037
     }
    ]
   },
@@ -4049,20 +4170,21 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 15.3,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1096
+     "elo": 1079
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1107
+     "elo": 1094
     }
    ]
   },
@@ -4077,15 +4199,16 @@
     "cacheRead": 1.5e-7
    },
    "aa": {
-    "intelligence": 22,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "website",
-     "elo": 1113
+     "elo": 1100
     }
    ]
   },
@@ -4100,35 +4223,36 @@
     "cacheRead": 1.5e-7
    },
    "aa": {
-    "intelligence": 23.5,
-    "coding": 46.8,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1114
+     "elo": 1088
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1136
+     "elo": 1104
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1236
+     "elo": 1218
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1231
+     "elo": 1220
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1248
+     "elo": 1236
     }
    ]
   },
@@ -4143,15 +4267,16 @@
     "cacheRead": 1.5e-7
    },
    "aa": {
-    "intelligence": 27,
-    "coding": 61.8,
-    "agentic": 20.5
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1155
+     "elo": 1130
     },
     {
      "arena": "agents",
@@ -4161,17 +4286,17 @@
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1270
+     "elo": 1254
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1261
+     "elo": 1251
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1268
+     "elo": 1258
     }
    ]
   },
@@ -4181,40 +4306,41 @@
    "created": 1781266361,
    "contextLength": 262144,
    "pricing": {
-    "prompt": 6.712e-7,
-    "completion": 0.00000335,
-    "cacheRead": 1.5e-7
+    "prompt": 6e-7,
+    "completion": 0.000003,
+    "cacheRead": 1.2e-7
    },
    "aa": {
-    "intelligence": 25.8,
-    "coding": 60.8,
-    "agentic": 21
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1175
+     "elo": 1151
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1176
+     "elo": 1144
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1251
+     "elo": 1235
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1253
+     "elo": 1245
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1263
+     "elo": 1252
     }
    ]
   },
@@ -4224,40 +4350,41 @@
    "created": 1784215858,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 2.14e-7,
-    "completion": 0.00002,
-    "cacheRead": 2.04e-7
+    "prompt": 1.92e-7,
+    "completion": 0.000016,
+    "cacheRead": 1.82e-7
    },
    "aa": {
-    "intelligence": 43.6,
-    "coding": 76.2,
-    "agentic": 50
+    "intelligence": 17.4,
+    "coding": null,
+    "engineering": 22.8,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1315
+     "elo": 1287
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1295
+     "elo": 1265
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1360
+     "elo": 1345
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1340
+     "elo": 1339
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1335
+     "elo": 1334
     }
    ]
   },
@@ -4267,30 +4394,41 @@
    "created": 1792778188,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 0.000002,
-    "completion": 0.00001,
-    "cacheRead": 2e-7
+    "prompt": 2.53e-7,
+    "completion": 0.0000088,
+    "cacheRead": 1.8e-7
    },
    "aa": {
-    "intelligence": 55.1,
+    "intelligence": 46.5,
     "coding": null,
+    "engineering": 50.9,
     "agentic": null
    },
    "designArena": [
     {
+     "arena": "agents",
+     "category": "fullstack",
+     "elo": 1322
+    },
+    {
+     "arena": "agents",
+     "category": "webapps",
+     "elo": 1294
+    },
+    {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1352
+     "elo": 1341
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1394
+     "elo": 1374
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1322
+     "elo": 1314
     }
    ]
   },
@@ -4307,6 +4445,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4324,6 +4463,25 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "motif-technologies/motif-3",
+   "name": "Motif Technologies: Motif 3",
+   "created": 1793655334,
+   "contextLength": 262144,
+   "pricing": {
+    "prompt": 3e-7,
+    "completion": 0.0000012,
+    "cacheRead": 6e-8
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4341,6 +4499,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4358,40 +4517,25 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
   },
   {
-   "id": "nousresearch/hermes-3-llama-3.1-405b",
-   "name": "Nous: Hermes 3 405B Instruct",
-   "created": 1723766400,
-   "contextLength": 131072,
+   "id": "nex-agi/nex-n2.6",
+   "name": "Nex AGI: Nex-N2.6",
+   "created": 1794282379,
+   "contextLength": 262144,
    "pricing": {
-    "prompt": 0.000001,
-    "completion": 0.000001,
-    "cacheRead": null
+    "prompt": 1.2e-7,
+    "completion": 4e-7,
+    "cacheRead": 2.4e-8
    },
    "aa": {
     "intelligence": null,
     "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "nousresearch/hermes-3-llama-3.1-70b",
-   "name": "Nous: Hermes 3 70B Instruct",
-   "created": 1723939200,
-   "contextLength": 131072,
-   "pricing": {
-    "prompt": 7e-7,
-    "completion": 7e-7,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": 6.7,
-    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4404,11 +4548,12 @@
    "pricing": {
     "prompt": 0.000001,
     "completion": 0.000003,
-    "cacheRead": null
+    "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 7.5,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4421,12 +4566,13 @@
    "pricing": {
     "prompt": 6e-8,
     "completion": 2.4e-7,
-    "cacheRead": null
+    "cacheRead": 1.2e-8
    },
    "aa": {
-    "intelligence": 8.9,
-    "coding": 14.4,
-    "agentic": 1
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -4436,14 +4582,15 @@
    "created": 1773245239,
    "contextLength": 262144,
    "pricing": {
-    "prompt": 3e-7,
-    "completion": 0.0000024,
-    "cacheRead": 1.5e-7
+    "prompt": 7.5e-8,
+    "completion": 4e-7,
+    "cacheRead": null
    },
    "aa": {
-    "intelligence": 12.8,
-    "coding": 37.7,
-    "agentic": 1.7
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -4453,30 +4600,31 @@
    "created": 1780551208,
    "contextLength": 262144,
    "pricing": {
-    "prompt": 6e-7,
-    "completion": 0.0000024,
-    "cacheRead": 1.2e-7
+    "prompt": 5e-7,
+    "completion": 0.0000022,
+    "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 22.9,
-    "coding": 49.3,
-    "agentic": 20.1
+    "intelligence": 11.8,
+    "coding": null,
+    "engineering": 22.8,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1145
+     "elo": 1124
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1133
+     "elo": 1119
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1144
+     "elo": 1125
     }
    ]
   },
@@ -4493,6 +4641,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4501,16 +4650,17 @@
    "id": "nvidia/nemotron-3.5-lightning",
    "name": "NVIDIA: Nemotron 3.5 Lightning",
    "created": 1786452751,
-   "contextLength": 262144,
+   "contextLength": 1048576,
    "pricing": {
     "prompt": 7e-8,
     "completion": 2e-7,
     "cacheRead": 4e-8
    },
    "aa": {
-    "intelligence": 12.9,
-    "coding": 26.8,
-    "agentic": 3.5
+    "intelligence": 5.5,
+    "coding": null,
+    "engineering": 15.5,
+    "agentic": null
    },
    "designArena": []
   },
@@ -4521,29 +4671,30 @@
    "contextLength": 1048576,
    "pricing": {
     "prompt": 1.5e-7,
-    "completion": 5e-7,
+    "completion": 4.7e-7,
     "cacheRead": 2e-8
    },
    "aa": {
-    "intelligence": 26.5,
+    "intelligence": 13.6,
     "coding": null,
+    "engineering": 23.5,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1152
+     "elo": 1130
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1145
+     "elo": 1146
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1169
+     "elo": 1151
     }
    ]
   },
@@ -4560,6 +4711,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4577,6 +4729,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4594,6 +4747,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4609,25 +4763,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 6.7,
-    "coding": 13.1,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "openai/gpt-4-turbo",
-   "name": "OpenAI: GPT-4 Turbo",
-   "created": 1712620800,
-   "contextLength": 128000,
-   "pricing": {
-    "prompt": 0.00001,
-    "completion": 0.00003,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": 7,
-    "coding": 21.5,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4643,25 +4781,26 @@
     "cacheRead": 5e-7
    },
    "aa": {
-    "intelligence": 12.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1024
+     "elo": 1007
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 995
+     "elo": 984
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1037
+     "elo": 1026
     }
    ]
   },
@@ -4676,25 +4815,26 @@
     "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 10.2,
-    "coding": 20.2,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 992
+     "elo": 975
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 956
+     "elo": 945
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 997
+     "elo": 985
     }
    ]
   },
@@ -4709,25 +4849,26 @@
     "cacheRead": 3e-8
    },
    "aa": {
-    "intelligence": 7.8,
-    "coding": 11.1,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 961
+     "elo": 944
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 911
+     "elo": 899
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 971
+     "elo": 960
     }
    ]
   },
@@ -4744,23 +4885,24 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 859
+     "elo": 842
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 880
+     "elo": 869
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 831
+     "elo": 818
     }
    ]
   },
@@ -4775,8 +4917,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 7.3,
-    "coding": 24.2,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4792,8 +4935,9 @@
     "cacheRead": 0.00000125
    },
    "aa": {
-    "intelligence": 7.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4809,8 +4953,9 @@
     "cacheRead": 0.00000125
    },
    "aa": {
-    "intelligence": 8.4,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4826,8 +4971,9 @@
     "cacheRead": 7.5e-8
    },
    "aa": {
-    "intelligence": 6.7,
-    "coding": 11.4,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4845,6 +4991,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4860,25 +5007,26 @@
     "cacheRead": 1.25e-7
    },
    "aa": {
-    "intelligence": 23,
-    "coding": 37.8,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1166
+     "elo": 1149
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1174
+     "elo": 1163
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1184
+     "elo": 1172
     }
    ]
   },
@@ -4895,6 +5043,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4912,6 +5061,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -4927,25 +5077,26 @@
     "cacheRead": 2.5e-8
    },
    "aa": {
-    "intelligence": 20.6,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1113
+     "elo": 1096
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1101
+     "elo": 1089
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1124
+     "elo": 1112
     }
    ]
   },
@@ -4960,25 +5111,26 @@
     "cacheRead": 5e-9
    },
    "aa": {
-    "intelligence": 13,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1084
+     "elo": 1066
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1061
+     "elo": 1050
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1101
+     "elo": 1088
     }
    ]
   },
@@ -4995,6 +5147,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5010,25 +5163,26 @@
     "cacheRead": 1.25e-7
    },
    "aa": {
-    "intelligence": 24.7,
-    "coding": 49.4,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1169
+     "elo": 1152
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1161
+     "elo": 1150
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1185
+     "elo": 1174
     }
    ]
   },
@@ -5043,8 +5197,9 @@
     "cacheRead": 1.3e-7
    },
    "aa": {
-    "intelligence": 23.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
@@ -5056,22 +5211,22 @@
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1018
+     "elo": 986
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1151
+     "elo": 1134
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1232
+     "elo": 1221
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1160
+     "elo": 1149
     }
    ]
   },
@@ -5088,6 +5243,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5103,25 +5259,26 @@
     "cacheRead": 3e-8
    },
    "aa": {
-    "intelligence": 20.4,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1092
+     "elo": 1075
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1076
+     "elo": 1065
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1109
+     "elo": 1098
     }
    ]
   },
@@ -5136,35 +5293,36 @@
     "cacheRead": 1.75e-7
    },
    "aa": {
-    "intelligence": 30.4,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "website",
-     "elo": 1193
+     "elo": 1182
     },
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1043
+     "elo": 1018
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1086
+     "elo": 1054
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1168
+     "elo": 1151
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1185
+     "elo": 1174
     }
    ]
   },
@@ -5181,6 +5339,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5196,20 +5355,21 @@
     "cacheRead": 1.75e-7
    },
    "aa": {
-    "intelligence": 28.5,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 993
+     "elo": 968
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1051
+     "elo": 1019
     }
    ]
   },
@@ -5226,6 +5386,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5241,35 +5402,36 @@
     "cacheRead": 1.75e-7
    },
    "aa": {
-    "intelligence": 32.5,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 983
+     "elo": 958
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1032
+     "elo": 1000
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1143
+     "elo": 1126
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1132
+     "elo": 1121
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1161
+     "elo": 1150
     }
    ]
   },
@@ -5284,35 +5446,36 @@
     "cacheRead": 2.5e-7
    },
    "aa": {
-    "intelligence": 39,
-    "coding": 71.1,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1210
+     "elo": 1193
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1234
+     "elo": 1223
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1218
+     "elo": 1207
     },
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1017
+     "elo": 992
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1059
+     "elo": 1027
     }
    ]
   },
@@ -5329,6 +5492,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5344,9 +5508,10 @@
     "cacheRead": 7.5e-8
    },
    "aa": {
-    "intelligence": 24.1,
-    "coding": 56.1,
-    "agentic": 17.9
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -5361,9 +5526,10 @@
     "cacheRead": 2e-8
    },
    "aa": {
-    "intelligence": 20.7,
-    "coding": 56.1,
-    "agentic": 16
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -5380,6 +5546,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5395,35 +5562,36 @@
     "cacheRead": 5e-7
    },
    "aa": {
-    "intelligence": 38.4,
-    "coding": 74.9,
-    "agentic": 36.4
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1089
+     "elo": 1064
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1117
+     "elo": 1085
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1259
+     "elo": 1242
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1254
+     "elo": 1244
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1255
+     "elo": 1243
     }
    ]
   },
@@ -5440,6 +5608,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5455,9 +5624,10 @@
     "cacheRead": 2e-8
    },
    "aa": {
-    "intelligence": 37.3,
-    "coding": 71.4,
-    "agentic": 42.1
+    "intelligence": 23.8,
+    "coding": null,
+    "engineering": 29.4,
+    "agentic": null
    },
    "designArena": []
   },
@@ -5474,6 +5644,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5489,9 +5660,10 @@
     "cacheRead": 4e-7
    },
    "aa": {
-    "intelligence": 47,
-    "coding": 77.4,
-    "agentic": 50.2
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -5508,6 +5680,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5523,9 +5696,10 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 42.1,
-    "coding": 76.7,
-    "agentic": 43.2
+    "intelligence": 32.3,
+    "coding": null,
+    "engineering": 36.6,
+    "agentic": null
    },
    "designArena": []
   },
@@ -5542,6 +5716,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5557,9 +5732,10 @@
     "cacheRead": 0.000001
    },
    "aa": {
-    "intelligence": 52.7,
-    "coding": 76.9,
-    "agentic": 51
+    "intelligence": 56.9,
+    "coding": null,
+    "engineering": 61.8,
+    "agentic": null
    },
    "designArena": []
   },
@@ -5576,6 +5752,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5591,8 +5768,9 @@
     "cacheRead": 1e-8
    },
    "aa": {
-    "intelligence": 38.1,
+    "intelligence": 27.9,
     "coding": null,
+    "engineering": 33.3,
     "agentic": null
    },
    "designArena": []
@@ -5610,6 +5788,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5625,8 +5804,9 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 47.6,
+    "intelligence": 44.2,
     "coding": null,
+    "engineering": 48.9,
     "agentic": null
    },
    "designArena": []
@@ -5644,6 +5824,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5659,30 +5840,36 @@
     "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 51.8,
+    "intelligence": 54.6,
     "coding": null,
+    "engineering": 59.4,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
+     "category": "fullstack",
+     "elo": 1224
+    },
+    {
+     "arena": "agents",
      "category": "webapps",
-     "elo": 1306
+     "elo": 1270
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1362
+     "elo": 1352
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1339
+     "elo": 1356
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1321
+     "elo": 1312
     }
    ]
   },
@@ -5699,6 +5886,115 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "openai/gpt-6.1-terra",
+   "name": "OpenAI: GPT-6.1 Terra",
+   "created": 1793038409,
+   "contextLength": 1050000,
+   "pricing": {
+    "prompt": 0.000001,
+    "completion": 0.000005,
+    "cacheRead": 5e-8
+   },
+   "aa": {
+    "intelligence": 51.3,
+    "coding": null,
+    "engineering": 54.7,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "openai/gpt-6.1-terra-pro",
+   "name": "OpenAI: GPT-6.1 Terra Pro",
+   "created": 1793038556,
+   "contextLength": 1050000,
+   "pricing": {
+    "prompt": 0.000001,
+    "completion": 0.000005,
+    "cacheRead": 5e-8
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "openai/gpt-6.2-astra",
+   "name": "OpenAI: GPT-6.2 Astra",
+   "created": 1794938423,
+   "contextLength": 1050000,
+   "pricing": {
+    "prompt": 0.000008,
+    "completion": 0.00004,
+    "cacheRead": 4e-7
+   },
+   "aa": {
+    "intelligence": 62.1,
+    "coding": null,
+    "engineering": 66.6,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "openai/gpt-6.2-astra-pro",
+   "name": "OpenAI: GPT-6.2 Astra Pro",
+   "created": 1794938432,
+   "contextLength": 1050000,
+   "pricing": {
+    "prompt": 0.000008,
+    "completion": 0.00004,
+    "cacheRead": 4e-7
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "openai/gpt-6.2-sol",
+   "name": "OpenAI: GPT-6.2 Sol",
+   "created": 1794938371,
+   "contextLength": 1050000,
+   "pricing": {
+    "prompt": 0.000002,
+    "completion": 0.00001,
+    "cacheRead": 1e-7
+   },
+   "aa": {
+    "intelligence": 57.3,
+    "coding": null,
+    "engineering": 61.2,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "openai/gpt-6.2-sol-pro",
+   "name": "OpenAI: GPT-6.2 Sol Pro",
+   "created": 1794938409,
+   "contextLength": 1050000,
+   "pricing": {
+    "prompt": 0.000002,
+    "completion": 0.00001,
+    "cacheRead": 1e-7
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5716,6 +6012,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5733,6 +6030,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5750,6 +6048,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5760,30 +6059,31 @@
    "created": 1754414231,
    "contextLength": 131072,
    "pricing": {
-    "prompt": 1.5e-7,
-    "completion": 6e-7,
-    "cacheRead": 7.5e-8
+    "prompt": 9e-8,
+    "completion": 3.6e-7,
+    "cacheRead": null
    },
    "aa": {
-    "intelligence": 11.6,
-    "coding": 30.4,
-    "agentic": 3.7
+    "intelligence": 3.8,
+    "coding": null,
+    "engineering": 11.2,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 961
+     "elo": 944
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 921
+     "elo": 910
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 966
+     "elo": 955
     }
    ]
   },
@@ -5793,20 +6093,21 @@
    "created": 1754414229,
    "contextLength": 131072,
    "pricing": {
-    "prompt": 1.8e-8,
-    "completion": 9e-8,
-    "cacheRead": 9e-9
+    "prompt": 1.7e-8,
+    "completion": 8.5e-8,
+    "cacheRead": 8.5e-9
    },
    "aa": {
-    "intelligence": 10,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "website",
-     "elo": 852
+     "elo": 840
     }
    ]
   },
@@ -5823,40 +6124,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "openai/o1",
-   "name": "OpenAI: o1",
-   "created": 1734459999,
-   "contextLength": 200000,
-   "pricing": {
-    "prompt": 0.000015,
-    "completion": 0.00006,
-    "cacheRead": 0.0000075
-   },
-   "aa": {
-    "intelligence": 15.2,
-    "coding": 39.7,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "openai/o1-pro",
-   "name": "OpenAI: o1-pro",
-   "created": 1742423211,
-   "contextLength": 200000,
-   "pricing": {
-    "prompt": 0.00015,
-    "completion": 0.0006,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": 12.4,
-    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5872,61 +6140,28 @@
     "cacheRead": 5e-7
    },
    "aa": {
-    "intelligence": 20.2,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1018
+     "elo": 1001
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1011
+     "elo": 1000
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1036
+     "elo": 1023
     }
    ]
-  },
-  {
-   "id": "openai/o3-mini",
-   "name": "OpenAI: o3 Mini",
-   "created": 1738351721,
-   "contextLength": 200000,
-   "pricing": {
-    "prompt": 0.0000011,
-    "completion": 0.0000044,
-    "cacheRead": 5.5e-7
-   },
-   "aa": {
-    "intelligence": 12.5,
-    "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "openai/o3-mini-high",
-   "name": "OpenAI: o3 Mini High",
-   "created": 1739372611,
-   "contextLength": 200000,
-   "pricing": {
-    "prompt": 0.0000011,
-    "completion": 0.0000044,
-    "cacheRead": 5.5e-7
-   },
-   "aa": {
-    "intelligence": 11,
-    "coding": 16.3,
-    "agentic": 0.9
-   },
-   "designArena": []
   },
   {
    "id": "openai/o3-pro",
@@ -5939,58 +6174,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 21.9,
-    "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "openai/o4-mini",
-   "name": "OpenAI: o4 Mini",
-   "created": 1744820942,
-   "contextLength": 200000,
-   "pricing": {
-    "prompt": 0.0000011,
-    "completion": 0.0000044,
-    "cacheRead": 2.75e-7
-   },
-   "aa": {
-    "intelligence": 16.7,
-    "coding": null,
-    "agentic": null
-   },
-   "designArena": [
-    {
-     "arena": "models",
-     "category": "codecategories",
-     "elo": 974
-    },
-    {
-     "arena": "models",
-     "category": "uicomponent",
-     "elo": 978
-    },
-    {
-     "arena": "models",
-     "category": "website",
-     "elo": 985
-    }
-   ]
-  },
-  {
-   "id": "openai/o4-mini-high",
-   "name": "OpenAI: o4 Mini High",
-   "created": 1744824212,
-   "contextLength": 200000,
-   "pricing": {
-    "prompt": 0.0000011,
-    "completion": 0.0000044,
-    "cacheRead": 2.75e-7
-   },
-   "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -5998,7 +6184,7 @@
   {
    "id": "openrouter/auto",
    "name": "Auto Router",
-   "created": 1699401600,
+   "created": 1793885889,
    "contextLength": 2000000,
    "pricing": {
     "prompt": -1,
@@ -6008,6 +6194,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6025,6 +6212,25 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "openrouter/auto-code",
+   "name": "Auto Code",
+   "created": 1793884321,
+   "contextLength": 2000000,
+   "pricing": {
+    "prompt": -1,
+    "completion": -1,
+    "cacheRead": null
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6042,6 +6248,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6059,6 +6266,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6076,6 +6284,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6093,6 +6302,25 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "particle-ai/particle-1",
+   "name": "Particle AI: Particle-1",
+   "created": 1793207893,
+   "contextLength": 1048576,
+   "pricing": {
+    "prompt": 7e-8,
+    "completion": 5e-7,
+    "cacheRead": 3e-8
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6110,6 +6338,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6127,6 +6356,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6142,8 +6372,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 7.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6161,6 +6392,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6176,8 +6408,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 7.6,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6195,6 +6428,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6210,42 +6444,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 11.8,
-    "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "poolside/laguna-s-2.1",
-   "name": "Poolside: Laguna S 2.1",
-   "created": 1784652683,
-   "contextLength": 1048576,
-   "pricing": {
-    "prompt": 9e-8,
-    "completion": 1.8e-7,
-    "cacheRead": 9e-9
-   },
-   "aa": {
     "intelligence": null,
     "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "poolside/laguna-xs-2.1",
-   "name": "Poolside: Laguna XS 2.1",
-   "created": 1783002429,
-   "contextLength": 262144,
-   "pricing": {
-    "prompt": 6e-8,
-    "completion": 1.2e-7,
-    "cacheRead": 3e-8
-   },
-   "aa": {
-    "intelligence": null,
-    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6263,6 +6464,25 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "prism-ml/ternary-bonsai-2-9b",
+   "name": "PrismML: Ternary Bonsai 2 9B",
+   "created": 1792130995,
+   "contextLength": 262144,
+   "pricing": {
+    "prompt": 8e-8,
+    "completion": 1.3e-7,
+    "cacheRead": 4e-8
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6278,25 +6498,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 7.7,
-    "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "qwen/qwen-2.5-7b-instruct",
-   "name": "Qwen: Qwen2.5 7B Instruct",
-   "created": 1729036800,
-   "contextLength": 32768,
-   "pricing": {
-    "prompt": 1e-7,
-    "completion": 2e-7,
-    "cacheRead": null
-   },
-   "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6312,8 +6516,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 6.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6331,6 +6536,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6348,6 +6554,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6363,8 +6570,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 6.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6375,30 +6583,31 @@
    "created": 1753119555,
    "contextLength": 262144,
    "pricing": {
-    "prompt": 9e-8,
-    "completion": 5.5e-7,
-    "cacheRead": null
+    "prompt": 1.4e-7,
+    "completion": 8e-7,
+    "cacheRead": 5e-8
    },
    "aa": {
-    "intelligence": 12,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1037
+     "elo": 1020
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 960
+     "elo": 949
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1056
+     "elo": 1045
     }
    ]
   },
@@ -6413,25 +6622,26 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 12.7,
-    "coding": 22.1,
-    "agentic": 1.3
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1031
+     "elo": 1014
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 940
+     "elo": 929
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1051
+     "elo": 1040
     }
    ]
   },
@@ -6446,25 +6656,26 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 7.6,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 940
+     "elo": 923
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 940
+     "elo": 929
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 953
+     "elo": 942
     }
    ]
   },
@@ -6474,13 +6685,14 @@
    "created": 1753806965,
    "contextLength": 262144,
    "pricing": {
-    "prompt": 9e-8,
+    "prompt": 1e-7,
     "completion": 3e-7,
-    "cacheRead": null
+    "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 7.5,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6496,8 +6708,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 7.3,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6513,25 +6726,26 @@
     "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 11.9,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1141
+     "elo": 1124
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1107
+     "elo": 1096
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1157
+     "elo": 1146
     }
    ]
   },
@@ -6546,20 +6760,21 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 9.6,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1041
+     "elo": 1030
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1087
+     "elo": 1074
     }
    ]
   },
@@ -6576,6 +6791,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6591,9 +6807,10 @@
     "cacheRead": 7e-8
    },
    "aa": {
-    "intelligence": 9.2,
-    "coding": 36.2,
-    "agentic": 0.9
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -6603,30 +6820,14 @@
    "created": 1757612213,
    "contextLength": 262144,
    "pricing": {
-    "prompt": 9e-8,
+    "prompt": 1e-7,
     "completion": 0.0000011,
-    "cacheRead": null
+    "cacheRead": 7e-8
    },
    "aa": {
-    "intelligence": 9.6,
+    "intelligence": null,
     "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "qwen/qwen3-next-80b-a3b-thinking",
-   "name": "Qwen: Qwen3 Next 80B A3B Thinking",
-   "created": 1757612284,
-   "contextLength": 262144,
-   "pricing": {
-    "prompt": 1.5e-7,
-    "completion": 0.0000012,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": 11.2,
-    "coding": 17.4,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6642,8 +6843,9 @@
     "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 9.9,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6659,25 +6861,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 7.9,
+    "intelligence": null,
     "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "qwen/qwen3-vl-30b-a3b-thinking",
-   "name": "Qwen: Qwen3 VL 30B A3B Thinking",
-   "created": 1759794479,
-   "contextLength": 262144,
-   "pricing": {
-    "prompt": 2.9e-7,
-    "completion": 0.000001,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": 9.5,
-    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6693,8 +6879,9 @@
     "cacheRead": 1.2e-7
    },
    "aa": {
-    "intelligence": 7.3,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6710,8 +6897,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 17.7,
-    "coding": 43.3,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6722,13 +6910,14 @@
    "created": 1772053810,
    "contextLength": 262144,
    "pricing": {
-    "prompt": 2.7e-7,
-    "completion": 0.00000216,
-    "cacheRead": 2.7e-7
+    "prompt": 2.6e-7,
+    "completion": 0.0000026,
+    "cacheRead": null
    },
    "aa": {
-    "intelligence": 22.9,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6744,8 +6933,9 @@
     "cacheRead": 5e-8
    },
    "aa": {
-    "intelligence": 19.3,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6756,30 +6946,31 @@
    "created": 1771223018,
    "contextLength": 262144,
    "pricing": {
-    "prompt": 5e-7,
-    "completion": 0.0000036,
-    "cacheRead": 3e-7
+    "prompt": 4.5e-7,
+    "completion": 0.000003,
+    "cacheRead": 2.2e-7
    },
    "aa": {
-    "intelligence": 21.4,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1178
+     "elo": 1161
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1158
+     "elo": 1147
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1189
+     "elo": 1178
     }
    ]
   },
@@ -6794,8 +6985,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 13.3,
-    "coding": 23.5,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6813,6 +7005,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6830,23 +7023,24 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1165
+     "elo": 1148
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1172
+     "elo": 1161
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1187
+     "elo": 1175
     }
    ]
   },
@@ -6863,6 +7057,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6878,9 +7073,10 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 21.4,
-    "coding": 53.7,
-    "agentic": 18.5
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -6891,13 +7087,14 @@
    "contextLength": 262144,
    "pricing": {
     "prompt": 1e-7,
-    "completion": 9.5e-7,
-    "cacheRead": 5e-8
+    "completion": 9e-7,
+    "cacheRead": 2.5e-8
    },
    "aa": {
-    "intelligence": 18.2,
-    "coding": 41.9,
-    "agentic": 13.1
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -6914,6 +7111,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6929,25 +7127,26 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 27,
-    "coding": 54.5,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1234
+     "elo": 1218
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1227
+     "elo": 1216
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1242
+     "elo": 1230
     }
    ]
   },
@@ -6964,6 +7163,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -6979,35 +7179,36 @@
     "cacheRead": 2.95e-7
    },
    "aa": {
-    "intelligence": 29.5,
-    "coding": 66,
-    "agentic": 22.5
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1191
+     "elo": 1168
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1208
+     "elo": 1176
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1274
+     "elo": 1257
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1265
+     "elo": 1257
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1274
+     "elo": 1263
     }
    ]
   },
@@ -7022,25 +7223,26 @@
     "cacheRead": 6.4e-8
    },
    "aa": {
-    "intelligence": 25.2,
-    "coding": 55.9,
-    "agentic": 17.5
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1267
+     "elo": 1251
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1256
+     "elo": 1247
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1268
+     "elo": 1256
     }
    ]
   },
@@ -7055,9 +7257,10 @@
     "cacheRead": 2.5e-7
    },
    "aa": {
-    "intelligence": 39.9,
-    "coding": 71.9,
-    "agentic": 50.1
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": []
   },
@@ -7065,16 +7268,17 @@
    "id": "qwen/qwen3.8-27b",
    "name": "Qwen: Qwen3.8 27B",
    "created": 1786722910,
-   "contextLength": 1000000,
+   "contextLength": 1024000,
    "pricing": {
-    "prompt": 2e-7,
-    "completion": 0.0000025,
-    "cacheRead": 9e-8
+    "prompt": 3.5e-8,
+    "completion": 0.0000015,
+    "cacheRead": 1.75e-8
    },
    "aa": {
-    "intelligence": 33.7,
-    "coding": 68.1,
-    "agentic": 45.8
+    "intelligence": 20.1,
+    "coding": null,
+    "engineering": 28.1,
+    "agentic": null
    },
    "designArena": []
   },
@@ -7089,8 +7293,9 @@
     "cacheRead": 1.6e-8
    },
    "aa": {
-    "intelligence": null,
+    "intelligence": 28.6,
     "coding": null,
+    "engineering": 33,
     "agentic": null
    },
    "designArena": []
@@ -7106,9 +7311,10 @@
     "cacheRead": 2.5e-7
    },
    "aa": {
-    "intelligence": 45.4,
-    "coding": 76.2,
-    "agentic": 56
+    "intelligence": 33.7,
+    "coding": null,
+    "engineering": 39.3,
+    "agentic": null
    },
    "designArena": []
   },
@@ -7125,6 +7331,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7142,6 +7349,43 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "qwen/qwen4-max",
+   "name": "Qwen: Qwen4 Max",
+   "created": 1794795526,
+   "contextLength": 1000000,
+   "pricing": {
+    "prompt": 0.000001425,
+    "completion": 0.000004275,
+    "cacheRead": 7.125e-8
+   },
+   "aa": {
+    "intelligence": 42.9,
+    "coding": null,
+    "engineering": 50.1,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "radixark/daisyrose-27b",
+   "name": "RadixArk: DaisyRose 27B",
+   "created": 1795222188,
+   "contextLength": 262144,
+   "pricing": {
+    "prompt": 1.5e-7,
+    "completion": 0.000001875,
+    "cacheRead": 3.75e-8
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7157,20 +7401,26 @@
     "cacheRead": 5e-8
    },
    "aa": {
-    "intelligence": null,
+    "intelligence": 17.7,
     "coding": null,
+    "engineering": 25.2,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1225
+     "elo": 1215
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1260
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1233
+     "elo": 1232
     }
    ]
   },
@@ -7187,6 +7437,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7202,8 +7453,9 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 6.4,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7221,6 +7473,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7238,6 +7491,25 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "ricursiveai/ripple-65b-preview",
+   "name": "Ricursive: Ripple 65B Preview",
+   "created": 1793818990,
+   "contextLength": 1048576,
+   "pricing": {
+    "prompt": 1e-7,
+    "completion": 3e-7,
+    "cacheRead": 2.5e-8
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7255,6 +7527,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7272,6 +7545,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7289,6 +7563,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7306,6 +7581,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7323,6 +7599,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7340,6 +7617,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7357,6 +7635,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7374,23 +7653,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "stepfun/step-3.5-flash",
-   "name": "StepFun: Step 3.5 Flash",
-   "created": 1769728337,
-   "contextLength": 262144,
-   "pricing": {
-    "prompt": 1e-7,
-    "completion": 3e-7,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": 17,
-    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7406,25 +7669,26 @@
     "cacheRead": 4e-8
    },
    "aa": {
-    "intelligence": 19.5,
-    "coding": 39.6,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1180
+     "elo": 1161
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1175
+     "elo": 1159
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1195
+     "elo": 1181
     }
    ]
   },
@@ -7432,32 +7696,16 @@
    "id": "stepfun/step-5-preview",
    "name": "StepFun: Step 5 Preview",
    "created": 1791462849,
-   "contextLength": 1048576,
+   "contextLength": 1000000,
    "pricing": {
     "prompt": 0.000001,
     "completion": 0.0000027,
     "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 43.7,
+    "intelligence": 28.5,
     "coding": null,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "tencent/hunyuan-a13b-instruct",
-   "name": "Tencent: Hunyuan A13B Instruct",
-   "created": 1751987664,
-   "contextLength": 131072,
-   "pricing": {
-    "prompt": 1.4e-7,
-    "completion": 5.7e-7,
-    "cacheRead": null
-   },
-   "aa": {
-    "intelligence": null,
-    "coding": null,
+    "engineering": 37,
     "agentic": null
    },
    "designArena": []
@@ -7475,6 +7723,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7492,6 +7741,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7509,6 +7759,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7519,49 +7770,101 @@
    "created": 1783344048,
    "contextLength": 262144,
    "pricing": {
-    "prompt": 1.32e-7,
-    "completion": 5.28e-7,
-    "cacheRead": 3.3e-8
+    "prompt": 1.4e-7,
+    "completion": 5.8e-7,
+    "cacheRead": 3.5e-8
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1175
-    },
-    {
-     "arena": "models",
-     "category": "uicomponent",
      "elo": 1158
     },
     {
      "arena": "models",
+     "category": "uicomponent",
+     "elo": 1147
+    },
+    {
+     "arena": "models",
      "category": "website",
-     "elo": 1180
+     "elo": 1169
     }
    ]
   },
   {
-   "id": "tencent/hy3-preview",
-   "name": "Tencent: Hy3 preview",
-   "created": 1776878150,
-   "contextLength": 262144,
+   "id": "tencent/hy4",
+   "name": "Tencent: Hy4",
+   "created": 1793766031,
+   "contextLength": 1048576,
    "pricing": {
-    "prompt": 1.8e-7,
-    "completion": 6e-7,
-    "cacheRead": 6e-8
+    "prompt": 4.17e-7,
+    "completion": 0.0000012505,
+    "cacheRead": 2.1e-8
    },
    "aa": {
-    "intelligence": 25.3,
-    "coding": 58.8,
-    "agentic": 24.1
+    "intelligence": 34.6,
+    "coding": null,
+    "engineering": 41.1,
+    "agentic": null
    },
-   "designArena": []
+   "designArena": [
+    {
+     "arena": "models",
+     "category": "codecategories",
+     "elo": 1247
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1183
+    },
+    {
+     "arena": "models",
+     "category": "website",
+     "elo": 1247
+    }
+   ]
+  },
+  {
+   "id": "tencent/hy4-flash",
+   "name": "Tencent: Hy4 flash",
+   "created": 1794838706,
+   "contextLength": 1048576,
+   "pricing": {
+    "prompt": 3.5e-8,
+    "completion": 1.405e-7,
+    "cacheRead": 1.5e-9
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": [
+    {
+     "arena": "models",
+     "category": "codecategories",
+     "elo": 1225
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1262
+    },
+    {
+     "arena": "models",
+     "category": "website",
+     "elo": 1227
+    }
+   ]
   },
   {
    "id": "tencent/hy4-preview",
@@ -7576,6 +7879,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7593,6 +7897,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7610,6 +7915,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7627,6 +7933,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7642,32 +7949,69 @@
     "cacheRead": 1.7e-7
    },
    "aa": {
-    "intelligence": 25,
-    "coding": 52.1,
-    "agentic": 22.5
+    "intelligence": 12.5,
+    "coding": null,
+    "engineering": 22,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1196
+     "elo": 1164
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1204
+     "elo": 1186
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1196
+     "elo": 1182
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1223
+     "elo": 1210
     }
    ]
+  },
+  {
+   "id": "thinkingmachines/inkling-2-mini",
+   "name": "Thinking Machines: Inkling 2 Mini",
+   "created": 1795227585,
+   "contextLength": 1048576,
+   "pricing": {
+    "prompt": 7.5e-8,
+    "completion": 3e-7,
+    "cacheRead": 1.5e-8
+   },
+   "aa": {
+    "intelligence": 20.1,
+    "coding": null,
+    "engineering": 27.6,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "thinkingmachines/inkling-2-small",
+   "name": "Thinking Machines: Inkling 2 Small",
+   "created": 1794261847,
+   "contextLength": 1048576,
+   "pricing": {
+    "prompt": 3e-7,
+    "completion": 0.000001,
+    "cacheRead": 3e-8
+   },
+   "aa": {
+    "intelligence": 30.6,
+    "coding": null,
+    "engineering": 38.9,
+    "agentic": null
+   },
+   "designArena": []
   },
   {
    "id": "thinkingmachines/inkling-small",
@@ -7680,9 +8024,10 @@
     "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 25.7,
-    "coding": 52.9,
-    "agentic": 23.5
+    "intelligence": 12.9,
+    "coding": null,
+    "engineering": 23.1,
+    "agentic": null
    },
    "designArena": []
   },
@@ -7699,6 +8044,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7716,6 +8062,25 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "unbiased/pareto-26.10-preview",
+   "name": "Pareto 26.10 Preview",
+   "created": 1790863623,
+   "contextLength": 1048576,
+   "pricing": {
+    "prompt": 8e-7,
+    "completion": 0.0000032,
+    "cacheRead": 3e-8
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7733,6 +8098,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7743,13 +8109,14 @@
    "created": 1689984000,
    "contextLength": 6144,
    "pricing": {
-    "prompt": 3.5e-7,
-    "completion": 6.5e-7,
-    "cacheRead": null
+    "prompt": 3e-7,
+    "completion": 5e-7,
+    "cacheRead": 2e-7
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -7765,44 +8132,28 @@
     "cacheRead": 5e-9
    },
    "aa": {
-    "intelligence": 24.1,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1139
+     "elo": 1113
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1087
+     "elo": 1082
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1153
+     "elo": 1134
     }
    ]
-  },
-  {
-   "id": "upstage/solar-pro-3",
-   "name": "Upstage: Solar Pro 3",
-   "created": 1769481200,
-   "contextLength": 131072,
-   "pricing": {
-    "prompt": 1.5e-7,
-    "completion": 6e-7,
-    "cacheRead": 1.5e-8
-   },
-   "aa": {
-    "intelligence": 7.8,
-    "coding": 16.2,
-    "agentic": 1.4
-   },
-   "designArena": []
   },
   {
    "id": "upstage/solar-pro4",
@@ -7815,30 +8166,31 @@
     "cacheRead": 3e-8
    },
    "aa": {
-    "intelligence": 28.2,
-    "coding": 52.7,
+    "intelligence": 14.2,
+    "coding": null,
+    "engineering": 24.4,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1105
+     "elo": 1074
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1182
+     "elo": 1162
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1145
+     "elo": 1133
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1176
+     "elo": 1158
     }
    ]
   },
@@ -7855,13 +8207,14 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
   },
   {
    "id": "x-ai/grok-4.20",
-   "name": "SpaceXAI: Grok 4.20",
+   "name": "SpaceXSI: Grok 4.20",
    "created": 1774979019,
    "contextLength": 2000000,
    "pricing": {
@@ -7870,41 +8223,42 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 25.7,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1054
+     "elo": 1029
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1144
+     "elo": 1112
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1219
+     "elo": 1202
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1194
+     "elo": 1184
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1228
+     "elo": 1216
     }
    ]
   },
   {
    "id": "x-ai/grok-4.20-multi-agent",
-   "name": "SpaceXAI: Grok 4.20 Multi-Agent",
+   "name": "SpaceXSI: Grok 4.20 Multi-Agent",
    "created": 1774979158,
    "contextLength": 2000000,
    "pricing": {
@@ -7915,13 +8269,14 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
   },
   {
    "id": "x-ai/grok-4.3",
-   "name": "SpaceXAI: Grok 4.3",
+   "name": "SpaceXSI: Grok 4.3",
    "created": 1777591821,
    "contextLength": 1000000,
    "pricing": {
@@ -7930,41 +8285,42 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 24.9,
-    "coding": 42.2,
-    "agentic": 15.5
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1006
+     "elo": 982
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1126
+     "elo": 1093
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1185
+     "elo": 1167
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1188
+     "elo": 1178
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1195
+     "elo": 1181
     }
    ]
   },
   {
    "id": "x-ai/grok-4.5",
-   "name": "SpaceXAI: Grok 4.5",
+   "name": "SpaceXSI: Grok 4.5",
    "created": 1783523154,
    "contextLength": 500000,
    "pricing": {
@@ -7973,15 +8329,60 @@
     "cacheRead": 3e-7
    },
    "aa": {
-    "intelligence": 38.8,
-    "coding": 72.4,
-    "agentic": 41.2
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1249
+     "elo": 1223
+    },
+    {
+     "arena": "agents",
+     "category": "webapps",
+     "elo": 1185
+    },
+    {
+     "arena": "models",
+     "category": "codecategories",
+     "elo": 1256
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1262
+    },
+    {
+     "arena": "models",
+     "category": "website",
+     "elo": 1269
+    }
+   ]
+  },
+  {
+   "id": "x-ai/grok-4.6",
+   "name": "SpaceXSI: Grok 4.6",
+   "created": 1786548957,
+   "contextLength": 500000,
+   "pricing": {
+    "prompt": 0.000002,
+    "completion": 0.000006,
+    "cacheRead": 5e-7
+   },
+   "aa": {
+    "intelligence": 31,
+    "coding": null,
+    "engineering": 37.4,
+    "agentic": null
+   },
+   "designArena": [
+    {
+     "arena": "agents",
+     "category": "fullstack",
+     "elo": 1238
     },
     {
      "arena": "agents",
@@ -7991,66 +8392,23 @@
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1274
+     "elo": 1272
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1275
+     "elo": 1277
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1280
-    }
-   ]
-  },
-  {
-   "id": "x-ai/grok-4.6",
-   "name": "SpaceXAI: Grok 4.6",
-   "created": 1786548957,
-   "contextLength": 500000,
-   "pricing": {
-    "prompt": 0.000002,
-    "completion": 0.000006,
-    "cacheRead": 5e-7
-   },
-   "aa": {
-    "intelligence": 44.3,
-    "coding": 76.8,
-    "agentic": 53
-   },
-   "designArena": [
-    {
-     "arena": "agents",
-     "category": "fullstack",
-     "elo": 1264
-    },
-    {
-     "arena": "agents",
-     "category": "webapps",
-     "elo": 1248
-    },
-    {
-     "arena": "models",
-     "category": "codecategories",
-     "elo": 1291
-    },
-    {
-     "arena": "models",
-     "category": "uicomponent",
-     "elo": 1290
-    },
-    {
-     "arena": "models",
-     "category": "website",
-     "elo": 1288
+     "elo": 1272
     }
    ]
   },
   {
    "id": "x-ai/grok-4.7",
-   "name": "SpaceXAI: Grok 4.7",
+   "name": "SpaceXSI: Grok 4.7",
    "created": 1790007541,
    "contextLength": 500000,
    "pricing": {
@@ -8059,59 +8417,10 @@
     "cacheRead": 5e-7
    },
    "aa": {
-    "intelligence": 46.4,
+    "intelligence": 35.5,
     "coding": null,
+    "engineering": 41.8,
     "agentic": null
-   },
-   "designArena": [
-    {
-     "arena": "models",
-     "category": "codecategories",
-     "elo": 1272
-    },
-    {
-     "arena": "models",
-     "category": "uicomponent",
-     "elo": 1274
-    },
-    {
-     "arena": "models",
-     "category": "website",
-     "elo": 1254
-    }
-   ]
-  },
-  {
-   "id": "x-ai/grok-build-0.1",
-   "name": "SpaceXAI: Grok Build 0.1",
-   "created": 1779298123,
-   "contextLength": 256000,
-   "pricing": {
-    "prompt": 0.000001,
-    "completion": 0.000002,
-    "cacheRead": 2e-7
-   },
-   "aa": {
-    "intelligence": 27.2,
-    "coding": 51.5,
-    "agentic": null
-   },
-   "designArena": []
-  },
-  {
-   "id": "xiaomi/mimo-v2.5",
-   "name": "Xiaomi: MiMo-V2.5",
-   "created": 1776874269,
-   "contextLength": 1050000,
-   "pricing": {
-    "prompt": 1.19e-7,
-    "completion": 2.38e-7,
-    "cacheRead": 2.55e-9
-   },
-   "aa": {
-    "intelligence": 21.8,
-    "coding": 56.8,
-    "agentic": 15.8
    },
    "designArena": [
     {
@@ -8122,12 +8431,46 @@
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1253
+     "elo": 1274
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1265
+     "elo": 1240
+    }
+   ]
+  },
+  {
+   "id": "xiaomi/mimo-v2.5",
+   "name": "Xiaomi: MiMo-V2.5",
+   "created": 1776874269,
+   "contextLength": 1000000,
+   "pricing": {
+    "prompt": 4e-7,
+    "completion": 0.000002,
+    "cacheRead": 8e-8
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": [
+    {
+     "arena": "models",
+     "category": "codecategories",
+     "elo": 1244
+    },
+    {
+     "arena": "models",
+     "category": "uicomponent",
+     "elo": 1242
+    },
+    {
+     "arena": "models",
+     "category": "website",
+     "elo": 1255
     }
    ]
   },
@@ -8135,32 +8478,33 @@
    "id": "xiaomi/mimo-v2.5-pro",
    "name": "Xiaomi: MiMo-V2.5-Pro",
    "created": 1776874273,
-   "contextLength": 1050000,
+   "contextLength": 262144,
    "pricing": {
-    "prompt": 3.045e-7,
-    "completion": 6.09e-7,
-    "cacheRead": 2.8e-9
+    "prompt": 4.8e-7,
+    "completion": 0.0000018,
+    "cacheRead": 9.6e-8
    },
    "aa": {
-    "intelligence": 26,
-    "coding": 60.2,
-    "agentic": 21.3
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1265
+     "elo": 1255
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1243
+     "elo": 1240
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1266
+     "elo": 1258
     }
    ]
   },
@@ -8168,15 +8512,16 @@
    "id": "xiaomi/mimo-v2.6-flash",
    "name": "Xiaomi: MiMo-V2.6-Flash",
    "created": 1790021264,
-   "contextLength": 1050000,
+   "contextLength": 1048576,
    "pricing": {
     "prompt": 1.4e-7,
     "completion": 2.8e-7,
     "cacheRead": 2.8e-9
    },
    "aa": {
-    "intelligence": 37.9,
+    "intelligence": 26.7,
     "coding": null,
+    "engineering": 31,
     "agentic": null
    },
    "designArena": []
@@ -8185,32 +8530,33 @@
    "id": "xiaomi/mimo-v2.6-pro",
    "name": "Xiaomi: MiMo-V2.6-Pro",
    "created": 1790021259,
-   "contextLength": 1050000,
+   "contextLength": 1048576,
    "pricing": {
     "prompt": 4.35e-7,
     "completion": 8.7e-7,
     "cacheRead": 3.6e-9
    },
    "aa": {
-    "intelligence": 46.3,
+    "intelligence": 29.9,
     "coding": null,
+    "engineering": 34.3,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1290
+     "elo": 1260
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1316
+     "elo": 1308
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1334
+     "elo": 1328
     },
     {
      "arena": "models",
@@ -8232,6 +8578,7 @@
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -8247,25 +8594,26 @@
     "cacheRead": 1.1e-7
    },
    "aa": {
-    "intelligence": 12.8,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1165
+     "elo": 1147
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1139
+     "elo": 1128
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1168
+     "elo": 1157
     }
    ]
   },
@@ -8280,25 +8628,26 @@
     "cacheRead": 2.5e-8
    },
    "aa": {
-    "intelligence": 11.1,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1137
+     "elo": 1119
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1118
+     "elo": 1107
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1145
+     "elo": 1134
     }
    ]
   },
@@ -8313,8 +8662,9 @@
     "cacheRead": 1.1e-7
    },
    "aa": {
-    "intelligence": 7.6,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -8325,35 +8675,36 @@
    "created": 1759235576,
    "contextLength": 204800,
    "pricing": {
-    "prompt": 5.5e-7,
-    "completion": 0.0000022,
-    "cacheRead": 1.1e-7
+    "prompt": 5e-7,
+    "completion": 0.000002,
+    "cacheRead": 1e-7
    },
    "aa": {
-    "intelligence": 18.5,
-    "coding": 45.8,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1029
+     "elo": 1004
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1164
+     "elo": 1147
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1142
+     "elo": 1131
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1174
+     "elo": 1161
     }
    ]
   },
@@ -8365,11 +8716,12 @@
    "pricing": {
     "prompt": 3e-7,
     "completion": 9e-7,
-    "cacheRead": 5e-8
+    "cacheRead": 5.5e-8
    },
    "aa": {
-    "intelligence": 11.2,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -8380,35 +8732,36 @@
    "created": 1766378014,
    "contextLength": 204800,
    "pricing": {
-    "prompt": 5.4e-7,
-    "completion": 0.00000198,
-    "cacheRead": 9.9e-8
+    "prompt": 4e-7,
+    "completion": 0.00000175,
+    "cacheRead": 8e-8
    },
    "aa": {
-    "intelligence": 22.2,
-    "coding": 45.3,
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1050
+     "elo": 1024
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1215
+     "elo": 1198
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1194
+     "elo": 1183
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1224
+     "elo": 1213
     }
    ]
   },
@@ -8423,25 +8776,26 @@
     "cacheRead": null
    },
    "aa": {
-    "intelligence": 14.9,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1176
+     "elo": 1159
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1202
+     "elo": 1191
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1194
+     "elo": 1181
     }
    ]
   },
@@ -8456,30 +8810,31 @@
     "cacheRead": 2e-7
    },
    "aa": {
-    "intelligence": 27.9,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1123
+     "elo": 1097
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1245
+     "elo": 1228
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1225
+     "elo": 1214
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1247
+     "elo": 1235
     }
    ]
   },
@@ -8494,25 +8849,26 @@
     "cacheRead": 2.4e-7
    },
    "aa": {
-    "intelligence": 26.6,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1260
+     "elo": 1244
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1257
+     "elo": 1247
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1261
+     "elo": 1249
     }
    ]
   },
@@ -8522,20 +8878,21 @@
    "created": 1775578025,
    "contextLength": 204800,
    "pricing": {
-    "prompt": 0.0000014,
-    "completion": 0.0000044,
-    "cacheRead": 2.6e-7
+    "prompt": 0.00000119,
+    "completion": 0.00000374,
+    "cacheRead": 6e-7
    },
    "aa": {
-    "intelligence": 26.1,
-    "coding": 55.8,
-    "agentic": 23.9
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1267
+     "elo": 1252
     },
     {
      "arena": "models",
@@ -8550,12 +8907,12 @@
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1167
+     "elo": 1142
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1175
+     "elo": 1144
     }
    ]
   },
@@ -8565,40 +8922,41 @@
    "created": 1781631930,
    "contextLength": 1048576,
    "pricing": {
-    "prompt": 3.41e-8,
-    "completion": 0.000007,
-    "cacheRead": 3.3e-8
+    "prompt": 6.2e-7,
+    "completion": 0.00000242,
+    "cacheRead": 1.4e-7
    },
    "aa": {
-    "intelligence": 33.7,
-    "coding": 68.8,
-    "agentic": 38.4
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1241
+     "elo": 1215
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1222
+     "elo": 1191
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1286
+     "elo": 1268
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1291
+     "elo": 1278
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1284
+     "elo": 1272
     }
    ]
   },
@@ -8613,25 +8971,31 @@
     "cacheRead": 6.89e-8
    },
    "aa": {
-    "intelligence": 44.8,
-    "coding": 74.8,
-    "agentic": 53.1
+    "intelligence": 31.7,
+    "coding": null,
+    "engineering": 37.6,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1301
+     "elo": 1275
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1307
+     "elo": 1277
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1293
+     "elo": 1273
+    },
+    {
+     "arena": "agents",
+     "category": "webapps",
+     "elo": 1270
     }
    ]
   },
@@ -8646,25 +9010,26 @@
     "cacheRead": 3e-8
    },
    "aa": {
-    "intelligence": 41.8,
-    "coding": 71.5,
-    "agentic": 50.9
+    "intelligence": 27.8,
+    "coding": null,
+    "engineering": 34.5,
+    "agentic": null
    },
    "designArena": [
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1280
+     "elo": 1259
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1309
+     "elo": 1289
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1270
+     "elo": 1252
     }
    ]
   },
@@ -8676,11 +9041,30 @@
    "pricing": {
     "prompt": 3.7e-7,
     "completion": 0.00000125,
-    "cacheRead": 9e-8
+    "cacheRead": 7.5e-8
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
+    "agentic": null
+   },
+   "designArena": []
+  },
+  {
+   "id": "z-ai/glm-5.3-flashx-legal",
+   "name": "Z.ai: GLM 5.3 FlashX Legal",
+   "created": 1793626154,
+   "contextLength": 1048576,
+   "pricing": {
+    "prompt": 3.7e-7,
+    "completion": 0.00000125,
+    "cacheRead": 7.5e-8
+   },
+   "aa": {
+    "intelligence": null,
+    "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -8691,13 +9075,14 @@
    "created": 1790199651,
    "contextLength": 1000000,
    "pricing": {
-    "prompt": 0.0000028,
-    "completion": 0.0000088,
-    "cacheRead": 5.6e-7
+    "prompt": 0.00000168,
+    "completion": 0.00000528,
+    "cacheRead": 3.36e-7
    },
    "aa": {
     "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": []
@@ -8713,35 +9098,36 @@
     "cacheRead": 2.4e-7
    },
    "aa": {
-    "intelligence": 23.5,
+    "intelligence": null,
     "coding": null,
+    "engineering": null,
     "agentic": null
    },
    "designArena": [
     {
      "arena": "agents",
      "category": "fullstack",
-     "elo": 1149
+     "elo": 1124
     },
     {
      "arena": "agents",
      "category": "webapps",
-     "elo": 1124
+     "elo": 1093
     },
     {
      "arena": "models",
      "category": "codecategories",
-     "elo": 1227
+     "elo": 1210
     },
     {
      "arena": "models",
      "category": "uicomponent",
-     "elo": 1207
+     "elo": 1195
     },
     {
      "arena": "models",
      "category": "website",
-     "elo": 1229
+     "elo": 1218
     }
    ]
   }

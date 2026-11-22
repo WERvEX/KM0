@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
 import { Sheet } from "@/components/ui/sheet";
-import { errorMessage } from "@/lib/ipc";
+import { errorMessage, IpcError } from "@/lib/ipc";
 import { DocumentsPanel } from "../documents/DocumentsPanel";
 import { useDocumentActions, useDocumentStreams } from "../documents/useDocuments";
 import { RoutingPanel } from "../routing/RoutingPanel";
@@ -30,6 +30,9 @@ export function ProjectPage({ projectId }: { projectId: number }) {
   const [ledgerOpen, setLedgerOpen] = useState(false);
 
   const actions = [answer, advance, more, review, setPath, retry, edit];
+  const resetErrors = (except?: (typeof actions)[number]) => {
+    for (const action of actions) if (action !== except && action.error) action.reset();
+  };
   const busy = actions.some((action) => action.isPending);
   const actionError = actions.find((action) => action.error)?.error;
 
@@ -48,7 +51,13 @@ export function ProjectPage({ projectId }: { projectId: number }) {
       if (item.version === null) void documents.generate(item.kind);
     }
   };
-  const failure = detail.error ?? (actionError ? { kind: "internal", message: errorMessage(actionError) } : null);
+  const failure =
+    detail.error ??
+    (actionError
+      ? actionError instanceof IpcError
+        ? actionError.shape
+        : { kind: "internal", message: errorMessage(actionError) }
+      : null);
 
   return (
     // Two panes that scroll on their own: the work on the left keeps its scrollbar at its own edge, and the
@@ -58,7 +67,10 @@ export function ProjectPage({ projectId }: { projectId: number }) {
         <Header
           detail={detail}
           busy={busy}
-          onPath={(path) => setPath.mutate({ id: projectId, path })}
+          onPath={(path) => {
+            resetErrors(setPath);
+            setPath.mutate({ id: projectId, path });
+          }}
           onLedger={() => setLedgerOpen(true)}
         />
 
@@ -69,7 +81,14 @@ export function ProjectPage({ projectId }: { projectId: number }) {
               <p className="mt-1">{failure.message}</p>
               <div className="mt-3 flex gap-2">
                 {detail.error ? (
-                  <Button size="sm" onClick={() => retry.mutate({ id: projectId })} disabled={busy}>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      resetErrors(retry);
+                      retry.mutate({ id: projectId });
+                    }}
+                    disabled={busy}
+                  >
                     <RotateCcw />
                     {t("project.error.retry")}
                   </Button>
@@ -95,8 +114,14 @@ export function ProjectPage({ projectId }: { projectId: number }) {
               key={detail.openRound.id}
               round={detail.openRound}
               busy={busy}
-              onSubmit={(answers) => answer.mutate({ projectId, roundId: detail.openRound?.id ?? 0, answers })}
-              onSkipRest={() => advance.mutate({ projectId, adoptRecommended: true }, { onSuccess: startDocuments })}
+              onSubmit={(answers) => {
+                resetErrors(answer);
+                answer.mutate({ projectId, roundId: detail.openRound?.id ?? 0, answers });
+              }}
+              onSkipRest={() => {
+                resetErrors(advance);
+                advance.mutate({ projectId, adoptRecommended: true }, { onSuccess: startDocuments });
+              }}
             />
           ) : current?.status === "ready" ? (
             <section className="rounded-lg border border-border bg-panel p-5">
@@ -106,7 +131,10 @@ export function ProjectPage({ projectId }: { projectId: number }) {
                 <Button
                   variant="primary"
                   disabled={busy}
-                  onClick={() => advance.mutate({ projectId, adoptRecommended: false }, { onSuccess: startDocuments })}
+                  onClick={() => {
+                    resetErrors(advance);
+                    advance.mutate({ projectId, adoptRecommended: false }, { onSuccess: startDocuments });
+                  }}
                 >
                   {isLast
                     ? writesDocuments
@@ -117,7 +145,10 @@ export function ProjectPage({ projectId }: { projectId: number }) {
                 <Button
                   disabled={busy || current.roundsUsed >= current.maxRounds}
                   title={current.roundsUsed >= current.maxRounds ? t("project.ready.noMoreRounds") : undefined}
-                  onClick={() => more.mutate({ projectId })}
+                  onClick={() => {
+                    resetErrors(more);
+                    more.mutate({ projectId });
+                  }}
                 >
                   {t("project.ready.more")}
                 </Button>
@@ -146,8 +177,14 @@ export function ProjectPage({ projectId }: { projectId: number }) {
           stages={detail.stages}
           decisions={detail.decisions}
           busy={busy}
-          onEdit={(key, text) => edit.mutate({ projectId, key, value: { text } })}
-          onReview={(stage) => review.mutate({ projectId, stage })}
+          onEdit={(key, text) => {
+            resetErrors(edit);
+            edit.mutate({ projectId, key, value: { text } });
+          }}
+          onReview={(stage) => {
+            resetErrors(review);
+            review.mutate({ projectId, stage });
+          }}
         />
       </div>
       <Sheet

@@ -2,7 +2,7 @@ import { ConfigBundle, type ImportSummary, type Language, type Theme } from "@km
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { Download, Upload } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
@@ -24,6 +24,11 @@ export function SettingsPage() {
   const search = useSearch({ strict: false }) as { tab?: string };
   const [tab, setTab] = useState<Tab>(() => TABS.find((item) => item === search.tab) ?? "models");
   const tabs = TABS;
+
+  useEffect(() => {
+    const next = TABS.find((item) => item === search.tab);
+    if (next) setTab(next);
+  }, [search.tab]);
 
   return (
     <div className="relative h-full overflow-y-auto [scrollbar-gutter:stable]">

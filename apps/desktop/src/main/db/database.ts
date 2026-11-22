@@ -27,9 +27,17 @@ export function backupBeforeMigrating(db: DatabaseSync, path: string, migrations
   const target = `${path}.before-${last}-${stamp}.bak`;
   db.prepare("VACUUM INTO ?").run(target);
   const prefix = `${basename(path)}.before-`;
+  const order = (name: string) => {
+    const match = name.match(/before-(\d+)-(\d{4}-.+)\.bak$/);
+    return { stamp: match?.[2] ?? name, id: match ? Number(match[1]) : 0 };
+  };
   const backups = readdirSync(dirname(path))
     .filter((name) => name.startsWith(prefix) && name.endsWith(".bak"))
-    .sort();
+    .sort((a, b) => {
+      const ka = order(a);
+      const kb = order(b);
+      return ka.stamp.localeCompare(kb.stamp) || ka.id - kb.id;
+    });
   for (const old of backups.slice(0, Math.max(0, backups.length - KEEP_BACKUPS))) rmSync(join(dirname(path), old));
   return target;
 }

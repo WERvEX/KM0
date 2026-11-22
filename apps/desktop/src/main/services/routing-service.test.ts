@@ -244,6 +244,59 @@ describe("routing", () => {
     expect(routing.get(project.id)?.tasks[0]?.failures).toEqual([]);
   });
 
+  it("excludes merge conflict attempts from run records, preserves failure agent, and disambiguates km0-<providerId>/<modelId>", async () => {
+    const { projects, routing, records, agents, settings } = setup();
+    const p2 = settings.createProvider({ name: "Relay", kind: "openai", baseUrl: "https://relay.example/v1" });
+    const p3 = settings.createProvider({ name: "Mirror", kind: "openai", baseUrl: "https://mirror.example/v1" });
+    const m2 = settings.createModel({
+      providerId: p2.id,
+      modelId: "shared-model",
+      name: "Shared Relay",
+      priceInPerMTok: 1,
+      priceOutPerMTok: 2,
+    });
+    const m3 = settings.createModel({
+      providerId: p3.id,
+      modelId: "shared-model",
+      name: "Shared Mirror",
+      priceInPerMTok: 1,
+      priceOutPerMTok: 2,
+    });
+    agents.update("codex", true, [m2.id]);
+    agents.update("pi", true, [m3.id]);
+    const cd = agents.list().find((item) => item.id === "claude_desktop");
+    agents.update("claude_desktop", true, cd?.models.map((m) => m.modelRef) ?? []);
+
+    let project = await projects.create("修复登录页按钮上的错别字", null);
+    project = await projects.advance(project.id, true);
+    await routing.plan(project.id);
+
+    await routing.setRunnerVerdict(project.id, 1, "2026-01-02T00:00:00Z", {
+      accepted: false,
+      tier: "T2",
+      reason: "bad",
+      attempts: [
+        { model: "anthropic/claude-opus-5-5", agent: "claude_code", purpose: "merge" },
+        { model: `km0-${p3.id}/shared-model`, agent: "pi", purpose: "task" },
+      ],
+      byUser: false,
+      ref: "runner:r2:01",
+    });
+
+    // Only the task attempt enters run_records, never the merge conflict resolution attempt, and p3 wins over p2.
+    expect(records.all()).toEqual([
+      expect.objectContaining({
+        agent: "pi",
+        modelKey: `model:${m3.id}`,
+        passed: false,
+      }),
+    ]);
+    // Failure keeps the exact agent so only that agent+model is penalized.
+    expect(routing.get(project.id)?.tasks[0]?.failures).toEqual([
+      expect.objectContaining({ source: "runner", agent: "pi", modelRef: m3.id }),
+    ]);
+  });
+
   it("plans the fast path straight from its decisions", async () => {
     const { projects, routing } = setup();
     let project = await projects.create("修复登录页按钮上的错别字", null);

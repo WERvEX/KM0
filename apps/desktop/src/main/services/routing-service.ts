@@ -60,6 +60,8 @@ const NO_SOURCES: RoutingSources = { registry: () => EMPTY_REGISTRY, records: nu
 /** One attempt of a KM0 Runner run: the model it ran, as the Runner names it. */
 export interface RunnerAttempt {
   model: string;
+  purpose?: string;
+  agent?: string;
 }
 
 interface TaskRow {
@@ -310,17 +312,19 @@ export class RoutingService {
       // The plan was made again since the run: its tasks are new and owe nothing to the old run.
       if (!row) return;
       const task = this.get(projectId)?.tasks.find((item) => item.id === row.id);
-      const last = verdict.attempts.at(-1);
-      const finished = last ? this.modelFor(last.model) : null;
+      const taskAttempts = verdict.attempts.filter((attempt) => attempt.purpose !== "merge");
+      const last = taskAttempts.at(-1);
+      const finished = last ? this.modelFor(last.model, attemptAgent(last)) : null;
       if (task && this.sources.records) {
-        const records: NewRecord[] = verdict.attempts.flatMap((attempt, index) => {
-          const model = this.modelFor(attempt.model);
+        const records: NewRecord[] = taskAttempts.flatMap((attempt, index) => {
+          const agent = attemptAgent(attempt);
+          const model = this.modelFor(attempt.model, agent);
           if (!model) return [];
-          const passed = verdict.accepted && index === verdict.attempts.length - 1;
+          const passed = verdict.accepted && index === taskAttempts.length - 1;
           return [
             {
               // KM0 Runner runs pi; the direct executor says which agent did the work.
-              ...this.runRecord(task, attemptAgent(attempt), model.modelRef, passed, verdict.byUser ? 2 : 1),
+              ...this.runRecord(task, agent, model.modelRef, passed, verdict.byUser ? 2 : 1),
               source: "acceptance" as const,
               projectId,
               taskId: row.id,
@@ -335,11 +339,13 @@ export class RoutingService {
       );
       if (!verdict.accepted) {
         const tier = verdict.tier ?? finished?.tier ?? task?.tier ?? "T1";
+        const explicitAgent = typeof last?.agent === "string" && last.agent ? last.agent : undefined;
         kept.push({
           tier,
           at: judgedAt,
           source: "runner",
           reason: verdict.reason,
+          ...(explicitAgent ? { agent: explicitAgent } : {}),
           ...(finished ? { modelRef: finished.modelRef } : {}),
         });
       }
@@ -373,11 +379,31 @@ export class RoutingService {
     };
   }
 
-  /** The user's model a KM0 Runner attempt ran, from the Runner's `provider/model` name or the bare model ID. */
-  private modelFor(name: string) {
-    const models = this.agents.list().flatMap((item) => item.models);
+  /** The user's model an attempt ran, from `km0-<providerId>/<modelId>`, `provider/model`, or the bare model ID. */
+  private modelFor(name: string, agent?: string) {
+    const configs = this.agents.list();
+    const preferred = agent ? (configs.find((item) => item.id === agent)?.models ?? []) : [];
+    const all = configs.flatMap((item) => item.models);
+    const ref = name.match(/^km0-(\d+)\/(.+)$/);
+    if (ref) {
+      const providerId = Number(ref[1]);
+      const modelId = ref[2] as string;
+      return (
+        preferred.find((item) => item.providerId === providerId && item.modelId === modelId) ??
+        all.find((item) => item.providerId === providerId && item.modelId === modelId) ??
+        preferred.find((item) => item.modelId === modelId) ??
+        all.find((item) => item.modelId === modelId) ??
+        null
+      );
+    }
     const bare = name.includes("/") ? name.slice(name.indexOf("/") + 1) : name;
-    return models.find((item) => item.modelId === name) ?? models.find((item) => item.modelId === bare) ?? null;
+    return (
+      preferred.find((item) => item.modelId === name) ??
+      preferred.find((item) => item.modelId === bare) ??
+      all.find((item) => item.modelId === name) ??
+      all.find((item) => item.modelId === bare) ??
+      null
+    );
   }
 
   private failures(projectId: number, taskId: number): TaskFailure[] {

@@ -46,15 +46,28 @@ export function migrate(db: Database, migrations: Migration[]): void {
   }
 }
 
+const txDepth = new WeakMap<Database, number>();
+
 export function transaction<T>(db: Database, work: () => T): T {
-  db.exec("BEGIN IMMEDIATE");
+  const depth = txDepth.get(db) ?? 0;
+  txDepth.set(db, depth + 1);
+  if (depth === 0) db.exec("BEGIN IMMEDIATE");
+  else db.exec(`SAVEPOINT km0_sp_${depth}`);
   try {
     const result = work();
-    db.exec("COMMIT");
+    if (depth === 0) db.exec("COMMIT");
+    else db.exec(`RELEASE SAVEPOINT km0_sp_${depth}`);
     return result;
   } catch (error) {
-    db.exec("ROLLBACK");
+    if (depth === 0) db.exec("ROLLBACK");
+    else {
+      db.exec(`ROLLBACK TO SAVEPOINT km0_sp_${depth}`);
+      db.exec(`RELEASE SAVEPOINT km0_sp_${depth}`);
+    }
     throw error;
+  } finally {
+    if (depth === 0) txDepth.delete(db);
+    else txDepth.set(db, depth);
   }
 }
 

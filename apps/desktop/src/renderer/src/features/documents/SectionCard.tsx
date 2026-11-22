@@ -16,8 +16,8 @@ interface Props {
   busy: boolean;
   /** This section is being revised. */
   working: boolean;
-  onSave: (body: string) => void;
-  onRevise: (instruction: string) => void;
+  onSave: (body: string) => Promise<boolean>;
+  onRevise: (instruction: string, onAccepted?: () => void) => void;
   onRegenerate: () => void;
 }
 
@@ -96,9 +96,9 @@ export function SectionCard({ index, section, readOnly, busy, working, onSave, o
                 size="sm"
                 variant="primary"
                 disabled={busy}
-                onClick={() => {
-                  onSave(draft);
-                  setMode("view");
+                onClick={async () => {
+                  const ok = await onSave(draft);
+                  if (ok !== false) setMode("view");
                 }}
               >
                 {t("documents.section.save")}
@@ -125,8 +125,7 @@ export function SectionCard({ index, section, readOnly, busy, working, onSave, o
             onSubmit={(event) => {
               event.preventDefault();
               if (!instruction.trim()) return;
-              onRevise(instruction.trim());
-              setMode("view");
+              onRevise(instruction.trim(), () => setMode("view"));
             }}
           >
             <Input

@@ -35,8 +35,8 @@ export function ExecutionWatcher() {
           message: t(`execution.ended.${run.status}`, { runId: run.runId }),
         });
       }
-      if (run.importedRunRef !== null && before?.imported !== run.importedRunRef) {
-        // New reports and verdicts: the Runner panel, the routing (rejections move tasks) and local records.
+      if (run.importedRunRef !== null && FINAL.has(run.status)) {
+        // New reports and verdicts (both initial import and post-judge update): refresh Runner, routing and records.
         void queryClient.invalidateQueries({ queryKey: ["runner.list", run.projectId] });
         void queryClient.invalidateQueries({ queryKey: ["routing.get", run.projectId] });
         void queryClient.invalidateQueries({ queryKey: ["settings.models.list"] });

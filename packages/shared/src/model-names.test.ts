@@ -85,5 +85,6 @@ describe("createMatcher", () => {
       {},
     );
     expect(loose.match("gpt-9")).toEqual({ problem: "ambiguous", candidates: ["a/gpt-9", "b/gpt-9"] });
+    expect(matcher.match("openai/gpt-4o")).toEqual({ id: "openai/gpt-4o" });
   });
 });

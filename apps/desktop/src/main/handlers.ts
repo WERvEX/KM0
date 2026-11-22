@@ -133,7 +133,10 @@ export function createHandlers({
     "project.get": ({ id }) => projects.get(id),
     "project.rename": ({ id, title }) => projects.rename(id, title),
     "project.setRepo": ({ id, path }) => projects.setRepo(id, path),
-    "project.delete": ({ id }) => projects.delete(id),
+    "project.delete": ({ id }) => {
+      execution.assertNotRunning(id);
+      projects.delete(id);
+    },
     "project.setPath": ({ id, path }) => projects.setPath(id, path),
     "project.retry": ({ id }) => projects.retry(id),
 

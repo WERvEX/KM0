@@ -42,6 +42,8 @@ export interface InboxTask {
   state: InboxState;
   createdAt: string;
   claimedAt: string | null;
+  /** Identifies which MCP server session claimed the task so concurrent clients do not steal it. */
+  claimedBy?: string | null;
   report: InboxReport | null;
 }
 

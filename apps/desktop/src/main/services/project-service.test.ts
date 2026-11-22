@@ -350,4 +350,28 @@ describe("research and linked repositories", () => {
     project = await service.advance(project.id, true);
     expect(project).toMatchObject({ stage: "routing", discussionComplete: true, documents: [] });
   });
+
+  it("setRepo updates triage.hasCodebase and prefills scan decisions cleanly", async () => {
+    const db = openDatabase(":memory:");
+    const repo = repoAccess({
+      "package.json": JSON.stringify({ dependencies: { react: "19", express: "5", pg: "8" } }),
+    });
+    const service = new ProjectService(
+      db,
+      () => createSimulatedLlm(),
+      () => "zh-CN",
+      { repo },
+    );
+    const created = await service.create("从零做一个团队内部的需求管理平台", null);
+    expect(created.triage?.hasCodebase).toBe(false);
+    const updated = await service.setRepo(created.id, "/work/ledger");
+    expect(updated.repoPath).toBe("/work/ledger");
+    expect(updated.triage?.hasCodebase).toBe(true);
+    expect(updated.decisions.map((d) => [d.key, d.value.text])).toEqual(
+      expect.arrayContaining([
+        ["frontend", "React"],
+        ["backend", "Express"],
+      ]),
+    );
+  });
 });

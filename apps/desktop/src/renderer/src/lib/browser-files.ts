@@ -24,8 +24,9 @@ export function chooseFileInBrowser(extensions: string[]): Promise<{ name: strin
 
 export function downloadInBrowser(name: string, blob: Blob): void {
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  link.href = url;
   link.download = name;
   link.click();
-  URL.revokeObjectURL(link.href);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

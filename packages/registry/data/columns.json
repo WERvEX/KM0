@@ -9,6 +9,7 @@
   "terminal_bench": { "transform": "rate", "capability": "devops", "weight": 1 },
   "aa_intelligence": { "transform": "index", "capability": "general", "weight": 1 },
   "aa_coding": { "transform": "index", "capability": "general", "weight": 1 },
+  "aa_engineering": { "transform": "index", "capability": "general", "weight": 1 },
   "aa_agentic": { "transform": "index", "capability": "general", "weight": 0.8 },
   "design_arena_frontend": { "transform": "elo", "capability": "frontend", "weight": 1 },
   "aider_polyglot": { "transform": "rate", "capability": "general", "weight": 0.5 }

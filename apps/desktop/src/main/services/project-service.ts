@@ -166,21 +166,32 @@ export class ProjectService {
 
   /**
    * Link the repository the work happens in, after the discussion started: for running the tasks. The
-   * scan is kept for the hand-off (its test command); undecided stack, modules and test decisions are prefilled.
+   * scan is kept for the hand-off (its test command); undecided stack, modules and test decisions are prefilled,
+   * and `triage.hasCodebase` is updated to true so downstream task planning grounds files in the scanned repo.
    */
-  async setRepo(id: number, repoPath: string): Promise<ProjectDetail> {
-    this.row(id);
-    const scan = await this.scanRepo(repoPath);
-    const existingKeys = new Set(this.decisions(id).map((decision) => decision.key));
-    transaction(this.db, () => {
-      this.db
-        .prepare("UPDATE projects SET repo_path = ?, repo_scan_json = ?, updated_at = ? WHERE id = ?")
-        .run(repoPath, JSON.stringify(scan), nowIso(), id);
-      for (const draft of decisionsFromScan(scan, this.language())) {
-        if (!existingKeys.has(draft.key)) this.upsertDecision(id, draft);
-      }
+  setRepo(id: number, repoPath: string): Promise<ProjectDetail> {
+    return this.withLock(id, async () => {
+      this.row(id);
+      const scan = await this.scanRepo(repoPath);
+      transaction(this.db, () => {
+        const project = this.row(id);
+        const triage = project.triage_json
+          ? { ...Triage.parse(JSON.parse(project.triage_json)), hasCodebase: true }
+          : null;
+        this.db
+          .prepare(
+            "UPDATE projects SET repo_path = ?, repo_scan_json = ?, triage_json = COALESCE(?, triage_json), updated_at = ? WHERE id = ?",
+          )
+          .run(repoPath, JSON.stringify(scan), triage ? JSON.stringify(triage) : null, nowIso(), id);
+        const existingKeys = new Set(this.decisions(id).map((decision) => decision.key));
+        for (const draft of decisionsFromScan(scan, this.language())) {
+          if (!existingKeys.has(draft.key)) this.upsertDecision(id, draft);
+        }
+        const stage = this.currentDiscussionStage(project, false);
+        if (stage) this.refreshStageStatus(id, stage);
+      });
+      return this.get(id);
     });
-    return this.get(id);
   }
 
   rename(id: number, title: string): ProjectSummary {

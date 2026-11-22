@@ -402,7 +402,7 @@ export class SettingsStore {
       const calls = this.db
         .prepare(
           `SELECT c.input_tokens AS input, c.output_tokens AS output, c.profile_id AS model FROM llm_calls c
-           JOIN models m ON m.id = c.profile_id WHERE m.provider_id = ? AND c.created_at >= ?`,
+           JOIN models m ON m.id = c.profile_id WHERE m.provider_id = ? AND c.created_at >= ? AND c.error_kind IS NULL`,
         )
         .all(provider.id, since) as { input: number; output: number; model: number }[];
       let used = 0;

@@ -140,15 +140,19 @@ export class StreamState implements EventStream {
 }
 
 /** End the process and what it started: its group on Linux and macOS, its tree on Windows. */
-function endTree(child: ChildProcess): void {
+export function killProcessTree(child: ChildProcess, signal: "SIGTERM" | "SIGKILL" = "SIGTERM"): void {
   if (child.exitCode !== null || child.pid === undefined) return;
   if (process.platform === "win32") {
-    spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true });
+    const killer = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
+      windowsHide: true,
+      stdio: "ignore",
+    });
+    killer.on("error", () => child.kill());
   } else {
     try {
-      process.kill(-child.pid, "SIGTERM");
+      process.kill(-child.pid, signal);
     } catch {
-      child.kill("SIGTERM");
+      child.kill(signal);
     }
   }
 }
@@ -248,7 +252,7 @@ export function runAgentProcess(options: AgentProcessOptions): AgentRun {
     outcome,
     stop() {
       stopped = true;
-      endTree(child);
+      killProcessTree(child, "SIGTERM");
     },
   };
 }

@@ -12,7 +12,7 @@ export interface OpenRouterModel {
   contextLength: number | null;
   /** USD per token, as published. */
   pricing: { prompt: number | null; completion: number | null; cacheRead: number | null };
-  aa: { intelligence: number | null; coding: number | null; agentic: number | null };
+  aa: { intelligence: number | null; coding: number | null; engineering?: number | null; agentic: number | null };
   designArena: { arena: string; category: string; elo: number }[];
 }
 
@@ -26,7 +26,7 @@ export const OPENROUTER = {
   name: "OpenRouter models (with Artificial Analysis and Design Arena)",
   url: "https://openrouter.ai/api/v1/models",
   measures:
-    "Model catalog, prices and context windows; Artificial Analysis intelligence, coding and agentic indices; Design Arena ratings for websites, UI components and web apps (frontend).",
+    "Model catalog, prices and context windows; Artificial Analysis intelligence, coding, engineering and agentic indices; Design Arena ratings for websites, UI components and web apps (frontend).",
 };
 
 /** Design Arena categories that are frontend work. */
@@ -48,6 +48,7 @@ interface ApiModel {
     artificial_analysis?: {
       intelligence_index?: number | null;
       coding_index?: number | null;
+      engineering_index?: number | null;
       agentic_index?: number | null;
     };
     design_arena?: { arena: string; category: string; elo: number }[];
@@ -74,6 +75,7 @@ export async function fetchOpenRouter(): Promise<OpenRouterRaw> {
         aa: {
           intelligence: model.benchmarks?.artificial_analysis?.intelligence_index ?? null,
           coding: model.benchmarks?.artificial_analysis?.coding_index ?? null,
+          engineering: model.benchmarks?.artificial_analysis?.engineering_index ?? null,
           agentic: model.benchmarks?.artificial_analysis?.agentic_index ?? null,
         },
         designArena: (model.benchmarks?.design_arena ?? [])
@@ -94,6 +96,7 @@ export function parseOpenRouter(raw: OpenRouterRaw): ParsedSource {
     };
     add("aa_intelligence", model.aa.intelligence);
     add("aa_coding", model.aa.coding);
+    add("aa_engineering", model.aa.engineering ?? null);
     add("aa_agentic", model.aa.agentic);
     // One frontend rating per model: the mean over the frontend categories it was rated in.
     if (model.designArena.length > 0) {

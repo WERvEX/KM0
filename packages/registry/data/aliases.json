@@ -8,5 +8,6 @@
   "Qwen3-Coder-480B-A35B-Instruct": "qwen/qwen3-coder",
   "Qwen3 235B A22B": "qwen/qwen3-235b-a22b",
   "Qwen3-235B-A22B": "qwen/qwen3-235b-a22b",
-  "Muse Wonder 1.0": "meta/muse-wonder"
+  "Muse Wonder 1.0": "meta/muse-wonder",
+  "Beam 1.0": "reflection/beam-1.0-501b-a23b"
 }

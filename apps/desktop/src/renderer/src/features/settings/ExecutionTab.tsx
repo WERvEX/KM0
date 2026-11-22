@@ -100,17 +100,22 @@ export function ExecutionTab() {
   const save = useIpcMutation("execution.settings.set", ["execution.settings.get", "execution.status"]);
   const [draft, setDraft] = useState<ExecutorSettings | null>(null);
   const [envText, setEnvText] = useState("");
+  const [syncedJson, setSyncedJson] = useState("");
+
+  const serverJson = settings.data ? JSON.stringify(settings.data) : "";
+  const env = textToEnv(envText);
+  const dirty = Boolean(draft && settings.data && JSON.stringify({ ...draft, customEnv: env ?? {} }) !== serverJson);
 
   useEffect(() => {
-    if (settings.data && !draft) {
+    if (!settings.data || !serverJson || serverJson === syncedJson) return;
+    if (!draft || !dirty) {
       setDraft(settings.data);
       setEnvText(envToText(settings.data.customEnv));
+      setSyncedJson(serverJson);
     }
-  }, [settings.data, draft]);
+  }, [settings.data, serverJson, syncedJson, draft, dirty]);
 
   if (!draft || !status.data) return null;
-  const env = textToEnv(envText);
-  const dirty = JSON.stringify({ ...draft, customEnv: env ?? {} }) !== JSON.stringify(settings.data);
   const set = (patch: Partial<ExecutorSettings>) => setDraft({ ...draft, ...patch });
   const text = (value: string) => (value.trim() ? value : null);
   const browse = async (key: "runsDir" | "configFile" | "customCwd") => {
@@ -410,11 +415,22 @@ export function ExecutionTab() {
       <div className="flex items-center gap-3">
         <Button
           variant="primary"
-          disabled={!dirty || !env || save.isPending || (draft.configFile !== null && !draft.configFile)}
+          disabled={
+            !dirty ||
+            !env ||
+            save.isPending ||
+            (draft.kind === "runner" && draft.configFile !== null && !draft.configFile.trim())
+          }
           onClick={() =>
             save.mutate(
               { ...draft, configFile: draft.configFile || null, customEnv: env ?? {} },
-              { onSuccess: (saved) => setDraft(saved) },
+              {
+                onSuccess: (saved) => {
+                  setDraft(saved);
+                  setEnvText(envToText(saved.customEnv));
+                  setSyncedJson(JSON.stringify(saved));
+                },
+              },
             )
           }
         >

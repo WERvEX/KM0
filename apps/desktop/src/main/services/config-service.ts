@@ -4,13 +4,23 @@ import {
   type ConfigBundle,
   type ConfigBundleV1,
   type ConfigBundleV2,
+  type ExecutorSettings,
   type ImportSummary,
   isPresetAgent,
   TIERS,
 } from "@km0/shared";
+import { type Database, transaction } from "../db/sql";
 import type { AgentStore } from "./agent-store";
 import type { SearchStore } from "./search-store";
 import type { SettingsStore } from "./settings-store";
+
+export interface ConfigOptions {
+  db?: Database;
+  execution?: {
+    getSettings(): ExecutorSettings;
+    setSettings(input: ExecutorSettings): ExecutorSettings;
+  };
+}
 
 /** Moves Settings between installs as one JSON file. */
 export class ConfigService {
@@ -19,6 +29,7 @@ export class ConfigService {
     private readonly agents: AgentStore,
     private readonly search: SearchStore,
     private readonly now: () => string = () => new Date().toISOString(),
+    private readonly options?: ConfigOptions,
   ) {}
 
   export(includeSecrets: boolean): ConfigBundleV2 {
@@ -26,6 +37,7 @@ export class ConfigService {
     const models = this.settings.listModels();
     const nameOf = (id: number | null) => models.find((model) => model.id === id)?.name ?? null;
     const roles = this.settings.getRoles();
+    const rulesState = this.settings.getRoutingRules();
     return {
       format: CONFIG_FORMAT,
       version: CONFIG_VERSION,
@@ -46,7 +58,7 @@ export class ConfigService {
         modelId: model.modelId,
         name: model.name,
         canonicalId: model.canonicalSource === "manual" ? model.canonicalId : null,
-        contextWindow: null,
+        contextWindow: model.contextWindowOverride,
         structuredMode: model.structuredMode,
         temperature: model.temperature,
         priceInPerMTok: model.priceInPerMTok,
@@ -56,6 +68,8 @@ export class ConfigService {
       })),
       roles: { router: nameOf(roles.router), planner: nameOf(roles.planner) },
       preferences: this.settings.getPreferences(),
+      routingRules: rulesState.custom ? rulesState.rules : null,
+      ...(this.options?.execution ? { execution: this.options.execution.getSettings() } : {}),
       agents: this.agents.list().map((agent) => ({
         id: agent.id,
         name: agent.name,
@@ -78,99 +92,109 @@ export class ConfigService {
    * new ones created. Nothing is deleted. Files from KM0 0.1 are converted first.
    */
   import(input: ConfigBundle): ImportSummary {
-    const bundle = input.version === 1 ? upgrade(input) : input;
-    const summary: ImportSummary = {
-      providersCreated: 0,
-      providersUpdated: 0,
-      modelsCreated: 0,
-      modelsUpdated: 0,
-      searchCreated: 0,
-      searchUpdated: 0,
-      agentsUpdated: 0,
-      agentsCreated: 0,
-      localServersDisabled: 0,
-      rolesSet: false,
-    };
+    const run = () => {
+      const bundle = input.version === 1 ? upgrade(input) : input;
+      const summary: ImportSummary = {
+        providersCreated: 0,
+        providersUpdated: 0,
+        modelsCreated: 0,
+        modelsUpdated: 0,
+        searchCreated: 0,
+        searchUpdated: 0,
+        agentsUpdated: 0,
+        agentsCreated: 0,
+        localServersDisabled: 0,
+        rolesSet: false,
+      };
 
-    for (const provider of bundle.providers) {
-      const existing = this.settings.listProviders().find((item) => item.name === provider.name);
-      if (existing) {
-        this.settings.updateProvider(existing.id, provider);
-        summary.providersUpdated += 1;
-      } else {
-        this.settings.createProvider(provider);
-        summary.providersCreated += 1;
-      }
-    }
-    const providerId = new Map(this.settings.listProviders().map((provider) => [provider.name, provider.id]));
-    for (const model of bundle.models) {
-      const id = providerId.get(model.provider);
-      if (id === undefined) continue;
-      const data = { ...model, providerId: id };
-      const existing = this.settings.listModels().find((item) => item.name === model.name);
-      if (existing) {
-        this.settings.updateModel(existing.id, data);
-        summary.modelsUpdated += 1;
-      } else {
-        this.settings.createModel(data);
-        summary.modelsCreated += 1;
-      }
-    }
-
-    const models = this.settings.listModels();
-    const modelId = (name: string | null) => (name === null ? null : (models.find((m) => m.name === name)?.id ?? null));
-    const router = modelId(bundle.roles.router ?? null);
-    if (router !== null) {
-      this.settings.setRoles({ router, planner: modelId(bundle.roles.planner ?? null) });
-      summary.rolesSet = true;
-    }
-
-    this.settings.setPreferences(bundle.preferences);
-
-    const order: string[] = [];
-    for (const agent of bundle.agents) {
-      let target = this.agents.list().find((item) => item.id === agent.id);
-      if (agent.kind === "custom") {
-        const definition = {
-          name: agent.name,
-          instructionFile: agent.instructionFile,
-          launchTemplate: agent.launchTemplate,
-          apiKinds: agent.apiKinds,
-          nativeVendor: agent.nativeVendor,
-          capabilities: agent.capabilities,
-        };
-        const sameName = this.agents.list().find((item) => item.kind === "custom" && item.name === agent.name);
-        if (sameName) {
-          this.agents.updateCustom(sameName.id, definition);
-          target = this.agents.list().find((item) => item.id === sameName.id);
+      for (const provider of bundle.providers) {
+        const existing = this.settings.listProviders().find((item) => item.name === provider.name);
+        if (existing) {
+          this.settings.updateProvider(existing.id, provider);
+          summary.providersUpdated += 1;
         } else {
-          const before = new Set(this.agents.list().map((item) => item.id));
-          target = this.agents.createCustom(definition).find((item) => !before.has(item.id));
-          summary.agentsCreated += 1;
+          this.settings.createProvider(provider);
+          summary.providersCreated += 1;
         }
-      } else if (!target || !isPresetAgent(agent.id)) {
-        continue;
       }
-      if (!target) continue;
-      // A model the agent cannot use (another API format) is left out rather than failing the import.
-      const refs = agent.models.flatMap((name) => {
-        const model = models.find((item) => item.name === name);
-        if (!model || (target.apiKinds.length > 0 && !target.apiKinds.includes(model.providerKind))) return [];
-        return [model.id];
-      });
-      this.agents.update(target.id, agent.enabled, refs, agent.capabilities);
-      if (agent.kind !== "custom") summary.agentsUpdated += 1;
-      order.push(target.id);
-    }
-    if (order.length > 0) this.agents.reorder(order);
+      const providerId = new Map(this.settings.listProviders().map((provider) => [provider.name, provider.id]));
+      for (const model of bundle.models) {
+        const id = providerId.get(model.provider);
+        if (id === undefined) continue;
+        const data = { ...model, providerId: id };
+        const existing = this.settings.listModels().find((item) => item.name === model.name);
+        if (existing) {
+          this.settings.updateModel(existing.id, data);
+          summary.modelsUpdated += 1;
+        } else {
+          this.settings.createModel(data);
+          summary.modelsCreated += 1;
+        }
+      }
 
-    for (const service of bundle.searchServices) {
-      const result = this.search.upsertByName(service);
-      if (result.created) summary.searchCreated += 1;
-      else summary.searchUpdated += 1;
-      if (result.disabled) summary.localServersDisabled += 1;
-    }
-    return summary;
+      const models = this.settings.listModels();
+      const modelId = (name: string | null) =>
+        name === null ? null : (models.find((m) => m.name === name)?.id ?? null);
+      const router = modelId(bundle.roles.router ?? null);
+      if (router !== null) {
+        this.settings.setRoles({ router, planner: modelId(bundle.roles.planner ?? null) });
+        summary.rolesSet = true;
+      }
+
+      this.settings.setPreferences(bundle.preferences);
+      if (bundle.routingRules !== undefined) this.settings.setRoutingRules(bundle.routingRules);
+      if (bundle.execution && this.options?.execution) this.options.execution.setSettings(bundle.execution);
+
+      const order: string[] = [];
+      for (const agent of bundle.agents) {
+        let target = this.agents.list().find((item) => item.id === agent.id);
+        let updatedExistingCustom = false;
+        if (agent.kind === "custom") {
+          const definition = {
+            name: agent.name,
+            instructionFile: agent.instructionFile,
+            launchTemplate: agent.launchTemplate,
+            apiKinds: agent.apiKinds,
+            nativeVendor: agent.nativeVendor,
+            capabilities: agent.capabilities,
+          };
+          const sameName = this.agents
+            .list()
+            .find((item) => item.kind === "custom" && item.name.toLowerCase() === agent.name.toLowerCase());
+          if (sameName) {
+            this.agents.updateCustom(sameName.id, definition);
+            target = this.agents.list().find((item) => item.id === sameName.id);
+            updatedExistingCustom = true;
+          } else {
+            const before = new Set(this.agents.list().map((item) => item.id));
+            target = this.agents.createCustom(definition).find((item) => !before.has(item.id));
+            summary.agentsCreated += 1;
+          }
+        } else if (!target || !isPresetAgent(agent.id)) {
+          continue;
+        }
+        if (!target) continue;
+        // A model the agent cannot use (another API format) is left out rather than failing the import.
+        const refs = agent.models.flatMap((name) => {
+          const model = models.find((item) => item.name === name);
+          if (!model || (target.apiKinds.length > 0 && !target.apiKinds.includes(model.providerKind))) return [];
+          return [model.id];
+        });
+        this.agents.update(target.id, agent.enabled, refs, agent.capabilities);
+        if (agent.kind !== "custom" || updatedExistingCustom) summary.agentsUpdated += 1;
+        order.push(target.id);
+      }
+      if (order.length > 0) this.agents.reorder(order);
+
+      for (const service of bundle.searchServices) {
+        const result = this.search.upsertByName(service);
+        if (result.created) summary.searchCreated += 1;
+        else summary.searchUpdated += 1;
+        if (result.disabled) summary.localServersDisabled += 1;
+      }
+      return summary;
+    };
+    return this.options?.db ? transaction(this.options.db, run) : run();
   }
 }
 

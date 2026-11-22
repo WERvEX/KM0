@@ -176,20 +176,30 @@ export class AgentStore {
     if (this.list().some((other) => other.id !== id && other.name.toLowerCase() === data.name.toLowerCase())) {
       throw new AppError("conflict", "An agent with this name already exists.");
     }
-    this.db
-      .prepare(
-        `UPDATE agents SET name = ?, capabilities_json = ?, instruction_file = ?, launch_template = ?, native_vendor = ?,
-           api_kinds_json = ? WHERE id = ?`,
-      )
-      .run(
-        data.name,
-        JSON.stringify([...new Set(data.capabilities)]),
-        data.instructionFile,
-        data.launchTemplate,
-        data.nativeVendor,
-        JSON.stringify([...new Set(data.apiKinds)]),
-        id,
-      );
+    transaction(this.db, () => {
+      this.db
+        .prepare(
+          `UPDATE agents SET name = ?, capabilities_json = ?, instruction_file = ?, launch_template = ?, native_vendor = ?,
+             api_kinds_json = ? WHERE id = ?`,
+        )
+        .run(
+          data.name,
+          JSON.stringify([...new Set(data.capabilities)]),
+          data.instructionFile,
+          data.launchTemplate,
+          data.nativeVendor,
+          JSON.stringify([...new Set(data.apiKinds)]),
+          id,
+        );
+      if (data.apiKinds.length > 0) {
+        const allowed = new Set(data.apiKinds);
+        for (const model of agent.models) {
+          if (!allowed.has(model.providerKind)) {
+            this.db.prepare("DELETE FROM agent_models WHERE agent_id = ? AND model_ref = ?").run(id, model.modelRef);
+          }
+        }
+      }
+    });
     return this.list();
   }
 

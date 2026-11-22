@@ -73,12 +73,17 @@ interface ProgressState {
 }
 
 interface Active {
+  projectId: number;
+  runDir: string;
   process: RunningProcess;
   progress: ProgressState;
   offset: number;
   log: string[];
   stopping: boolean;
   timer: ReturnType<typeof setInterval>;
+  polling: Promise<void> | null;
+  done: Promise<void>;
+  resolveDone: () => void;
 }
 
 const emptyProgress = (): ProgressState => ({ tasks: new Map(), finished: null, cost: 0, integration: null });
@@ -262,6 +267,7 @@ const TEXT = {
       `${count} 个任务会等待 Claude Desktop 领取：先在“设置 → 执行”里把 KM0 的 MCP 服务器加到 Claude Desktop，然后在 Claude Desktop 里说“做 KM0 的任务”。`,
     noIntegration: "这次执行没有生成可合并的最终集成分支。",
     stillRunning: "执行还在进行中，结束后再合并或检出。",
+    deleteWhileRunning: "这个项目还有正在执行的任务，请先停止执行后再删除。",
     branchMissing: (branch: string) => `仓库里找不到集成分支 ${branch}，可能已被手动删除。`,
     dirtyRepo: "当前仓库工作区有未提交的改动，请先提交或暂存（git stash）后再合并或检出。",
     mergeConflict: (branch: string, target: string) =>
@@ -332,6 +338,7 @@ const TEXT = {
       `${count} ${count === 1 ? "task waits" : "tasks wait"} for Claude Desktop to take ${count === 1 ? "it" : "them"}: add KM0's MCP server to Claude Desktop under Settings → Execution, then ask Claude Desktop to "do the KM0 tasks".`,
     noIntegration: "This run has no final integration branch available.",
     stillRunning: "The run is still active; wait for it to finish before integrating.",
+    deleteWhileRunning: "This project has a run in progress; stop the run before deleting it.",
     branchMissing: (branch: string) => `Integration branch ${branch} no longer exists in the repository.`,
     dirtyRepo: "The repository working tree has uncommitted changes; commit or stash them first.",
     mergeConflict: (branch: string, target: string) =>
@@ -485,6 +492,7 @@ const codexVersionIn = (output: string) => (/codex/i.test(output) ? versionIn(ou
 export class ExecutionService {
   private readonly active = new Map<number, Active>();
   private readonly locks = new KeyedLock<number>();
+  private shuttingDown = false;
 
   constructor(
     private readonly db: Database,
@@ -563,14 +571,25 @@ export class ExecutionService {
     };
   }
 
+  private async resolveCommand(raw: string): Promise<string[]> {
+    const parts = splitCommand(raw);
+    const port = this.port;
+    const head = parts[0];
+    if (port && port.platform === "win32" && head && !/[\\/]/.test(head)) {
+      const resolved = await port.which(head);
+      if (resolved) parts[0] = resolved;
+    }
+    return parts;
+  }
+
   private async findClaude(): Promise<{ check: ToolCheck; command: string[] | null }> {
     const port = this.port as ExecPort;
     const text = TEXT[this.language()];
     const configured = this.getSettings().claudeCommand;
     const command = configured
-      ? splitCommand(configured)
+      ? await this.resolveCommand(configured)
       : await port.which("claude").then((found) => (found ? [found] : null));
-    if (command) {
+    if (command && command.length > 0) {
       const result = await port.capture([...command, "--version"]);
       const version = result.code === 0 ? claudeVersionIn(result.output) : null;
       if (version) {
@@ -592,9 +611,9 @@ export class ExecutionService {
     const text = TEXT[this.language()];
     const configured = this.getSettings().codexCommand;
     const command = configured
-      ? splitCommand(configured)
+      ? await this.resolveCommand(configured)
       : await port.which("codex").then((found) => (found ? [found] : null));
-    if (command) {
+    if (command && command.length > 0) {
       const result = await port.capture([...command, "--version"]);
       const version = result.code === 0 ? codexVersionIn(result.output) : null;
       if (version) {
@@ -616,8 +635,10 @@ export class ExecutionService {
     const text = TEXT[this.language()];
     const configured = this.getSettings().runnerCommand;
     const candidates: string[][] = [];
-    if (configured) candidates.push(splitCommand(configured));
-    else {
+    if (configured) {
+      const resolved = await this.resolveCommand(configured);
+      if (resolved.length > 0) candidates.push(resolved);
+    } else {
       const onPath = await port.which("km0-runner");
       if (onPath) candidates.push([onPath]);
       for (const python of ["python3", "python"]) {
@@ -905,13 +926,24 @@ export class ExecutionService {
         )
         .run(projectId, runId, settings.kind, runDir, JSON.stringify(seqs), reuse, nowIso());
       const id = Number(result.lastInsertRowid);
+      let resolveDone: () => void = () => undefined;
+      const done = new Promise<void>((resolve) => {
+        resolveDone = resolve;
+      });
       const active: Active = {
+        projectId,
+        runDir,
         process,
         progress: emptyProgress(),
         offset: 0,
         log,
         stopping: false,
-        timer: setInterval(() => void this.poll(id), POLL_MS),
+        timer: setInterval(() => {
+          void this.poll(id).catch(() => undefined);
+        }, POLL_MS),
+        polling: null,
+        done,
+        resolveDone,
       };
       this.active.set(id, active);
       void process.exited.then((exit) => this.finish(id, exit.code));
@@ -1050,20 +1082,37 @@ export class ExecutionService {
     if (!active) return this.view(row);
     active.stopping = true;
     if (this.port) await this.port.writeFile(this.port.join(row.run_dir, STOP_FILE), "");
+    if (!this.active.has(runRef)) return this.view(this.row(runRef));
     active.process.terminate();
-    this.db.prepare("UPDATE runs SET status = 'stopping' WHERE id = ?").run(runRef);
+    this.db.prepare("UPDATE runs SET status = 'stopping' WHERE id = ? AND status = 'running'").run(runRef);
     const view = this.view(this.row(runRef));
     this.emit(view);
     return view;
   }
 
-  /** Stop every run still going and wait for them to end, at most `timeoutMs`; for closing the window. */
+  hasRunningForProject(projectId: number): boolean {
+    for (const active of this.active.values()) {
+      if (active.projectId === projectId) return true;
+    }
+    return false;
+  }
+
+  assertNotRunning(projectId: number): void {
+    if (this.hasRunningForProject(projectId)) {
+      throw new AppError("conflict", TEXT[this.language()].deleteWhileRunning);
+    }
+  }
+
+  /** Stop every run still going and wait for them to end and flush final status, at most `timeoutMs`; for closing the window. */
   async stopAll(timeoutMs = 15_000): Promise<void> {
-    const ids = [...this.active.keys()];
-    await Promise.all(ids.map((id) => this.stop(this.row(id).project_id, id)));
-    const waits = ids.map((id) => this.active.get(id)?.process.exited ?? Promise.resolve());
-    await Promise.race([Promise.all(waits), new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
-    for (const id of ids) this.active.get(id)?.process.kill();
+    this.shuttingDown = true;
+    const entries = [...this.active.entries()];
+    await Promise.allSettled(entries.map(([id, active]) => this.stop(active.projectId, id)));
+    const waits = entries.map(([, active]) => active.process.exited);
+    await Promise.race([Promise.allSettled(waits), new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
+    for (const [, active] of entries) active.process.kill();
+    const dones = entries.map(([, active]) => active.done);
+    await Promise.race([Promise.allSettled(dones), new Promise((resolve) => setTimeout(resolve, 3_000))]);
   }
 
   runningCount(): number {
@@ -1148,12 +1197,24 @@ export class ExecutionService {
         };
       }
 
-      const hasUser = (await port.capture(["git", "-C", repo, "config", "user.name"])).output.trim().length > 0;
-      const author = hasUser ? [] : ["-c", "user.name=KM0", "-c", "user.email=km0@localhost"];
+      const hasName = (await port.capture(["git", "-C", repo, "config", "user.name"])).output.trim().length > 0;
+      const hasEmail = (await port.capture(["git", "-C", repo, "config", "user.email"])).output.trim().length > 0;
+      const author = [
+        ...(hasName ? [] : ["-c", "user.name=KM0"]),
+        ...(hasEmail ? [] : ["-c", "user.email=km0@localhost"]),
+      ];
       const res = await port.capture(["git", "-C", repo, ...author, "merge", "--no-edit", integration.branch]);
       if (res.code !== 0) {
-        await port.capture(["git", "-C", repo, "merge", "--abort"]);
-        throw new AppError("conflict", text.mergeConflict(integration.branch, currentBranch));
+        const unmerged = (
+          await port.capture(["git", "-C", repo, "diff", "--name-only", "--diff-filter=U"])
+        ).output.trim();
+        const merging =
+          (await port.capture(["git", "-C", repo, "rev-parse", "-q", "--verify", "MERGE_HEAD"])).code === 0;
+        if (merging) await port.capture(["git", "-C", repo, "merge", "--abort"]);
+        if (unmerged || merging) {
+          throw new AppError("conflict", text.mergeConflict(integration.branch, currentBranch));
+        }
+        throw new AppError("conflict", text.integrateFailed(res.output.trim() || integration.branch));
       }
       return {
         mode,
@@ -1164,44 +1225,68 @@ export class ExecutionService {
     });
   }
 
-  /** Read new progress lines; a line is only taken once it is complete. */
-  private async poll(id: number): Promise<void> {
+  /** Read new progress lines; serialized per run so concurrent ticks cannot double-count events. */
+  private poll(id: number): Promise<void> {
     const active = this.active.get(id);
-    if (!active || !this.port) return;
-    const row = this.row(id);
-    const { text } = await this.port.readFrom(this.port.join(row.run_dir, PROGRESS_FILE), active.offset);
-    const end = text.lastIndexOf("\n");
-    if (end < 0) {
+    if (!active || !this.port) return Promise.resolve();
+    if (active.polling) return active.polling;
+    const port = this.port;
+    const work = (async () => {
+      const row = this.db.prepare("SELECT * FROM runs WHERE id = ?").get(id) as RunRow | undefined;
+      if (!row) return;
+      const { text } = await port.readFrom(port.join(active.runDir, PROGRESS_FILE), active.offset);
+      const end = text.lastIndexOf("\n");
+      if (end < 0) {
+        this.emit(this.view(row));
+        return;
+      }
+      const complete = text.slice(0, end + 1);
+      active.offset += new TextEncoder().encode(complete).length;
+      applyProgress(active.progress, complete.split("\n").filter(Boolean));
       this.emit(this.view(row));
-      return;
-    }
-    const complete = text.slice(0, end + 1);
-    active.offset += new TextEncoder().encode(complete).length;
-    applyProgress(active.progress, complete.split("\n").filter(Boolean));
-    this.emit(this.view(row));
+    })().finally(() => {
+      if (active.polling === work) active.polling = null;
+    });
+    active.polling = work;
+    return work;
   }
 
   private async finish(id: number, code: number | null): Promise<void> {
     const active = this.active.get(id);
     if (!active) return;
     clearInterval(active.timer);
-    await this.poll(id);
-    this.active.delete(id);
-    const row = this.row(id);
-    const text = TEXT[this.language()];
-    const cancelled = code === EXIT_CANCELLED || active.progress.finished === "cancelled" || active.stopping;
-    // The Runner and the direct executor exit 1 when some task failed, which is still a finished run; a custom
-    // command must exit 0.
-    const ok = row.executor === "custom" ? code === 0 : code === 0 || code === 1;
-    const status: ExecutionStatus = cancelled ? "cancelled" : ok ? "finished" : "failed";
-    const error = status === "failed" ? [text.exited(code), ...active.log.slice(-5)].join("\n") : null;
-    this.db
-      .prepare(
-        `UPDATE runs SET status = ?, finished_at = ?, exit_code = ?, error = ?, cost = ?, log_json = ? WHERE id = ?`,
-      )
-      .run(status, nowIso(), code, error, active.progress.cost, JSON.stringify(active.log.slice(-KEPT_LOG_LINES)), id);
-    this.emit(await this.loadView(this.row(id)));
-    await this.collect(id);
+    try {
+      if (active.polling) await active.polling.catch(() => undefined);
+      await this.poll(id).catch(() => undefined);
+      this.active.delete(id);
+      const row = this.db.prepare("SELECT * FROM runs WHERE id = ?").get(id) as RunRow | undefined;
+      if (!row) return;
+      const text = TEXT[this.language()];
+      const cancelled = code === EXIT_CANCELLED || active.progress.finished === "cancelled" || active.stopping;
+      // The Runner and the direct executor exit 1 when some task failed, which is still a finished run; a custom
+      // command must exit 0.
+      const ok = row.executor === "custom" ? code === 0 : code === 0 || code === 1;
+      const status: ExecutionStatus = cancelled ? "cancelled" : ok ? "finished" : "failed";
+      const error = status === "failed" ? [text.exited(code), ...active.log.slice(-5)].join("\n") : null;
+      this.db
+        .prepare(
+          `UPDATE runs SET status = ?, finished_at = ?, exit_code = ?, error = ?, cost = ?, log_json = ? WHERE id = ?`,
+        )
+        .run(
+          status,
+          nowIso(),
+          code,
+          error,
+          active.progress.cost,
+          JSON.stringify(active.log.slice(-KEPT_LOG_LINES)),
+          id,
+        );
+      this.emit(await this.loadView(this.row(id)));
+      if (!this.shuttingDown) await this.collect(id);
+    } finally {
+      this.active.delete(id);
+      active.resolveDone();
+    }
   }
 
   /** Import the run's reports and judge them; a run without Runner reports asks for a manual import. */

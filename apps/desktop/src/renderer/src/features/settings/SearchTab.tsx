@@ -25,9 +25,19 @@ export function SearchTab() {
   const list = services.data ?? [];
   const activeId = list.find((service) => service.enabled && !(web && service.config.kind === "mcp_stdio"))?.id;
   const saveError = create.error ?? update.error;
+  const openEdit = (next: Editing) => {
+    create.reset();
+    update.reset();
+    setEditing(next);
+  };
+  const closeEdit = () => {
+    create.reset();
+    update.reset();
+    setEditing(null);
+  };
 
   const save = (input: SearchServiceInput) => {
-    const done = { onSuccess: () => setEditing(null) };
+    const done = { onSuccess: closeEdit };
     if (editing?.mode === "edit") update.mutate({ id: editing.service.id, data: input }, done);
     else create.mutate(input, done);
   };
@@ -49,7 +59,7 @@ export function SearchTab() {
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted">{t("settings.search.intro")}</p>
       <div className="flex justify-end">
-        <Button variant="primary" size="sm" onClick={() => setEditing({ mode: "create" })}>
+        <Button variant="primary" size="sm" onClick={() => openEdit({ mode: "create" })}>
           <Plus />
           {t("settings.search.add")}
         </Button>
@@ -103,7 +113,7 @@ export function SearchTab() {
                       size="icon"
                       variant="ghost"
                       aria-label={t("settings.search.edit")}
-                      onClick={() => setEditing({ mode: "edit", service })}
+                      onClick={() => openEdit({ mode: "edit", service })}
                     >
                       <Pencil />
                     </Button>
@@ -142,7 +152,7 @@ export function SearchTab() {
       <Dialog
         open={editing !== null}
         onOpenChange={(open) => {
-          if (!open) setEditing(null);
+          if (!open) closeEdit();
         }}
         title={editing?.mode === "edit" ? t("settings.search.form.editTitle") : t("settings.search.form.createTitle")}
         wide
@@ -155,7 +165,7 @@ export function SearchTab() {
             submitting={create.isPending || update.isPending}
             error={saveError ? errorMessage(saveError) : null}
             onSubmit={save}
-            onCancel={() => setEditing(null)}
+            onCancel={closeEdit}
           />
         ) : null}
       </Dialog>
@@ -208,9 +218,10 @@ export function SearchServiceForm({ service, web, submitting, error, onSubmit, o
   const [secret, setSecret] = useState("");
   const [touched, setTouched] = useState(false);
 
+  const canKeepSecret = Boolean(service?.hasSecret && service.config.kind === kind);
   const missing =
     !name.trim() ||
-    (kind === "bocha" && !service?.hasSecret && !secret.trim()) ||
+    (kind === "bocha" && !canKeepSecret && !secret.trim()) ||
     (kind === "mcp_stdio" && !command.trim()) ||
     (kind === "mcp_http" && !/^https?:\/\/\S+$/.test(url.trim())) ||
     (kind !== "bocha" && (!toolName.trim() || !queryArg.trim()));
@@ -233,8 +244,8 @@ export function SearchServiceForm({ service, web, submitting, error, onSubmit, o
               ...mcp,
             }
           : { kind, url: url.trim(), ...mcp };
-    // An empty field keeps the stored secret when editing.
-    const keepSecret = service?.hasSecret && !secret.trim() && service.config.kind === kind;
+    // An empty field keeps the stored secret when editing the same kind of service.
+    const keepSecret = canKeepSecret && !secret.trim();
     onSubmit({
       name: name.trim(),
       enabled,
@@ -243,7 +254,7 @@ export function SearchServiceForm({ service, web, submitting, error, onSubmit, o
     });
   };
   const required = (value: boolean) => (touched && value ? t("settings.search.form.required") : undefined);
-  const secretPlaceholder = service?.hasSecret ? t("settings.search.form.keepSecret") : "";
+  const secretPlaceholder = canKeepSecret ? t("settings.search.form.keepSecret") : "";
 
   return (
     <form
@@ -273,7 +284,7 @@ export function SearchServiceForm({ service, web, submitting, error, onSubmit, o
           label={t("settings.search.form.apiKey")}
           htmlFor="search-key"
           hint={t("settings.search.form.apiKeyHint")}
-          error={required(!service?.hasSecret && !secret.trim())}
+          error={required(!canKeepSecret && !secret.trim())}
         >
           <Input
             id="search-key"

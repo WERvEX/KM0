@@ -1,9 +1,9 @@
-import { exec } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { appendFile, cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { IntegrationSummary } from "@km0/shared";
 import type { RunningProcess } from "../services/exec-port";
-import { type AgentOutcome, type AgentRun, runClaudeCode } from "./claude-code";
+import { type AgentOutcome, type AgentRun, killProcessTree, runClaudeCode } from "./claude-code";
 import { runCodex } from "./codex";
 import { AUTHOR, EXCLUDES, GitError, git, gitDiff } from "./git";
 import {
@@ -137,7 +137,7 @@ function diffStats(diff: string): { files: number; added: number; removed: numbe
 const TEXT = {
   "zh-CN": {
     claudeNote: (branch: string) =>
-      `你在一个独立的 git worktree 里工作，分支是 \`${branch}\`。按下面的任务完成改动；任务有测试命令时，完成后运行它。不要切换分支，也不要推送。改动可以自己提交；没有提交的改动，KM0 会在你结束后提交到这个分支。项目背景、文档和上游交接（如有 \`km0/upstream.md\`）在 \`km0/\` 文件夹里。`,
+      `你在一个独立的 git worktree 里工作，分支是 \`${branch}\`。按下面的任务完成改动；任务有测试命令时，完成后运行它。不要切换分支、提交或推送：你结束后，KM0 会把改动提交到这个分支。项目背景、文档和上游交接（如有 \`km0/upstream.md\`）在 \`km0/\` 文件夹里。`,
     codexNote: (branch: string) =>
       `你在一个独立的 git worktree 里工作，分支是 \`${branch}\`。按下面的任务完成改动；任务有测试命令时，完成后运行它。不要切换分支、提交或推送：你结束后，KM0 会把改动提交到这个分支。项目背景、文档和上游交接（如有 \`km0/upstream.md\`）在 \`km0/\` 文件夹里。`,
     upstreamFailed: (seq: string) => `依赖的任务 ${seq} 没有完成。`,
@@ -145,6 +145,7 @@ const TEXT = {
     noAgent: (agent: string) => `直接执行还不能把任务交给 ${agent}。`,
     noClaude: "没有找到 Claude Code。",
     noCodex: "没有找到 Codex。",
+    budgetExhausted: "项目预算已用完。",
     gaveUp: (summary: string) => `Agent 放弃了这个任务：${summary}`,
     testsFailed: "测试没有通过。",
     noRepoCommit: "仓库还没有任何提交：先提交一次，再执行。",
@@ -185,7 +186,7 @@ const TEXT = {
   },
   en: {
     claudeNote: (branch: string) =>
-      `You work in a git worktree of your own, on branch \`${branch}\`. Make the change the task below asks for; when the task has a test command, run it at the end. Do not switch branches or push. You may commit; whatever you leave uncommitted, KM0 commits to this branch when you finish. Project background, documents and upstream notes (if \`km0/upstream.md\` exists) are in \`km0/\`.`,
+      `You work in a git worktree of your own, on branch \`${branch}\`. Make the change the task below asks for; when the task has a test command, run it at the end. Do not switch branches, commit or push: when you finish, KM0 commits your changes to this branch. Project background, documents and upstream notes (if \`km0/upstream.md\` exists) are in \`km0/\`.`,
     codexNote: (branch: string) =>
       `You work in a git worktree of your own, on branch \`${branch}\`. Make the change the task below asks for; when the task has a test command, run it at the end. Do not switch branches, commit or push: when you finish, KM0 commits your changes to this branch. Project background, documents and upstream notes (if \`km0/upstream.md\` exists) are in \`km0/\`.`,
     upstreamFailed: (seq: string) => `Upstream task ${seq} did not finish.`,
@@ -193,6 +194,7 @@ const TEXT = {
     noAgent: (agent: string) => `The direct executor cannot hand a task to ${agent} yet.`,
     noClaude: "Claude Code was not found.",
     noCodex: "Codex was not found.",
+    budgetExhausted: "The project budget is exhausted.",
     gaveUp: (summary: string) => `The agent gave the task up: ${summary}`,
     testsFailed: "The tests do not pass.",
     noRepoCommit: "The repository has no commit yet: commit once, then run.",
@@ -276,31 +278,13 @@ function transitiveUpstream(seq: number, tasks: { seq: number; dependsOn: number
   return [...found].sort((a, b) => a - b);
 }
 
-/** Run a shell command in `cwd` to its end, with a time limit; its exit code and the tail of its output. */
-function runShell(
-  command: string,
-  cwd: string,
-  timeoutMs = TEST_TIMEOUT_MS,
-): Promise<{ code: number; output: string }> {
-  return new Promise((resolve) => {
-    exec(
-      command,
-      { cwd, timeout: timeoutMs, maxBuffer: 16 * 1024 * 1024, windowsHide: true, encoding: "utf8" },
-      (error, stdout, stderr) => {
-        const output = `${stdout}${stderr}`.slice(-4000);
-        const code = error ? (typeof error.code === "number" ? error.code : 1) : 0;
-        resolve({ code, output });
-      },
-    );
-  });
-}
-
 export class DirectRun implements RunningProcess {
   readonly exited: Promise<{ code: number | null; signal: string | null }>;
   private cancelled = false;
   /** Marking this run's inbox tasks cancelled, once a stop was asked for; awaited before they are removed. */
   private cancelling: Promise<void> = Promise.resolve();
   private readonly activeRuns = new Set<AgentRun>();
+  private readonly activeShells = new Set<ChildProcess>();
   private activeTaskCount = 0;
   private seqNo = 0;
   private spent = 0;
@@ -329,11 +313,54 @@ export class DirectRun implements RunningProcess {
   terminate(): void {
     this.cancelled = true;
     for (const run of this.activeRuns) run.stop();
+    for (const child of this.activeShells) killProcessTree(child, "SIGKILL");
     this.cancelling = this.cancelInbox().catch(() => undefined);
   }
 
   kill(): void {
     this.terminate();
+  }
+
+  /** Run a shell command in `cwd` to its end, with a time limit and cancellation tracking. */
+  private runShell(
+    command: string,
+    cwd: string,
+    timeoutMs = TEST_TIMEOUT_MS,
+  ): Promise<{ code: number; output: string }> {
+    if (this.cancelled) return Promise.resolve({ code: 1, output: "" });
+    return new Promise((resolve) => {
+      const child = spawn(command, {
+        cwd,
+        shell: true,
+        detached: process.platform !== "win32",
+        windowsHide: true,
+      });
+      this.activeShells.add(child);
+      let output = "";
+      const push = (chunk: Buffer | string) => {
+        output += chunk.toString();
+        if (output.length > 32_000) output = output.slice(-16_000);
+      };
+      child.stdout?.on("data", push);
+      child.stderr?.on("data", push);
+      let done = false;
+      const timer = setTimeout(() => {
+        killProcessTree(child, "SIGKILL");
+      }, timeoutMs);
+      const finish = (code: number) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        this.activeShells.delete(child);
+        resolve({ code, output: output.slice(-4000) });
+      };
+      child.on("error", (error) => {
+        push(error.message);
+        finish(1);
+      });
+      child.on("close", (code) => finish(code ?? 1));
+      if (this.cancelled) killProcessTree(child, "SIGKILL");
+    });
   }
 
   private withRepoLock<T>(fn: () => Promise<T>): Promise<T> {
@@ -503,122 +530,152 @@ export class DirectRun implements RunningProcess {
 
     const results = new Map<number, Status>();
     const branches = new Map<number, string>();
-    // Upstream tasks this run does not redo: the branch an earlier run left them on.
+    const selectedSeqs = new Set(selected.map((task) => task.seq));
+    const reusedSeqs = new Set<number>();
+    // Upstream/sibling tasks this run does not redo: only reuse succeeded branches not invalidated by re-running upstream.
     if (options.reuse) {
+      const staleReuse = new Set<number>(selectedSeqs);
+      let grew = true;
+      while (grew) {
+        grew = false;
+        for (const task of options.tasks) {
+          if (!staleReuse.has(task.seq) && task.dependsOn.some((dep) => staleReuse.has(dep))) {
+            staleReuse.add(task.seq);
+            grew = true;
+          }
+        }
+      }
+      const reuseDir = join(dirname(options.runDir), options.reuse);
       for (const task of options.tasks) {
-        if (selected.includes(task)) continue;
+        if (staleReuse.has(task.seq)) continue;
+        const reportPath = join(reuseDir, "reports", `${pad(task.seq)}.json`);
+        const prior = await readFile(reportPath, "utf8")
+          .then((raw) => JSON.parse(raw) as { failure_category?: string | null })
+          .catch(() => null);
+        if (!prior || prior.failure_category !== null) continue;
         const branch = `km0/${options.reuse}/${pad(task.seq)}`;
         if (await git(options.repo, ["rev-parse", "--verify", "-q", `refs/heads/${branch}`], false)) {
           branches.set(task.seq, branch);
+          reusedSeqs.add(task.seq);
         }
       }
     }
 
     // Dynamic DAG scheduler: independent ready tasks run concurrently up to `maxConcurrency`.
-    const selectedSeqs = new Set(selected.map((task) => task.seq));
     const pending = [...order];
     const running = new Map<number, Promise<void>>();
     const settledOk = (status: Status | undefined) => status === "passed" || status === "unjudged";
 
-    while (pending.length > 0 || running.size > 0) {
-      if (this.cancelled) {
-        for (const task of pending.splice(0)) {
-          const status = await this.finishSkipped(task, "cancelled", "cancelled", "");
-          results.set(task.seq, status);
-        }
-        if (running.size > 0) await Promise.all(running.values());
-        break;
-      }
-
-      // Immediately block any pending tasks whose upstream already failed/blocked/cancelled (transitively).
-      let propagated = true;
-      while (propagated) {
-        propagated = false;
-        for (let i = 0; i < pending.length; i += 1) {
-          const task = pending[i] as DirectTask;
-          const failedDep = [...task.dependsOn]
-            .sort((a, b) => a - b)
-            .find((dep) => selectedSeqs.has(dep) && results.has(dep) && !settledOk(results.get(dep)));
-          if (failedDep !== undefined) {
-            pending.splice(i, 1);
-            const status = await this.finishSkipped(
-              task,
-              "blocked",
-              "blocked",
-              this.text.upstreamFailed(pad(failedDep)),
-            );
+    try {
+      while (pending.length > 0 || running.size > 0) {
+        if (this.cancelled) {
+          for (const task of pending.splice(0)) {
+            const status = await this.finishSkipped(task, "cancelled", "cancelled", "");
             results.set(task.seq, status);
-            propagated = true;
-            break;
+          }
+          if (running.size > 0) await Promise.all(running.values());
+          break;
+        }
+
+        // Immediately block any pending tasks whose upstream already failed/blocked/cancelled (transitively).
+        let propagated = true;
+        while (propagated) {
+          propagated = false;
+          for (let i = 0; i < pending.length; i += 1) {
+            const task = pending[i] as DirectTask;
+            const failedDep = [...task.dependsOn]
+              .sort((a, b) => a - b)
+              .find((dep) => selectedSeqs.has(dep) && results.has(dep) && !settledOk(results.get(dep)));
+            if (failedDep !== undefined) {
+              pending.splice(i, 1);
+              const status = await this.finishSkipped(
+                task,
+                "blocked",
+                "blocked",
+                this.text.upstreamFailed(pad(failedDep)),
+              );
+              results.set(task.seq, status);
+              propagated = true;
+              break;
+            }
+          }
+        }
+
+        while (running.size < maxConcurrency && !this.cancelled) {
+          const index = pending.findIndex((task) =>
+            task.dependsOn.every((dep) => !selectedSeqs.has(dep) || settledOk(results.get(dep))),
+          );
+          if (index < 0) break;
+          const [task] = pending.splice(index, 1);
+          if (!task) break;
+          this.activeTaskCount += 1;
+          const promise = this.runTask(task, startCommit, results, branches, selected)
+            .then((status) => {
+              results.set(task.seq, status);
+            })
+            .finally(() => {
+              this.activeTaskCount -= 1;
+              running.delete(task.seq);
+            });
+          running.set(task.seq, promise);
+        }
+
+        if (running.size > 0) {
+          await Promise.race(running.values());
+        } else if (pending.length > 0) {
+          // Guard against cyclic dependencies so the scheduler never deadlocks.
+          for (const task of pending.splice(0)) {
+            const dep = task.dependsOn.find((item) => selectedSeqs.has(item)) ?? task.seq;
+            const status = await this.finishSkipped(task, "blocked", "blocked", this.text.upstreamFailed(pad(dep)));
+            results.set(task.seq, status);
           }
         }
       }
 
-      while (running.size < maxConcurrency && !this.cancelled) {
-        const index = pending.findIndex((task) =>
-          task.dependsOn.every((dep) => !selectedSeqs.has(dep) || settledOk(results.get(dep))),
-        );
-        if (index < 0) break;
-        const [task] = pending.splice(index, 1);
-        if (!task) break;
-        this.activeTaskCount += 1;
-        const promise = this.runTask(task, startCommit, results, branches, selected)
-          .then((status) => {
-            results.set(task.seq, status);
-          })
-          .finally(() => {
-            this.activeTaskCount -= 1;
-            running.delete(task.seq);
-          });
-        running.set(task.seq, promise);
+      const counts = { passed: 0, unjudged: 0, failed: 0, blocked: 0, cancelled: 0 };
+      for (const status of results.values()) counts[status] += 1;
+
+      let integration: IntegrationSummary | null = null;
+      if (
+        !this.cancelled &&
+        counts.failed === 0 &&
+        counts.blocked === 0 &&
+        counts.cancelled === 0 &&
+        results.size > 0 &&
+        branches.size > 0
+      ) {
+        integration = await this.integrateFinal(startCommit, branches, reusedSeqs);
+        if (integration) await this.emit("integration_finished", { ...integration });
       }
 
+      await this.writeJson("summary.json", {
+        run_id: options.runId,
+        executor: "km0-direct",
+        tasks: results.size,
+        ...counts,
+        cost: this.spent,
+        integration,
+      });
+      // Nothing of this run stays in the inbox for an agent to take.
+      await this.cancelling;
+      await removeRun(options.inboxDir, options.runId);
+      await this.emit("run_finished", { status: this.cancelled ? "cancelled" : "completed", cost: this.spent });
+      await this.acceptanceWrites;
+      await this.writes;
+      if (this.cancelled) return EXIT_CANCELLED;
+      if (counts.failed + counts.blocked > 0) return 1;
+      if (integration && integration.status !== "ready") return 1;
+      return 0;
+    } finally {
       if (running.size > 0) {
-        await Promise.race(running.values());
-      } else if (pending.length > 0) {
-        // Guard against cyclic dependencies so the scheduler never deadlocks.
-        for (const task of pending.splice(0)) {
-          const dep = task.dependsOn.find((item) => selectedSeqs.has(item)) ?? task.seq;
-          const status = await this.finishSkipped(task, "blocked", "blocked", this.text.upstreamFailed(pad(dep)));
-          results.set(task.seq, status);
-        }
+        this.terminate();
+        await Promise.allSettled(running.values());
       }
+      await this.cancelling;
+      await removeRun(options.inboxDir, options.runId).catch(() => undefined);
+      await this.acceptanceWrites.catch(() => undefined);
+      await this.writes.catch(() => undefined);
     }
-
-    const counts = { passed: 0, unjudged: 0, failed: 0, blocked: 0, cancelled: 0 };
-    for (const status of results.values()) counts[status] += 1;
-
-    let integration: IntegrationSummary | null = null;
-    if (
-      !this.cancelled &&
-      counts.failed === 0 &&
-      counts.blocked === 0 &&
-      counts.cancelled === 0 &&
-      results.size > 0 &&
-      branches.size > 0
-    ) {
-      integration = await this.integrateFinal(startCommit, branches);
-      await this.emit("integration_finished", { ...integration });
-    }
-
-    await this.writeJson("summary.json", {
-      run_id: options.runId,
-      executor: "km0-direct",
-      tasks: results.size,
-      ...counts,
-      cost: this.spent,
-      integration,
-    });
-    // Nothing of this run stays in the inbox for an agent to take.
-    await this.cancelling;
-    await removeRun(options.inboxDir, options.runId);
-    await this.emit("run_finished", { status: this.cancelled ? "cancelled" : "completed", cost: this.spent });
-    await this.acceptanceWrites;
-    await this.writes;
-    if (this.cancelled) return EXIT_CANCELLED;
-    if (counts.failed + counts.blocked > 0) return 1;
-    if (integration && integration.status !== "ready") return 1;
-    return 0;
   }
 
   private async prepareKm0Folder(worktree: string, upstreamNotes: TaskHandoffNote[]): Promise<void> {
@@ -674,318 +731,353 @@ export class DirectRun implements RunningProcess {
     } catch (error) {
       return finish("blocked", "error", (error as Error).message);
     }
-    const upstreamNotes = await this.loadUpstreamHandoffs(task);
-    const initialStep: DirectStep = {
-      agent: task.agent,
-      model: task.model,
-      modelRef: task.modelRef,
-      tier: task.tier,
-      env: task.env,
-    };
-    for (const other of upstream.slice(1)) {
-      try {
-        await git(worktree, [...AUTHOR, "merge", "-q", "--no-edit", other.branch]);
-      } catch {
-        const resolved = await this.resolveMergeConflict({
-          worktree,
-          targetBranch: branch,
-          otherBranch: other.branch,
-          taskId,
-          contextNotes: upstreamNotes,
-          preferredStep: initialStep,
-          report,
-        });
-        if (!resolved.resolved) {
-          await this.discard(worktree, branch);
-          if (this.cancelled) return finish("cancelled", "cancelled", "");
-          return finish("blocked", "blocked", text.conflict(`${other.branch}: ${resolved.files.join(", ") || "?"}`));
-        }
-      }
-    }
-
-    const upstreamDiffs = options.judge ? await this.loadUpstreamDiffs(task) : [];
-    await this.prepareKm0Folder(worktree, upstreamNotes);
-
-    const upstreamBlock = formatUpstreamPromptBlock(upstreamNotes, options.language);
-    const basePrompt = upstreamBlock ? `${upstreamBlock}\n\n---\n\n${task.prompt}` : task.prompt;
-    const baseCommit = await git(worktree, ["rev-parse", "HEAD"]);
-    Object.assign(report, { branch, base_commit: baseCommit, start_tier: task.tier });
-    await this.emit("task_started", { task_id: taskId, tier: task.tier, agent: task.agent });
-
-    const steps: DirectStep[] =
-      options.autoEscalate === false ? [initialStep] : [initialStep, ...(task.escalations ?? [])];
-    const maxRepairs = Math.max(0, options.maxRepairs ?? 1);
-
-    let attemptNo = 0;
-    let lastHead = baseCommit;
-    let lastDiff: string | null = null;
-    let lastOutcome: HandOffOutcome | null = null;
-    let lastStep = initialStep;
-    let finalVerdict: InlineJudgeVerdict | null = null;
-    let finalStatus: Status = "failed";
-    let finalCategory: Category | null = "error";
-    let finalDetail = "";
-    let escalationFrom = "";
-    let escalationFeedback = "";
-
-    const recordEscalation = async (from: DirectStep, to: DirectStep, signal: string, reason: string) => {
-      const fromTier = from.tier ?? from.agent;
-      const toTier = to.tier ?? to.agent;
-      const crossAgent = from.agent !== to.agent;
-      const detail = crossAgent ? `${from.agent} → ${to.agent}: ${reason}` : reason;
-      const entry = {
-        from_tier: fromTier,
-        to_tier: toTier,
-        from_agent: from.agent,
-        to_agent: to.agent,
-        signal,
-        detail,
+    let worktreeOwned = true;
+    try {
+      const upstreamNotes = await this.loadUpstreamHandoffs(task);
+      const initialStep: DirectStep = {
+        agent: task.agent,
+        model: task.model,
+        modelRef: task.modelRef,
+        tier: task.tier,
+        env: task.env,
       };
-      report.escalations.push(entry);
-      await this.emit("escalation", { task_id: taskId, ...entry });
-      options.onLine(text.escalating(taskId, stepLabel(from), stepLabel(to), reason));
-    };
-
-    stepLoop: for (let stepIndex = 0; stepIndex < steps.length; stepIndex += 1) {
-      const step = steps[stepIndex] as DirectStep;
-      const nextStep = steps[stepIndex + 1];
-      lastStep = step;
-      if (stepIndex > 0) {
-        // Start an escalated stronger combination cleanly from baseCommit, keeping km0/ intact.
-        await git(worktree, ["reset", "--hard", baseCommit], false);
-        await git(worktree, ["clean", "-fd", "-e", "km0"], false);
-        await this.prepareKm0Folder(worktree, upstreamNotes);
+      for (const other of upstream.slice(1)) {
+        try {
+          await git(worktree, [...AUTHOR, "merge", "-q", "--no-edit", other.branch]);
+        } catch {
+          const resolved = await this.resolveMergeConflict({
+            worktree,
+            targetBranch: branch,
+            otherBranch: other.branch,
+            taskId,
+            contextNotes: upstreamNotes,
+            preferredStep: initialStep,
+            report,
+          });
+          if (!resolved.resolved) {
+            await this.discard(worktree, branch);
+            worktreeOwned = false;
+            if (this.cancelled) return finish("cancelled", "cancelled", "");
+            return finish("blocked", "blocked", text.conflict(`${other.branch}: ${resolved.files.join(", ") || "?"}`));
+          }
+        }
       }
 
-      let repairFeedback = "";
-      for (let repair = 0; repair <= maxRepairs; repair += 1) {
-        attemptNo += 1;
-        const purpose = repair > 0 ? "repair" : stepIndex > 0 ? "escalation" : "task";
-        const prompt =
-          repair > 0
-            ? `${text.repairPrompt(repairFeedback)}\n\n---\n\n${basePrompt}`
-            : stepIndex > 0 && escalationFeedback
-              ? `${text.escalationPrompt(escalationFrom, escalationFeedback)}\n\n---\n\n${basePrompt}`
-              : basePrompt;
+      const upstreamDiffs = options.judge ? await this.loadUpstreamDiffs(task) : [];
+      await this.prepareKm0Folder(worktree, upstreamNotes);
 
-        await this.emit("attempt_started", {
-          task_id: taskId,
-          tier: step.tier,
-          model: step.model,
-          agent: step.agent,
-          purpose,
-        });
+      const upstreamBlock = formatUpstreamPromptBlock(upstreamNotes, options.language);
+      const basePrompt = upstreamBlock ? `${upstreamBlock}\n\n---\n\n${task.prompt}` : task.prompt;
+      const baseCommit = await git(worktree, ["rev-parse", "HEAD"]);
+      const km0TrackedAtBase = Boolean(
+        (await git(worktree, ["ls-tree", "--name-only", baseCommit, "km0"], false)).trim(),
+      );
+      Object.assign(report, { branch, base_commit: baseCommit, start_tier: task.tier });
+      await this.emit("task_started", { task_id: taskId, tier: task.tier, agent: task.agent });
 
-        const started = Date.now();
-        const eventsRel =
-          step.agent === "claude_code" || step.agent === "codex"
-            ? attemptNo === 1
-              ? `events/${taskId}.jsonl`
-              : `events/${taskId}-a${attemptNo}.jsonl`
-            : null;
-        const outcome = await this.handTo(task, step, prompt, worktree, branch, eventsRel);
-        const wallTime = (Date.now() - started) / 1000;
-        lastOutcome = outcome;
+      const steps: DirectStep[] =
+        options.autoEscalate === false ? [initialStep] : [initialStep, ...(task.escalations ?? [])];
+      const maxRepairs = Math.max(0, options.maxRepairs ?? 1);
 
-        this.spent += outcome.cost;
-        report.cost += outcome.cost;
-        report.steps += outcome.steps;
-        report.tokens.input += outcome.tokens.input;
-        report.tokens.output += outcome.tokens.output;
-        report.tokens.cache_read += outcome.tokens.cache_read;
-        report.tokens.cache_write += outcome.tokens.cache_write;
-        report.wall_time += wallTime;
-        await this.emit("attempt_finished", {
-          task_id: taskId,
-          tier: step.tier,
-          model: step.model,
-          agent: step.agent,
-          cost: outcome.cost,
-          steps: outcome.steps,
-          stop_reason: outcome.stopReason,
-        });
+      let attemptNo = 0;
+      let lastHead = baseCommit;
+      let lastDiff: string | null = null;
+      let lastOutcome: HandOffOutcome | null = null;
+      let lastStep = initialStep;
+      let finalVerdict: InlineJudgeVerdict | null = null;
+      let finalStatus: Status = "failed";
+      let finalCategory: Category | null = "error";
+      let finalDetail = "";
+      let escalationFrom = "";
+      let escalationFeedback = "";
 
-        // Whatever the agent left uncommitted goes onto the task's branch, outside km0/.
-        await git(worktree, ["add", "-A", "--", ".", ...EXCLUDES], false);
-        if (await git(worktree, ["diff", "--cached", "--name-only"], false)) {
-          await git(worktree, [...AUTHOR, "commit", "-q", "--no-verify", "-m", `km0: ${taskId} ${task.title}`], false);
-        }
-        lastHead = await git(worktree, ["rev-parse", "HEAD"]);
-        lastDiff = lastHead !== baseCommit ? await gitDiff(worktree, baseCommit, lastHead) : null;
-
-        let testResult: { passed: boolean | null; judge: string; detail: string } | null = null;
-        const settled = outcome.stopReason === "settled" && !outcome.gaveUp;
-        if (task.testCommand && settled && !this.cancelled) {
-          const run = await runShell(task.testCommand, worktree);
-          testResult = { passed: run.code === 0, judge: "test_command", detail: run.output };
-          report.test_result = testResult;
-          await this.emit("test_result", {
-            task_id: taskId,
-            passed: testResult.passed,
-            detail: run.output.slice(-500),
-          });
-        }
-
-        const attemptRecord: Record<string, unknown> = {
-          purpose,
-          tier: step.tier ?? "T1",
-          model: step.modelRef ?? step.model ?? step.agent,
-          agent: step.agent,
-          steps: outcome.steps,
-          tokens: outcome.tokens,
-          cost: outcome.cost,
-          wall_time: wallTime,
-          stop_reason: outcome.stopReason,
-          test_result: testResult,
-          events: eventsRel,
+      const recordEscalation = async (from: DirectStep, to: DirectStep, signal: string, reason: string) => {
+        const fromTier = from.tier ?? from.agent;
+        const toTier = to.tier ?? to.agent;
+        const crossAgent = from.agent !== to.agent;
+        const detail = crossAgent ? `${from.agent} → ${to.agent}: ${reason}` : reason;
+        const entry = {
+          from_tier: fromTier,
+          to_tier: toTier,
+          from_agent: from.agent,
+          to_agent: to.agent,
+          signal,
+          detail,
         };
-        report.attempts.push(attemptRecord);
+        report.escalations.push(entry);
+        await this.emit("escalation", { task_id: taskId, ...entry });
+        options.onLine(text.escalating(taskId, stepLabel(from), stepLabel(to), reason));
+      };
 
-        if (outcome.stopReason === "cancelled" || this.cancelled) {
-          finalStatus = "cancelled";
-          finalCategory = "cancelled";
-          finalDetail = "";
-          break stepLoop;
-        }
-        if (outcome.stopReason === "cost_budget") {
-          finalStatus = "failed";
-          finalCategory = "budget_exhausted";
-          finalDetail = outcome.detail;
-          break stepLoop;
-        }
-        if (outcome.stopReason === "error" || outcome.gaveUp) {
-          const reason = outcome.gaveUp ? text.gaveUp(outcome.detail) : outcome.detail;
-          if (nextStep) {
-            await recordEscalation(step, nextStep, outcome.gaveUp ? "gave_up" : "error", reason);
-            escalationFrom = stepLabel(step);
-            escalationFeedback = reason;
-            break;
-          }
-          finalStatus = "failed";
-          finalCategory = outcome.gaveUp ? "gave_up" : "error";
-          finalDetail = reason;
-          break stepLoop;
+      stepLoop: for (let stepIndex = 0; stepIndex < steps.length; stepIndex += 1) {
+        const step = steps[stepIndex] as DirectStep;
+        const nextStep = steps[stepIndex + 1];
+        lastStep = step;
+        if (stepIndex > 0) {
+          // Start an escalated stronger combination cleanly from baseCommit, keeping km0/ intact.
+          await git(worktree, ["reset", "--hard", baseCommit], false);
+          await git(worktree, ["clean", "-fd", "-e", "km0"], false);
+          await this.prepareKm0Folder(worktree, upstreamNotes);
         }
 
-        if (testResult?.passed === false) {
-          const feedback = text.testFeedback(task.testCommand ?? "", testResult.detail);
-          if (repair < maxRepairs && isAutomatedCli(step.agent)) {
-            options.onLine(text.repairing(taskId, text.testsFailed));
-            repairFeedback = feedback;
-            continue;
-          }
-          if (nextStep) {
-            await recordEscalation(step, nextStep, "tests_failed", text.testsFailed);
-            escalationFrom = stepLabel(step);
-            escalationFeedback = feedback;
-            break;
-          }
-          finalStatus = "failed";
-          finalCategory = "tests_failed";
-          finalDetail = text.testsFailed;
-          break stepLoop;
-        }
+        let repairFeedback = "";
+        for (let repair = 0; repair <= maxRepairs; repair += 1) {
+          attemptNo += 1;
+          const purpose = repair > 0 ? "repair" : stepIndex > 0 ? "escalation" : "task";
+          const prompt =
+            repair > 0
+              ? `${text.repairPrompt(repairFeedback)}\n\n---\n\n${basePrompt}`
+              : stepIndex > 0 && escalationFeedback
+                ? `${text.escalationPrompt(escalationFrom, escalationFeedback)}\n\n---\n\n${basePrompt}`
+                : basePrompt;
 
-        // Tests passed (or no test command): run the inline EARS acceptance gate when configured.
-        if (options.judge) {
-          options.onLine(text.judging(taskId));
-          let verdict: InlineJudgeVerdict | null = null;
-          try {
-            verdict = await options.judge({
-              task,
-              diff: lastDiff,
-              upstream: upstreamDiffs,
-              testResult,
-              failure: null,
-            });
-          } catch (error) {
-            options.onLine(text.judgeError(taskId, error instanceof Error ? error.message : String(error)));
+          await this.emit("attempt_started", {
+            task_id: taskId,
+            tier: step.tier,
+            model: step.model,
+            agent: step.agent,
+            purpose,
+          });
+
+          const started = Date.now();
+          const eventsRel =
+            step.agent === "claude_code" || step.agent === "codex"
+              ? attemptNo === 1
+                ? `events/${taskId}.jsonl`
+                : `events/${taskId}-a${attemptNo}.jsonl`
+              : null;
+          const outcome = await this.handTo(task, step, prompt, worktree, branch, eventsRel);
+          const wallTime = (Date.now() - started) / 1000;
+          lastOutcome = outcome;
+
+          this.spent += outcome.cost;
+          report.cost += outcome.cost;
+          report.steps += outcome.steps;
+          report.tokens.input += outcome.tokens.input;
+          report.tokens.output += outcome.tokens.output;
+          report.tokens.cache_read += outcome.tokens.cache_read;
+          report.tokens.cache_write += outcome.tokens.cache_write;
+          report.wall_time += wallTime;
+          await this.emit("attempt_finished", {
+            task_id: taskId,
+            tier: step.tier,
+            model: step.model,
+            agent: step.agent,
+            cost: outcome.cost,
+            steps: outcome.steps,
+            stop_reason: outcome.stopReason,
+          });
+
+          // Whatever the agent left uncommitted goes onto the task's branch, outside km0/.
+          if (!km0TrackedAtBase && (await git(worktree, ["ls-files", "km0"], false)).trim()) {
+            await git(worktree, ["rm", "-rf", "--cached", "--quiet", "km0"], false);
           }
-          if (verdict) {
-            attemptRecord.verdict = { accepted: verdict.accepted, reason: verdict.reason };
-            await this.emit("task_judged", {
+          await git(worktree, ["add", "-A", "--", ".", ...EXCLUDES], false);
+          if (await git(worktree, ["diff", "--cached", "--name-only"], false)) {
+            await git(
+              worktree,
+              [...AUTHOR, "commit", "-q", "--no-verify", "-m", `km0: ${taskId} ${task.title}`],
+              false,
+            );
+          }
+          lastHead = await git(worktree, ["rev-parse", "HEAD"]);
+          lastDiff = lastHead !== baseCommit ? await gitDiff(worktree, baseCommit, lastHead) : null;
+
+          let testResult: { passed: boolean | null; judge: string; detail: string } | null = null;
+          const settled = outcome.stopReason === "settled" && !outcome.gaveUp;
+          if (task.testCommand && settled && !this.cancelled) {
+            const run = await this.runShell(task.testCommand, worktree);
+            testResult = { passed: run.code === 0, judge: "test_command", detail: run.output };
+            await this.emit("test_result", {
               task_id: taskId,
-              accepted: verdict.accepted,
-              reason: verdict.reason,
-              judged_by: verdict.judgedBy,
+              passed: testResult.passed,
+              detail: run.output.slice(-500),
             });
-            if (verdict.accepted) {
-              options.onLine(text.accepted(taskId, verdict.reason));
-              finalVerdict = verdict;
-              report.solved_tier = step.tier;
-              finalStatus = "passed";
-              finalCategory = null;
-              finalDetail = "";
-              break stepLoop;
+          }
+          report.test_result = testResult;
+
+          const attemptRecord: Record<string, unknown> = {
+            purpose,
+            tier: step.tier ?? "T1",
+            model: step.modelRef ?? step.model ?? step.agent,
+            agent: step.agent,
+            steps: outcome.steps,
+            tokens: outcome.tokens,
+            cost: outcome.cost,
+            wall_time: wallTime,
+            stop_reason: outcome.stopReason,
+            test_result: testResult,
+            events: eventsRel,
+          };
+          report.attempts.push(attemptRecord);
+
+          if (outcome.stopReason === "cancelled" || this.cancelled) {
+            finalStatus = "cancelled";
+            finalCategory = "cancelled";
+            finalDetail = "";
+            break stepLoop;
+          }
+          if (outcome.stopReason === "cost_budget") {
+            finalStatus = "failed";
+            finalCategory = "budget_exhausted";
+            finalDetail = outcome.detail;
+            break stepLoop;
+          }
+          if (outcome.stopReason === "error" || outcome.gaveUp) {
+            const reason = outcome.gaveUp ? text.gaveUp(outcome.detail) : outcome.detail;
+            if (nextStep) {
+              await recordEscalation(step, nextStep, outcome.gaveUp ? "gave_up" : "error", reason);
+              escalationFrom = stepLabel(step);
+              escalationFeedback = reason;
+              break;
             }
-            options.onLine(text.rejected(taskId, verdict.reason));
-            const feedback = text.acceptanceFeedback(verdict.reason);
+            finalStatus = "failed";
+            finalCategory = outcome.gaveUp ? "gave_up" : "error";
+            finalDetail = reason;
+            break stepLoop;
+          }
+
+          if (testResult?.passed === false) {
+            const feedback = text.testFeedback(task.testCommand ?? "", testResult.detail);
             if (repair < maxRepairs && isAutomatedCli(step.agent)) {
-              options.onLine(text.repairing(taskId, verdict.reason));
+              options.onLine(text.repairing(taskId, text.testsFailed));
               repairFeedback = feedback;
               continue;
             }
             if (nextStep) {
-              await recordEscalation(step, nextStep, "acceptance_rejected", verdict.reason);
+              await recordEscalation(step, nextStep, "tests_failed", text.testsFailed);
               escalationFrom = stepLabel(step);
               escalationFeedback = feedback;
               break;
             }
-            finalVerdict = verdict;
             finalStatus = "failed";
-            finalCategory = "acceptance_rejected";
-            finalDetail = verdict.reason;
+            finalCategory = "tests_failed";
+            finalDetail = text.testsFailed;
             break stepLoop;
           }
+
+          // Tests passed (or no test command): run the inline EARS acceptance gate when configured.
+          if (options.judge) {
+            options.onLine(text.judging(taskId));
+            let verdict: InlineJudgeVerdict | null = null;
+            try {
+              verdict = await options.judge({
+                task,
+                diff: lastDiff,
+                upstream: upstreamDiffs,
+                testResult,
+                failure: null,
+              });
+            } catch (error) {
+              options.onLine(text.judgeError(taskId, error instanceof Error ? error.message : String(error)));
+            }
+            if (this.cancelled) {
+              finalStatus = "cancelled";
+              finalCategory = "cancelled";
+              finalDetail = "";
+              break stepLoop;
+            }
+            if (verdict) {
+              attemptRecord.verdict = { accepted: verdict.accepted, reason: verdict.reason };
+              await this.emit("task_judged", {
+                task_id: taskId,
+                accepted: verdict.accepted,
+                reason: verdict.reason,
+                judged_by: verdict.judgedBy,
+              });
+              if (verdict.accepted) {
+                options.onLine(text.accepted(taskId, verdict.reason));
+                finalVerdict = verdict;
+                report.solved_tier = step.tier;
+                finalStatus = "passed";
+                finalCategory = null;
+                finalDetail = "";
+                break stepLoop;
+              }
+              options.onLine(text.rejected(taskId, verdict.reason));
+              const feedback = text.acceptanceFeedback(verdict.reason);
+              if (repair < maxRepairs && isAutomatedCli(step.agent)) {
+                options.onLine(text.repairing(taskId, verdict.reason));
+                repairFeedback = feedback;
+                continue;
+              }
+              if (nextStep) {
+                await recordEscalation(step, nextStep, "acceptance_rejected", verdict.reason);
+                escalationFrom = stepLabel(step);
+                escalationFeedback = feedback;
+                break;
+              }
+              finalVerdict = verdict;
+              finalStatus = "failed";
+              finalCategory = "acceptance_rejected";
+              finalDetail = verdict.reason;
+              break stepLoop;
+            }
+          }
+
+          if (testResult?.passed) report.solved_tier = step.tier;
+          finalStatus = testResult?.passed ? "passed" : "unjudged";
+          finalCategory = null;
+          finalDetail = "";
+          break stepLoop;
         }
-
-        if (testResult?.passed) report.solved_tier = step.tier;
-        finalStatus = testResult?.passed ? "passed" : "unjudged";
-        finalCategory = null;
-        finalDetail = "";
-        break stepLoop;
       }
-    }
 
-    report.agent = lastStep.agent;
-    if (lastHead !== baseCommit && lastDiff !== null) {
-      report.commit = lastHead;
-      report.diff = `diffs/${taskId}.diff`;
-      const diffFile = join(options.runDir, "diffs", `${taskId}.diff`);
-      await mkdir(dirname(diffFile), { recursive: true });
-      await writeFile(diffFile, lastDiff, "utf8");
-    }
-    this.diffs.set(task.seq, lastDiff);
-    branches.set(task.seq, branch);
-
-    if (finalStatus === "passed" || finalStatus === "unjudged") {
-      if (task.testCommand && report.test_result?.passed === true) {
-        this.passedTestCommands.set(task.seq, task.testCommand);
+      report.agent = lastStep.agent;
+      if (lastHead !== baseCommit && lastDiff !== null) {
+        report.commit = lastHead;
+        report.diff = `diffs/${taskId}.diff`;
+        const diffFile = join(options.runDir, "diffs", `${taskId}.diff`);
+        await mkdir(dirname(diffFile), { recursive: true });
+        await writeFile(diffFile, lastDiff, "utf8");
       }
-      const changedRaw =
-        lastHead !== baseCommit ? await git(worktree, ["diff", "--name-only", baseCommit, lastHead], false) : "";
-      const note = buildHandoffNote({
-        taskId,
-        seq: task.seq,
-        title: task.title,
-        agent: lastStep.agent,
-        model: lastStep.model,
-        branch,
-        commit: report.commit,
-        changedFiles: changedRaw.split(/\r?\n/).filter(Boolean),
-        diff: lastDiff,
-        agentText: lastOutcome?.detail ?? "",
-        explicitContracts: lastOutcome?.contracts,
-        explicitNotes: lastOutcome?.downstreamNotes,
-        verdict: finalVerdict ? { accepted: finalVerdict.accepted, reason: finalVerdict.reason } : null,
-      });
-      this.handoffs.set(task.seq, note);
-      await this.writeJson(`handoffs/${taskId}.json`, note);
-    }
+      this.diffs.set(task.seq, lastDiff);
 
-    if (finalVerdict) await this.appendAcceptance(taskId, finalVerdict);
-    await this.removeWorktree(worktree);
-    return finish(finalStatus, finalCategory, finalDetail);
+      if (finalStatus === "passed" || finalStatus === "unjudged") {
+        branches.set(task.seq, branch);
+        if (task.testCommand && report.test_result?.passed === true) {
+          this.passedTestCommands.set(task.seq, task.testCommand);
+        }
+        const changedRaw =
+          lastHead !== baseCommit ? await git(worktree, ["diff", "--name-only", baseCommit, lastHead], false) : "";
+        const note = buildHandoffNote({
+          taskId,
+          seq: task.seq,
+          title: task.title,
+          agent: lastStep.agent,
+          model: lastStep.model,
+          branch,
+          commit: report.commit,
+          changedFiles: changedRaw.split(/\r?\n/).filter(Boolean),
+          diff: lastDiff,
+          agentText: lastOutcome?.detail ?? "",
+          explicitContracts: lastOutcome?.contracts,
+          explicitNotes: lastOutcome?.downstreamNotes,
+          verdict: finalVerdict ? { accepted: finalVerdict.accepted, reason: finalVerdict.reason } : null,
+        });
+        this.handoffs.set(task.seq, note);
+        await this.writeJson(`handoffs/${taskId}.json`, note);
+      }
+
+      if (finalVerdict) await this.appendAcceptance(taskId, finalVerdict);
+      await this.removeWorktree(worktree);
+      worktreeOwned = false;
+      return finish(finalStatus, finalCategory, finalDetail);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      this.options.onLine(detail);
+      if (worktreeOwned) {
+        await this.removeWorktree(worktree).catch(() => undefined);
+        worktreeOwned = false;
+      }
+      return finish(
+        this.cancelled ? "cancelled" : "failed",
+        this.cancelled ? "cancelled" : "error",
+        this.cancelled ? "" : detail,
+      );
+    } finally {
+      if (worktreeOwned) await this.removeWorktree(worktree).catch(() => undefined);
+    }
   }
 
   /** Choose the strongest available automated CLI step to resolve a multi-branch git merge conflict. */
@@ -1151,7 +1243,11 @@ export class DirectRun implements RunningProcess {
   }
 
   /** Combine all parallel leaf task branches into `km0/<run_id>/final`, write `diffs/final.diff`, and run tests. */
-  private async integrateFinal(startCommit: string, branches: Map<number, string>): Promise<IntegrationSummary> {
+  private async integrateFinal(
+    startCommit: string,
+    branches: Map<number, string>,
+    reusedSeqs: Set<number> = new Set(),
+  ): Promise<IntegrationSummary | null> {
     const { options, text } = this;
     const finalBranch = `km0/${options.runId}/final`;
     const allSeqs = [...branches.keys()].sort((a, b) => a - b);
@@ -1159,7 +1255,7 @@ export class DirectRun implements RunningProcess {
     for (const seq of allSeqs) {
       const task = options.tasks.find((item) => item.seq === seq);
       for (const dep of task?.dependsOn ?? []) {
-        if (branches.has(dep)) dependedOn.add(dep);
+        if (branches.has(dep) && (!reusedSeqs.has(seq) || reusedSeqs.has(dep))) dependedOn.add(dep);
       }
     }
     const leaves = allSeqs.filter((seq) => !dependedOn.has(seq));
@@ -1167,6 +1263,7 @@ export class DirectRun implements RunningProcess {
     const firstSeq = leafSeqs[0] as number;
     const firstBranch = branches.get(firstSeq) as string;
 
+    if (this.cancelled) return null;
     options.onLine(text.integrating(finalBranch, leafSeqs.length));
     const needsTests =
       Boolean(options.repoTestCommand) &&
@@ -1175,6 +1272,7 @@ export class DirectRun implements RunningProcess {
 
     // Fast path: single leaf branch and no extra repo-wide test run needed — point `final` directly without a worktree.
     if (leafSeqs.length === 1 && !needsTests) {
+      if (this.cancelled) return null;
       try {
         await this.withRepoLock(() => git(options.repo, ["branch", "-f", finalBranch, firstBranch]));
       } catch (error) {
@@ -1230,10 +1328,18 @@ export class DirectRun implements RunningProcess {
 
     const integratedSeqs = [firstSeq];
     for (const seq of leafSeqs.slice(1)) {
+      if (this.cancelled) {
+        await this.discard(worktree, finalBranch);
+        return null;
+      }
       const otherBranch = branches.get(seq) as string;
       try {
         await git(worktree, [...AUTHOR, "merge", "-q", "--no-edit", otherBranch]);
       } catch {
+        if (this.cancelled) {
+          await this.discard(worktree, finalBranch);
+          return null;
+        }
         const contextNotes = await this.loadHandoffsFor([...integratedSeqs, seq]);
         const resolved = await this.resolveMergeConflict({
           worktree,
@@ -1242,6 +1348,10 @@ export class DirectRun implements RunningProcess {
           taskId: null,
           contextNotes,
         });
+        if (this.cancelled) {
+          await this.discard(worktree, finalBranch);
+          return null;
+        }
         if (!resolved.resolved) {
           await this.discard(worktree, finalBranch);
           return {
@@ -1259,6 +1369,11 @@ export class DirectRun implements RunningProcess {
       integratedSeqs.push(seq);
     }
 
+    if (this.cancelled) {
+      await this.discard(worktree, finalBranch);
+      return null;
+    }
+
     const finalHead = await git(worktree, ["rev-parse", "HEAD"]);
     const fullDiff = finalHead !== startCommit ? await gitDiff(worktree, startCommit, finalHead) : "";
     const diffFile = join(options.runDir, "diffs", "final.diff");
@@ -1273,10 +1388,19 @@ export class DirectRun implements RunningProcess {
         testPassed = true;
       } else {
         options.onLine(text.integrationTesting(finalBranch, options.repoTestCommand));
-        const run = await runShell(options.repoTestCommand, worktree);
+        const run = await this.runShell(options.repoTestCommand, worktree);
+        if (this.cancelled) {
+          await this.discard(worktree, finalBranch);
+          return null;
+        }
         testPassed = run.code === 0;
         if (!testPassed) detail = run.output.slice(-1000) || text.integrationTestsFailed(options.repoTestCommand);
       }
+    }
+
+    if (this.cancelled) {
+      await this.discard(worktree, finalBranch);
+      return null;
     }
 
     await this.removeWorktree(worktree);
@@ -1304,6 +1428,9 @@ export class DirectRun implements RunningProcess {
     const { options, text } = this;
     const base = { steps: 0, cost: 0, tokens: { input: 0, output: 0, cache_read: 0, cache_write: 0 } };
     if (this.cancelled) return { ...base, stopReason: "cancelled", detail: "" };
+    if (options.budget !== null && this.spent >= options.budget) {
+      return { ...base, stopReason: "cost_budget", detail: text.budgetExhausted };
+    }
     const failed = (detail: string): HandOffOutcome => ({ ...base, stopReason: "error", detail });
 
     if (step.agent === "claude_code") {

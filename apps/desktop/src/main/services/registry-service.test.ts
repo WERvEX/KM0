@@ -81,10 +81,11 @@ describe("RegistryService", () => {
     );
   });
 
-  it("imports a newer file, refuses an older one, and goes back to the bundled registry", () => {
+  it("imports a newer file, refuses an older one without wiping stored data, and goes back to the bundled registry", () => {
     const service = setup(async () => "");
     expect(service.import(JSON.stringify(registry("2026-10-20")))).toMatchObject({ origin: "imported" });
     expect(() => service.import(JSON.stringify(registry("2026-01-01")))).toThrow(/older than the one shipped/);
+    expect(service.info()).toMatchObject({ origin: "imported", dataDate: "2026-10-20" });
     expect(service.reset()).toMatchObject({ origin: "bundled", dataDate: "2026-10-01" });
   });
 

@@ -24,7 +24,7 @@ import {
   Scissors,
   X,
 } from "lucide-react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, TierBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -90,7 +90,11 @@ export function RoutingPanel({ projectId, blockedReason, openQuestions = 0 }: Pr
     mutationFn: (taskId: number) => call("task.clearFailures", { projectId, taskId }),
     onSuccess: onPlan,
   });
-  const error = replan.error ?? strategy.error ?? override.error ?? record.error ?? clearFailures.error;
+  const muts = [replan, strategy, override, record, clearFailures];
+  const resetErrors = (except?: (typeof muts)[number]) => {
+    for (const mut of muts) if (mut !== except && mut.error) mut.reset();
+  };
+  const error = muts.find((mut) => mut.error)?.error;
 
   if (plan.isLoading) return null;
   const data = plan.data;
@@ -138,7 +142,10 @@ export function RoutingPanel({ projectId, blockedReason, openQuestions = 0 }: Pr
       <Summary
         plan={data}
         busy={strategy.isPending}
-        onStrategy={(level, budget) => strategy.mutate({ level, budget })}
+        onStrategy={(level, budget) => {
+          resetErrors(strategy);
+          strategy.mutate({ level, budget });
+        }}
       />
 
       <div className="flex justify-end">
@@ -146,7 +153,11 @@ export function RoutingPanel({ projectId, blockedReason, openQuestions = 0 }: Pr
           size="sm"
           variant="ghost"
           disabled={replan.isPending}
-          onClick={() => (overridden ? setConfirmReplan(true) : replan.mutate())}
+          onClick={() => {
+            resetErrors(replan);
+            if (overridden) setConfirmReplan(true);
+            else replan.mutate();
+          }}
         >
           {replan.isPending ? <Loader2 className="animate-spin" /> : <RefreshCw />}
           {replan.isPending ? t("routing.planning") : t("routing.replan")}
@@ -156,9 +167,18 @@ export function RoutingPanel({ projectId, blockedReason, openQuestions = 0 }: Pr
       <TaskTable
         plan={data}
         busy={override.isPending || record.isPending || clearFailures.isPending}
-        onOverride={(taskId, value) => override.mutate({ taskId, override: value })}
-        onRecord={(taskId, passed) => record.mutate({ taskId, passed })}
-        onClearFailures={(taskId) => clearFailures.mutate(taskId)}
+        onOverride={(taskId, value) => {
+          resetErrors(override);
+          override.mutate({ taskId, override: value });
+        }}
+        onRecord={(taskId, passed) => {
+          resetErrors(record);
+          record.mutate({ taskId, passed });
+        }}
+        onClearFailures={(taskId) => {
+          resetErrors(clearFailures);
+          clearFailures.mutate(taskId);
+        }}
       />
 
       <HandoffPanel projectId={projectId} plan={data} />
@@ -229,6 +249,9 @@ function Summary({
   const level = useLevelText();
   const { totals, tierCounts, budgetAdvice } = plan;
   const [budget, setBudget] = useState(plan.budget === null ? "" : String(plan.budget));
+  useEffect(() => {
+    setBudget(plan.budget === null ? "" : String(plan.budget));
+  }, [plan.budget]);
   const parsed = budget.trim() === "" ? null : Number(budget);
   const budgetValid = parsed === null || (Number.isFinite(parsed) && parsed > 0);
   const seq = (taskId: number) => plan.tasks.find((task) => task.id === taskId)?.seq ?? taskId;

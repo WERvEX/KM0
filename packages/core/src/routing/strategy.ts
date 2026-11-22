@@ -290,10 +290,11 @@ export function select(
   if (options.risky) {
     const open = scoped.filter((item) => !item.excluded);
     const safe = open.filter((item) => passProbabilityAt(item.chance, RISK_FLOOR.quantile) >= RISK_FLOOR.pass);
-    if (safe.length > 0)
-      for (const item of open)
-        if (!safe.includes(item)) item.excluded = "risk_floor";
-        else if (open.length > 0) notes.push("riskFloor");
+    if (safe.length > 0) {
+      for (const item of open) if (!safe.includes(item)) item.excluded = "risk_floor";
+    } else if (open.length > 0) {
+      notes.push("riskFloor");
+    }
   }
 
   // A vendor's own agent takes its model when it is at most NATIVE_MARGIN less likely to pass than another agent.

@@ -10,21 +10,26 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { call } from "@/lib/ipc";
 
-const optionalNumber = z
-  .string()
-  .trim()
-  .refine((value) => value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0), "invalidNumber");
+const optionalNumber = (min: number, max: number, integer = false) =>
+  z
+    .string()
+    .trim()
+    .refine((value) => {
+      if (value === "") return true;
+      const n = Number(value);
+      return Number.isFinite(n) && n >= min && n <= max && (!integer || Number.isInteger(n));
+    }, "invalidNumber");
 
 const FormSchema = z.object({
   providerId: z.string().min(1, "required"),
   modelId: z.string().trim().min(1, "required"),
   name: z.string().trim(),
-  contextWindow: optionalNumber,
+  contextWindow: optionalNumber(1, Number.MAX_SAFE_INTEGER, true),
   structuredMode: z.enum(["auto", "json_schema", "tool", "prompt"]),
-  temperature: optionalNumber,
-  priceIn: optionalNumber,
-  priceOut: optionalNumber,
-  priceCacheRead: optionalNumber,
+  temperature: optionalNumber(0, 2),
+  priceIn: optionalNumber(0, 10_000),
+  priceOut: optionalNumber(0, 10_000),
+  priceCacheRead: optionalNumber(0, 10_000),
   tierLabel: z.enum(["", "T1", "T2", "T3"]),
 });
 type FormValues = z.infer<typeof FormSchema>;

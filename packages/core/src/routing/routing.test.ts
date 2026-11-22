@@ -321,6 +321,8 @@ describe("strategy levels", () => {
     const routed = route(risky, agents, { level: 1 });
     expect(routed).toMatchObject({ level: 4, levelSource: "risk" });
     expect(routed.options.find((option) => option.modelRef === 1)?.excluded).toBe("risk_floor");
+    expect(routed.agentReason).not.toMatch(/能力下限|ability floor/);
+    expect(route(risky, [pi([cheap])], { level: 1 }).agentReason).toMatch(/能力下限|ability floor/);
     expect(route(risky, agents, { level: 5 }).levelSource).toBe("project");
     // A level set on the task still cannot go below the risk level.
     expect(route(task({ ...risky, override: { level: 2 } }), agents).level).toBe(4);

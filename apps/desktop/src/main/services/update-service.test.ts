@@ -78,9 +78,13 @@ describe("updates", () => {
   });
 
   it("explains why it cannot update a development build, the browser build or a non-AppImage Linux install", async () => {
-    expect(new UpdateService(null, "1.0.0", () => "zh-CN").state()).toMatchObject({
+    let lang: "zh-CN" | "en" = "zh-CN";
+    const dynamic = new UpdateService(null, "1.0.0", () => lang);
+    expect(dynamic.state()).toMatchObject({ status: "unsupported", detail: "开发版本不自动更新。" });
+    lang = "en";
+    expect(dynamic.state()).toMatchObject({
       status: "unsupported",
-      detail: "开发版本不自动更新。",
+      detail: "Development builds do not update themselves.",
     });
     expect(new UpdateService(null, "1.0.0", () => "en", undefined, "linux").state().detail).toMatch(/AppImage/);
     const web = new UpdateService(null, "1.0.0", () => "en", undefined, "web");

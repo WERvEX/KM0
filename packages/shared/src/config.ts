@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { ExecutorSettings } from "./execution";
 import { LlmRole, ProviderKind, StructuredMode } from "./llm";
 import { Billing } from "./models";
 import { SearchServiceInput } from "./research";
-import { AgentId, Capability } from "./routing";
+import { AgentId, Capability, RoutingRules } from "./routing";
 import { Preferences } from "./settings";
 
 export const CONFIG_FORMAT = "km0-config";
@@ -47,6 +48,8 @@ export const ConfigBundleV2 = z.object({
   /** Model names. */
   roles: z.record(LlmRole, z.string().nullable()),
   preferences: Preferences.partial(),
+  routingRules: RoutingRules.nullable().optional(),
+  execution: ExecutorSettings.optional(),
   agents: z.array(
     z.object({
       id: AgentId,
