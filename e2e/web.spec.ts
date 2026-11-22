@@ -242,7 +242,7 @@ test("technology questions are checked with a search service, which can be expor
   const chooser = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "导入配置" }).click();
   await (await chooser).setFiles(file);
-  await expect(page.getByText(/导入完成：.*更新 1 个搜索服务/)).toBeVisible();
+  await expect(page.getByText(/导入完成：.*搜索服务新增 0 个、更新 1 个/)).toBeVisible();
 
   // A full-path project reaches the technology stage with its options checked.
   await page.getByRole("link", { name: "新建任务" }).click();
